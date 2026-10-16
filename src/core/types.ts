@@ -57,6 +57,11 @@ export interface Activity {
   completedAt?: string;
   /** Local calendar date (YYYY-MM-DD) on which the activity was created. */
   createdAt: string;
+  /**
+   * Optional practice the planner added for the day it is due (consolidation-day blind practice).
+   * If it is not done it goes stale instead of becoming overdue debt.
+   */
+  extra?: boolean;
 }
 
 export interface Note {
