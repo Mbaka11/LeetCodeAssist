@@ -67,6 +67,28 @@ describe('dashboard views (render smoke tests)', () => {
     expect(open).toContain('Python snippet');
   });
 
+  it('Problem sheet shows program position, hints and hints used in the attempt history', () => {
+    const base: AppState = defaultState(today);
+    const done = {
+      ...createActivity([], { type: 'new', slug: 'two-sum', dueDate: today, createdAt: today }),
+      status: 'done' as const,
+      completedAt: today,
+      outcome: 'hint' as const,
+      totalMs: 20 * 60_000,
+      hintsUsed: 3,
+    };
+    const html = renderToStaticMarkup(
+      <ProblemView slug="two-sum" state={{ ...base, activities: [done] }} actions={actions} />,
+    );
+    expect(html).toContain('Program position');
+    expect(html).toContain('3 hints');
+    expect(html).toContain('Hints used');
+    expect(html).toContain('Reveal hint 1');
+    const none = renderToStaticMarkup(<ProblemView slug="median-of-two-sorted-arrays" state={base} actions={actions} />);
+    expect(none).toContain('Not in the 30-day program');
+    expect(none).not.toContain('Reveal hint');
+  });
+
   it('Problem sheet handles an unknown slug', () => {
     const html = renderToStaticMarkup(
       <ProblemView slug="nope" state={defaultState(today)} actions={actions} />,

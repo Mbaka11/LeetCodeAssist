@@ -18,6 +18,12 @@ export interface AppActions {
   markApproachFound(id: string): Promise<void>;
   completeActivity(id: string, outcome: Outcome, totalMs?: number): Promise<void>;
   skip(id: string): Promise<void>;
+  /** Moves a planned review to `newDate` (>= today); see `commands.rescheduleReview`. */
+  moveReview(id: string, newDate: string): Promise<void>;
+  /** Moves a new problem back in the queue without dropping it; see `commands.postponeNew`. */
+  postpone(id: string): Promise<void>;
+  /** Records that hint `level` (1-3) was revealed during an open activity. */
+  revealHint(id: string, level: number): Promise<void>;
   saveNote(slug: string, fields: commands.NoteFields): Promise<void>;
   toggleChecked(slug: string): Promise<void>;
   updateSettings(change: Partial<Settings>): Promise<void>;
@@ -48,6 +54,15 @@ export function createActions(store: AppStore, now: Clock = Date.now): AppAction
     skip: (id) => {
       const t = now();
       return store.update((s) => commands.skipActivity(commands.materializeToday(s, t), id, t));
+    },
+    moveReview: (id, newDate) => store.update((s) => commands.rescheduleReview(s, id, newDate, now())),
+    postpone: (id) => {
+      const t = now();
+      return store.update((s) => commands.postponeNew(commands.materializeToday(s, t), id, t));
+    },
+    revealHint: (id, level) => {
+      const t = now();
+      return store.update((s) => commands.revealHint(commands.materializeToday(s, t), id, level));
     },
     saveNote: (slug, fields) => store.update((s) => commands.saveNote(s, slug, fields, now())),
     toggleChecked: (slug) => store.update((s) => commands.toggleChecked(s, slug)),

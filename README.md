@@ -66,17 +66,30 @@ problem is planned on a day (the strongest wins). Reviews continue after day 30.
 Notes are hidden while a review of the same problem is in progress or due; click **Reveal** if
 you really need them.
 
+### Moving, postponing and hints
+
+- **Move…** (Today cards and the Calendar day detail) reschedules a planned review to any day from
+  today on. Only the due date changes; the history stays.
+- **Postpone** replaces *Skip* for new problems: the problem moves back in the queue behind the next
+  two and comes back later. It is never removed from the program.
+- **Hints**: every program problem has three progressive hints (nudge, insight, sketch). Reveal them one
+  at a time in the side panel or on the problem sheet; they are recorded on the attempt, shown in the
+  attempt history, and pre-select **Hint** in the outcome form (you can still change it).
+
 ## Using it
 
 - **Toolbar icon** opens (or focuses) the dashboard.
-- **Dashboard** views: *Today* (plan, timers, outcome form, pace and streak), *Calendar* (days
-  1–30 plus later review days, planned/done/carried work, goal vs streak), *Roadmap* (the 150
-  problems by category with progress counters and checkboxes), *Problem sheet* (notes, attempt
-  history, next review) and *Settings*.
-- **Side panel** on leetcode.com problem pages: shows today's activity for the open problem (or
-  offers *Start as extra practice*), its timer, instruction, outcome form and notes. Open it from
-  the dashboard's **Open side panel** button or with the shortcut **Alt+Shift+L** (change it at
-  `chrome://extensions/shortcuts`).
+- **Dashboard** views: *Today* (plan, timers, outcome form, pace and streak), *Calendar* (program
+  progress, days 1–30 plus later review days with a minutes bar, a hover/focus popover per day with a
+  *projected* plan for future days, `Move…`), *Roadmap* (the 150 problems as a prerequisite **tree** or
+  a **grid**, with progress counters and checkboxes), *Problem sheet* (notes, hints, attempt history,
+  next review) and *Settings*.
+- **Side panel**: one global panel per window that stays open across tabs. On a leetcode.com problem
+  page it shows the problem (difficulty, category, program position), today's activity with its
+  instruction and timer, hints, the outcome form, notes, attempt history and the next review date. On
+  any other page it shows **Open a LeetCode problem** and today's checklist with an **Open** button per
+  item. Open it from the dashboard's **Open side panel** button, by clicking a LeetCode link in the
+  dashboard, or with the shortcut **Alt+Shift+L** (change it at `chrome://extensions/shortcuts`).
 - **Notifications and badge**: a morning summary (for example
   `Today: 2 new, 2 recalls, 1 rebuild · ~2h20`) and an evening reminder if the daily target is
   not met, at the times set in Settings. The toolbar badge shows the activities left today.
@@ -122,10 +135,11 @@ are covered by unit tests; storage and the background worker are tested against 
 ### Layout
 
 - `src/core/` – pure TypeScript (no browser APIs): types, dates, timer, review cycle, planner,
-  calendar, roadmap tiers, state.
-- `src/data/` – static NeetCode 150 list, roadmap categories and the 30-day program (queue,
-  benchmarks).
-- `src/lib/` – storage, actions, reminders and background tasks, URL helpers.
+  projection, queue, calendar, roadmap tree layout, state.
+- `src/data/` – static NeetCode 150 list, roadmap categories, the 30-day program (queue,
+  benchmarks) and the three-level hints.
+- `src/lib/` – storage, commands and actions, reminders and background tasks, URL and side panel
+  helpers.
 - `src/components/` – shared React components.
 - `src/dashboard/`, `src/sidepanel/` – the two UIs.
 - `src/entrypoints/` – WXT entrypoints (dashboard, side panel, background worker).

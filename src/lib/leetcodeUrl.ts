@@ -28,3 +28,14 @@ export function problemSlugFromUrl(url: string | undefined): string | null {
     return null; // malformed percent escape, e.g. /problems/%
   }
 }
+
+/**
+ * Whether opening a problem may replace the page of the active tab: a LeetCode page or an empty tab.
+ * Any other page is the user's own, so the problem opens in a new tab instead.
+ */
+export function canNavigateTabTo(url: string | undefined): boolean {
+  if (url === undefined || url === '' || url === 'about:blank') return true;
+  if (isLeetCodeUrl(url)) return true;
+  const parsed = parse(url);
+  return parsed !== null && parsed.protocol === 'chrome:' && parsed.hostname === 'newtab';
+}

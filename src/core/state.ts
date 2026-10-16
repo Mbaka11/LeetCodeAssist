@@ -10,11 +10,15 @@ import type {
   Note,
   Outcome,
   ProblemStatus,
+  RoadmapViewMode,
   Settings,
   TimerState,
 } from './types';
 
 export const STATE_VERSION = 1;
+
+/** Hints per problem: nudge, insight, sketch (see `src/data/hints.ts`). */
+export const MAX_HINTS = 3;
 
 /** A day counts towards the streak with >= 1 activity done and >= 30 minutes logged. */
 export const STREAK_MIN_LOGGED_MIN = 30;
@@ -86,6 +90,7 @@ const PROBLEM_STATUSES: readonly ProblemStatus[] = [
   'reviewed',
   'mastered',
 ];
+const ROADMAP_VIEWS: readonly RoadmapViewMode[] = ['tree', 'grid'];
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 type Json = Record<string, unknown>;
@@ -139,6 +144,9 @@ function validateSettings(value: unknown): Settings {
     eveningNotify: asString(o.eveningNotify, 'settings.eveningNotify'),
     language: asOneOf(o.language, ['python'], 'settings.language'),
   };
+  if (o.roadmapView !== undefined) {
+    settings.roadmapView = asOneOf(o.roadmapView, ROADMAP_VIEWS, 'settings.roadmapView');
+  }
   if (settings.dailyTargetMin <= 0) fail('settings.dailyTargetMin', 'must be positive');
   if (settings.dailyCapMin < settings.dailyTargetMin) {
     fail('settings.dailyCapMin', 'must be at least dailyTargetMin');
@@ -176,6 +184,17 @@ function validateActivity(value: unknown, index: number): Activity {
   if (o.extra !== undefined) {
     if (typeof o.extra !== 'boolean') fail(`${path}.extra`, 'expected a boolean');
     activity.extra = o.extra;
+  }
+  if (o.hintsUsed !== undefined) {
+    const hints = asNonNegative(o.hintsUsed, `${path}.hintsUsed`);
+    if (!Number.isInteger(hints) || hints > MAX_HINTS) {
+      fail(`${path}.hintsUsed`, `expected an integer from 0 to ${MAX_HINTS}`);
+    }
+    activity.hintsUsed = hints;
+  }
+  if (o.postponed !== undefined) {
+    if (typeof o.postponed !== 'boolean') fail(`${path}.postponed`, 'expected a boolean');
+    activity.postponed = o.postponed;
   }
   if (activity.status === 'done' && activity.completedAt === undefined) {
     fail(`${path}.completedAt`, 'a done activity needs completedAt');
@@ -228,6 +247,13 @@ export function validateState(value: unknown): AppState {
     checked[slug] = flag;
   }
 
+  let queue: string[] | undefined;
+  if (o.queue !== undefined) {
+    if (!Array.isArray(o.queue)) fail('queue', 'expected an array');
+    queue = o.queue.map((slug, i) => asString(slug, `queue[${i}]`));
+    if (new Set(queue).size !== queue.length) fail('queue', 'duplicate slug');
+  }
+
   return {
     version: STATE_VERSION,
     settings: validateSettings(o.settings),
@@ -235,6 +261,7 @@ export function validateState(value: unknown): AppState {
     notes,
     problemStatus,
     checked,
+    ...(queue ? { queue } : {}),
   };
 }
 

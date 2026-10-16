@@ -1,5 +1,4 @@
 import { createBackgroundTasks } from '../lib/backgroundTasks';
-import { isLeetCodeUrl } from '../lib/leetcodeUrl';
 import { openDashboard } from '../lib/openDashboard';
 import { STORAGE_KEY, chromeStorageBackend, createAppStore } from '../lib/storage';
 
@@ -61,33 +60,23 @@ export default defineBackground(() => {
   // Also on every worker start, for example after it was killed and woken by an event.
   tasks.refresh().catch(report);
 
-  // Side panel: enabled only on LeetCode tabs; the toolbar icon keeps opening the dashboard.
-  const syncSidePanel = (tabId: number, url: string | undefined): void => {
-    chrome.sidePanel
-      .setOptions({ tabId, path: SIDE_PANEL_PATH, enabled: isLeetCodeUrl(url) })
-      .catch(report);
-  };
+  // Side panel: one global panel for the whole window, enabled once. It stays open while the user
+  // switches or opens tabs and shows what to do for whichever page is active. The toolbar icon keeps
+  // opening the dashboard.
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(report);
-  chrome.sidePanel.setOptions({ enabled: false }).catch(report);
-  chrome.tabs.query({}).then((tabs) => {
-    for (const tab of tabs) if (tab.id !== undefined) syncSidePanel(tab.id, tab.url);
-  }, report);
-  chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo.url !== undefined || changeInfo.status !== undefined) {
-      syncSidePanel(tabId, changeInfo.url ?? tab.url);
-    }
-  });
-  chrome.tabs.onActivated.addListener(({ tabId }) => {
-    chrome.tabs.get(tabId).then((tab) => syncSidePanel(tabId, tab.url), report);
-  });
+  chrome.sidePanel.setOptions({ path: SIDE_PANEL_PATH, enabled: true }).catch(report);
 
-  // Keyboard shortcut: open the side panel on a LeetCode tab (the dashboard elsewhere).
+  // Keyboard shortcut: open the side panel in the window of the active tab. The window id comes from
+  // the event so the call happens inside the user gesture.
   chrome.commands.onCommand.addListener((command, tab) => {
     if (command !== 'open-side-panel') return;
-    if (tab?.id !== undefined && isLeetCodeUrl(tab.url)) {
-      chrome.sidePanel.open({ tabId: tab.id }).catch(report);
-    } else {
-      openDashboard().catch(report);
+    if (tab?.windowId !== undefined) {
+      chrome.sidePanel.open({ windowId: tab.windowId }).catch(report);
+      return;
     }
+    chrome.windows
+      .getLastFocused()
+      .then((window) => (window.id === undefined ? undefined : chrome.sidePanel.open({ windowId: window.id })))
+      .catch(report);
   });
 });

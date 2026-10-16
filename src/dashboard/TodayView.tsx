@@ -155,7 +155,7 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
 
       {plan.bonus ? (
         <Card title="Bonus (optional)">
-          <p className="muted">It fits under the cap and never becomes debt: skip it freely.</p>
+          <p className="muted">It fits under the cap and never becomes debt: postpone it freely.</p>
           <ActivityCard activity={plan.bonus.activity} now={now} actions={actions} variant="bonus" />
         </Card>
       ) : null}

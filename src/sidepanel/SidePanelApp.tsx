@@ -2,6 +2,7 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { problemSlugFromUrl } from '../lib/leetcodeUrl';
 import { openDashboard } from '../lib/openDashboard';
+import { openProblemInBrowser } from '../lib/sidePanel';
 import { useAppState } from '../lib/useAppState';
 import { useNow } from '../lib/useNow';
 import { ProblemPanel } from './ProblemPanel';
@@ -13,6 +14,8 @@ export function SidePanelApp() {
   const anyRunning = snapshot.status === 'ready' && snapshot.state.activities.some((a) => a.timer.running);
   const now = useNow(anyRunning ? 1000 : 30_000);
   const open = (hash: string): void => void openDashboard(hash);
+  const openProblem = (slug: string): void =>
+    void openProblemInBrowser(slug).catch((e: unknown) => console.error('Could not open the problem', e));
 
   if (snapshot.status === 'loading') return <main className="panel muted">Loading…</main>;
   if (snapshot.status === 'empty') {
@@ -45,6 +48,7 @@ export function SidePanelApp() {
         slug={problemSlugFromUrl(url)}
         now={now}
         openDashboard={open}
+        openProblem={openProblem}
       />
     </main>
   );

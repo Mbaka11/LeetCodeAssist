@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calendarDays } from './calendar';
+import { calendarDays, programProgress } from './calendar';
 import { materializePlan, planDay } from './planner';
 import { START, day, newState, simulateDay } from './testing';
 import { applyOutcome } from './reviews';
@@ -108,5 +108,45 @@ describe('calendarDays', () => {
     const later = calendarDays(state, day(40));
     expect(later.filter((d) => d.overflow).map((d) => d.dayIndex)).toEqual([32, 36, 40, 50]);
     expect(later.find((d) => d.dayIndex === 40)?.kind).toBe('today');
+  });
+});
+
+describe('calendar entries: movable and postponable', () => {
+  it('flags planned reviews as movable and unfinished queue problems as postponable', () => {
+    const state = simulateDay(newState(), day(1)).state;
+    const days = calendarDays(state, day(2));
+    const recalls = days[1]!.entries.filter((e) => e.type === 'recall');
+    expect(recalls.length).toBeGreaterThan(0);
+    expect(recalls.every((e) => e.movable && !e.postponable)).toBe(true);
+    // Future reviews can be moved too; the expected program work cannot.
+    expect(days[3]!.entries.filter((e) => e.type === 'rebuild').every((e) => e.movable)).toBe(true);
+    expect(days[2]!.entries.filter((e) => e.state === 'expected').every((e) => !e.movable && !e.postponable)).toBe(true);
+    // Today's new problems are postponable, finished ones are not.
+    const first = calendarDays(newState(), day(1))[0]!;
+    expect(first.entries.filter((e) => e.type === 'new').every((e) => e.postponable && !e.movable)).toBe(true);
+    expect(first.entries.filter((e) => e.type === 'benchmark').every((e) => !e.postponable && !e.movable)).toBe(true);
+    const done = calendarDays(state, day(2))[0]!;
+    expect(done.entries.filter((e) => e.state === 'done').every((e) => !e.movable && !e.postponable)).toBe(true);
+  });
+});
+
+describe('programProgress', () => {
+  it('counts learned program problems and elapsed program days', () => {
+    expect(programProgress(newState(), day(1))).toEqual({
+      learned: 0,
+      totalProblems: 53,
+      daysElapsed: 1,
+      totalDays: 30,
+    });
+    const state = simulateDay(simulateDay(newState(), day(1)).state, day(2)).state;
+    const progress = programProgress(state, day(3));
+    expect(progress.learned).toBe(state.activities.filter((a) => a.type === 'new' && a.status === 'done').length);
+    expect(progress.learned).toBeGreaterThanOrEqual(4);
+    expect(progress.daysElapsed).toBe(3);
+  });
+
+  it('clamps the elapsed days before the start and after day 30, and ignores non-program problems', () => {
+    expect(programProgress(newState(), day(-5)).daysElapsed).toBe(0);
+    expect(programProgress(newState(), day(45)).daysElapsed).toBe(30);
   });
 });

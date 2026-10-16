@@ -2,14 +2,22 @@
  * Pure state transitions behind the UI actions. Each takes the current `AppState` (and the
  * current timestamp where time matters) and returns the next one; storage lives in `storage.ts`.
  */
-import { createActivity, findActivity, isReviewType, markApproachFound, updateActivity } from '../core/activities';
-import { addDays, localDateFromTimestamp } from '../core/dates';
+import {
+  REVIEW_STRENGTH,
+  createActivity,
+  findActivity,
+  isReviewType,
+  markApproachFound,
+  updateActivity,
+} from '../core/activities';
+import { addDays, compareDates, isValidDateString, localDateFromTimestamp } from '../core/dates';
 import { materializePlan, planDay } from '../core/planner';
 import { getProblem } from '../data/neetcode150';
+import { postponeInQueue, programQueue } from '../core/queue';
 import { applyOutcome } from '../core/reviews';
-import { validateState } from '../core/state';
+import { MAX_HINTS, validateState } from '../core/state';
 import { pauseTimer, resumeTimer, startTimer } from '../core/timer';
-import type { Activity, AppState, Note, Outcome, Settings } from '../core/types';
+import type { Activity, AppState, Note, Outcome, ReviewType, Settings } from '../core/types';
 
 /** Persists the activities of today's plan (new problems, benchmarks, bonus) so timers can persist. */
 export function materializeToday(state: AppState, now: number): AppState {
@@ -99,6 +107,82 @@ export function skipActivity(state: AppState, id: string, now: number): AppState
     createdAt: today,
   });
   return { ...skipped, activities: [...skipped.activities, retry] };
+}
+
+/**
+ * Records that hint number `level` (1 = nudge, 2 = insight, 3 = sketch) was revealed during an open
+ * activity. Revealing a hint also counts the lower ones; revealing an earlier hint again changes nothing.
+ */
+export function revealHint(state: AppState, id: string, level: number): AppState {
+  if (!Number.isInteger(level) || level < 1 || level > MAX_HINTS) {
+    throw new Error(`Hint level must be an integer from 1 to ${MAX_HINTS}`);
+  }
+  const activity = requireOpen(state, id);
+  if ((activity.hintsUsed ?? 0) >= level) return state;
+  return updateActivity(state, id, (a) => ({ ...a, hintsUsed: level }));
+}
+
+/**
+ * Moves a planned review to another day (>= today). The review keeps its type and history; only its
+ * due date changes. If the problem already has a planned review on that day the stronger one is kept
+ * (SPEC §3 merge rule) and the weaker one is marked skipped.
+ */
+export function rescheduleReview(state: AppState, id: string, newDate: string, now: number): AppState {
+  const activity = findActivity(state, id);
+  if (!activity) throw new Error(`Unknown activity: ${id}`);
+  if (!isReviewType(activity.type) || activity.extra) {
+    throw new Error('Only scheduled reviews can be moved to another day');
+  }
+  if (activity.status !== 'planned') throw new Error(`Activity ${id} is already ${activity.status}`);
+  if (!isValidDateString(newDate)) throw new Error(`Invalid date: "${newDate}"`);
+  const today = localDateFromTimestamp(now);
+  if (compareDates(newDate, today) < 0) throw new Error('A review cannot be moved to a day in the past');
+  if (newDate === activity.dueDate) return state;
+
+  const moved: Activity = { ...activity, dueDate: newDate };
+  const clash = state.activities.find(
+    (a) =>
+      a.id !== id &&
+      a.slug === activity.slug &&
+      a.status === 'planned' &&
+      !a.extra &&
+      isReviewType(a.type) &&
+      a.dueDate === newDate,
+  );
+  const strength = (a: Activity): number => REVIEW_STRENGTH[a.type as ReviewType];
+  const loserId = clash ? (strength(clash) >= strength(moved) ? moved.id : clash.id) : null;
+  return {
+    ...state,
+    activities: state.activities.map((a) => {
+      const next = a.id === id ? moved : a;
+      return next.id === loserId ? { ...next, status: 'skipped' as const } : next;
+    }),
+  };
+}
+
+/**
+ * Postpones a new problem: it is skipped for now (history is kept, marked `postponed`) and moved back in
+ * the queue behind the next two problems, so the planner offers it again later. It never leaves the program.
+ */
+export function postponeNew(state: AppState, id: string, now: number): AppState {
+  const activity = requireOpen(state, id);
+  if (activity.type !== 'new' || activity.extra) {
+    throw new Error('Only new problems from the queue can be postponed');
+  }
+  const finished = new Set(
+    state.activities
+      .filter((a) => a.type === 'new' && (a.status === 'done' || (a.status === 'skipped' && !a.postponed)))
+      .map((a) => a.slug),
+  );
+  finished.delete(activity.slug);
+  const queue = postponeInQueue(programQueue(state), activity.slug, finished);
+  const postponed = updateActivity(state, id, (a) => ({
+    ...a,
+    status: 'skipped',
+    postponed: true,
+    timer: pauseTimer(a.timer, now),
+  }));
+  return { ...postponed, queue };
 }
 
 /**

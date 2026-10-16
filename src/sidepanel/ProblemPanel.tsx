@@ -1,12 +1,16 @@
 import { useMemo, useState } from 'react';
 import { ActivityCard, type CardVariant } from '../components/ActivityCard';
+import { AttemptHistory } from '../components/AttemptHistory';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { HintsSection } from '../components/HintsSection';
+import { LeetCodeLink } from '../components/LeetCodeLink';
 import { NotesForm } from '../components/NotesForm';
 import { localDateFromTimestamp } from '../core/dates';
-import { planDay } from '../core/planner';
+import { planDay, type PlanItem } from '../core/planner';
 import { attemptHistory, isNotesLocked, nextReview } from '../core/problemSheet';
+import { programQueue, queuePosition } from '../core/queue';
 import { getProblemStatus } from '../core/state';
 import type { Activity, AppState } from '../core/types';
 import { getProblem, problemUrl } from '../data/neetcode150';
@@ -24,6 +28,8 @@ export interface ProblemPanelProps {
   now: number;
   /** Opens (or focuses) the dashboard at a hash such as `#/problem/two-sum`. */
   openDashboard: (hash: string) => void;
+  /** Opens a problem on LeetCode: in the active tab when it is a LeetCode or empty page, else in a new tab. */
+  openProblem: (slug: string) => void;
 }
 
 interface Match {
@@ -138,29 +144,69 @@ function ExtraPractice({
   );
 }
 
-function TodayStrip({ state, now, openDashboard }: Pick<ProblemPanelProps, 'state' | 'now' | 'openDashboard'>) {
+function ChecklistRow({
+  item,
+  tag,
+  openProblem,
+}: {
+  item: PlanItem;
+  tag?: string;
+  openProblem: (slug: string) => void;
+}) {
+  const { activity } = item;
+  const problem = getProblem(activity.slug);
+  const title = problem?.title ?? activity.slug;
+  const done = activity.status === 'done';
+  return (
+    <li className={done ? 'check-done' : undefined}>
+      <span className="check-mark" aria-hidden="true">
+        {done ? '✓' : activity.status === 'in_progress' ? '▶' : '○'}
+      </span>
+      <span className="visually-hidden">
+        {done ? 'Done: ' : activity.status === 'in_progress' ? 'In progress: ' : 'To do: '}
+      </span>
+      <Badge tone={activity.type}>{ACTIVITY_LABELS[activity.type]}</Badge>
+      {tag ? <Badge tone="warn">{tag}</Badge> : null}
+      <span className="check-title">{title}</span>
+      {problem ? <Badge tone={difficultyTone(problem.difficulty)}>{problem.difficulty}</Badge> : null}
+      <span className="muted">~{formatMinutes(item.minutes)}</span>
+      <span className="spacer" />
+      <Button aria-label={`Open ${title} on LeetCode`} onClick={() => openProblem(activity.slug)}>
+        Open
+      </Button>
+    </li>
+  );
+}
+
+/** Today's checklist with an Open button per item, shown whenever the active tab is not a known problem page. */
+function TodayChecklist({
+  state,
+  now,
+  openDashboard,
+  openProblem,
+}: Pick<ProblemPanelProps, 'state' | 'now' | 'openDashboard' | 'openProblem'>) {
   const today = localDateFromTimestamp(now);
   const plan = useMemo(() => planDay(state, today), [state, today]);
-  const open = plan.items.filter((i) => i.activity.status === 'planned' || i.activity.status === 'in_progress');
-  const next = open.find((i) => i.activity.status === 'in_progress') ?? open[0];
-  const nextProblem = next ? getProblem(next.activity.slug) : undefined;
   if (plan.dayIndex < 1) {
     return <p className="muted">Your program starts on {formatDate(state.settings.startDate)}.</p>;
   }
+  const open = plan.items.filter((i) => i.activity.status === 'planned' || i.activity.status === 'in_progress');
   return (
     <div className="stack-tight">
       <p>
         <strong>Day {plan.dayIndex}</strong> · {plan.items.length - open.length}/{plan.items.length} done ·{' '}
         {open.length} left (~{formatMinutes(open.reduce((sum, i) => sum + i.minutes, 0))})
       </p>
-      {next && nextProblem ? (
-        <p>
-          Next: {ACTIVITY_LABELS[next.activity.type]} ·{' '}
-          <a href={nextProblem.url} target="_blank" rel="noreferrer">
-            {nextProblem.title} ↗
-          </a>
-        </p>
-      ) : null}
+      {plan.items.length === 0 ? <p className="muted">Nothing is scheduled today.</p> : null}
+      <ul className="checklist" aria-label="Today's checklist">
+        {plan.items.map((item) => (
+          <ChecklistRow key={item.activity.id} item={item} openProblem={openProblem} />
+        ))}
+        {plan.bonus ? <ChecklistRow item={plan.bonus} tag="Bonus" openProblem={openProblem} /> : null}
+        {plan.carriedOver.map((item) => (
+          <ChecklistRow key={item.activity.id} item={item} tag="Carried over" openProblem={openProblem} />
+        ))}
+      </ul>
       <DashboardLink hash="#/today" openDashboard={openDashboard}>
         Open the dashboard
       </DashboardLink>
@@ -168,16 +214,21 @@ function TodayStrip({ state, now, openDashboard }: Pick<ProblemPanelProps, 'stat
   );
 }
 
-export function ProblemPanel({ state, actions, slug, now, openDashboard }: ProblemPanelProps) {
+export function ProblemPanel({ state, actions, slug, now, openDashboard, openProblem }: ProblemPanelProps) {
   const today = localDateFromTimestamp(now);
   const plan = useMemo(() => planDay(state, today), [state, today]);
 
   if (slug === null) {
     return (
       <div className="stack">
-        <Card title="LeetCode Assist">
-          <p className="muted">Open a problem on leetcode.com to see its activity, timer and notes here.</p>
-          <TodayStrip state={state} now={now} openDashboard={openDashboard} />
+        <Card title="Open a LeetCode problem">
+          <p className="muted">
+            This panel follows your active tab. Open a problem on leetcode.com, or pick one from today&apos;s
+            checklist, to see its activity, timer, hints and notes here.
+          </p>
+        </Card>
+        <Card title="Today's checklist">
+          <TodayChecklist state={state} now={now} openDashboard={openDashboard} openProblem={openProblem} />
         </Card>
       </div>
     );
@@ -191,7 +242,9 @@ export function ProblemPanel({ state, actions, slug, now, openDashboard }: Probl
           <p className="muted">
             “{slug}” is not one of the 150 problems this program tracks, so there is nothing to plan for it.
           </p>
-          <TodayStrip state={state} now={now} openDashboard={openDashboard} />
+        </Card>
+        <Card title="Today's checklist">
+          <TodayChecklist state={state} now={now} openDashboard={openDashboard} openProblem={openProblem} />
         </Card>
       </div>
     );
@@ -211,7 +264,12 @@ export function ProblemPanel({ state, actions, slug, now, openDashboard }: Probl
 
   const status = getProblemStatus(state, slug);
   const review = nextReview(state, slug, today);
-  const attempts = attemptHistory(state, slug).length;
+  const history = attemptHistory(state, slug);
+  const attempts = history.length;
+  const position = queuePosition(state, slug);
+  const openActivity =
+    matches.map((m) => m.activity).find((a) => a.status === 'in_progress') ??
+    matches.map((m) => m.activity).find((a) => a.status === 'planned');
   const locked = isNotesLocked(state, slug, today);
 
   return (
@@ -224,6 +282,11 @@ export function ProblemPanel({ state, actions, slug, now, openDashboard }: Probl
           <span className="muted">{problem.category}</span>
         </div>
         <p className="muted">
+          {position !== null
+            ? `Program problem ${position} of ${programQueue(state).length}`
+            : 'Not in the 30-day program'}
+        </p>
+        <p className="muted">
           {review
             ? `Next review: ${ACTIVITY_LABELS[review.type]} on ${formatDate(review.dueDate)}${review.dueDate < today ? ' (overdue)' : ''}`
             : 'No review scheduled'}
@@ -233,9 +296,7 @@ export function ProblemPanel({ state, actions, slug, now, openDashboard }: Probl
           <DashboardLink hash={problemHref(slug)} openDashboard={openDashboard}>
             Open the problem sheet
           </DashboardLink>
-          <a className="link-out" href={problemUrl(slug)} target="_blank" rel="noreferrer">
-            LeetCode ↗
-          </a>
+          <LeetCodeLink href={problemUrl(slug)} />
         </div>
       </Card>
 
@@ -259,7 +320,13 @@ export function ProblemPanel({ state, actions, slug, now, openDashboard }: Probl
 
       {hasOpen ? null : <ExtraPractice state={state} actions={actions} slug={slug} today={today} />}
 
+      <HintsSection slug={slug} activity={openActivity} actions={actions} />
+
       <NotesSection state={state} actions={actions} slug={slug} locked={locked} />
+
+      <Card title="Attempt history">
+        <AttemptHistory history={history} compact />
+      </Card>
     </div>
   );
 }

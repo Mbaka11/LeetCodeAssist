@@ -1,5 +1,11 @@
 /** Day-by-day view of the program for the Calendar (SPEC §6): planned, done and carried work per day. */
-import { BENCHMARKS, NEW_PROBLEMS_PER_DAY, PROGRAM_LENGTH_DAYS, isConsolidationDay } from '../data/program';
+import {
+  BENCHMARKS,
+  NEW_PROBLEMS_PER_DAY,
+  PROGRAM_LENGTH_DAYS,
+  PROGRAM_QUEUE,
+  isConsolidationDay,
+} from '../data/program';
 import { estimatedMinutes, isReviewType } from './activities';
 import { compareDates, dateFromDayIndex, dayIndex } from './dates';
 import { planDay } from './planner';
@@ -28,6 +34,10 @@ export interface CalendarEntry {
   /** Logged minutes of a completed activity. */
   loggedMinutes?: number;
   outcome?: Outcome;
+  /** A planned, not yet started review that can be moved to another day. */
+  movable: boolean;
+  /** A new problem from the queue that is not finished and can be postponed (when it is today's). */
+  postponable: boolean;
 }
 
 export interface CalendarDay {
@@ -73,6 +83,9 @@ function entryOf(a: Activity, state: EntryState): CalendarEntry {
     minutes: estimatedMinutes(a.type, a.slug),
     ...(a.status === 'done' ? { loggedMinutes: (a.totalMs ?? 0) / 60_000 } : {}),
     ...(a.outcome ? { outcome: a.outcome } : {}),
+    movable: isReviewType(a.type) && !a.extra && a.status === 'planned',
+    postponable:
+      a.type === 'new' && !a.extra && (a.status === 'planned' || a.status === 'in_progress'),
   };
 }
 
@@ -95,7 +108,7 @@ function stateOnDate(a: Activity, date: string, today: string, carriedIds: Reado
  */
 function bonusIds(state: AppState, date: string): Set<string> {
   const due = state.activities.filter((a) => a.type === 'new' && !a.extra && a.dueDate === date);
-  const committed = due.filter((a) => a.status !== 'planned').length;
+  const committed = due.filter((a) => a.status !== 'planned' && !a.postponed).length;
   const unstarted = due.filter((a) => a.status === 'planned');
   return new Set(unstarted.slice(Math.max(0, NEW_PROBLEMS_PER_DAY - committed)).map((a) => a.id));
 }
@@ -148,6 +161,8 @@ function draftsAfterToday(state: AppState, date: string, index: number): Draft[]
         slug,
         state: 'expected',
         minutes: estimatedMinutes('benchmark', slug),
+        movable: false,
+        postponable: false,
       });
     }
   }
@@ -159,6 +174,8 @@ function draftsAfterToday(state: AppState, date: string, index: number): Draft[]
         type: 'new',
         state: 'expected',
         minutes: EXPECTED_NEW_MINUTES,
+        movable: false,
+        postponable: false,
       });
     }
   }
@@ -218,4 +235,30 @@ export function calendarDays(state: AppState, today: string): CalendarDay[] {
   dates.push(...[...overflow].sort());
 
   return dates.map((date) => buildDay(state, date, today));
+}
+
+export interface ProgramProgress {
+  /** Program problems with a completed `new` activity. */
+  learned: number;
+  totalProblems: number;
+  /** Program days elapsed including today, between 0 and `totalDays`. */
+  daysElapsed: number;
+  totalDays: number;
+}
+
+/** Overall progress through the 30-day program (shown at the top of the Calendar). */
+export function programProgress(state: AppState, today: string): ProgramProgress {
+  const inProgram = new Set(PROGRAM_QUEUE);
+  const learned = new Set(
+    state.activities
+      .filter((a) => a.type === 'new' && a.status === 'done' && inProgram.has(a.slug))
+      .map((a) => a.slug),
+  );
+  const index = dayIndex(state.settings.startDate, today);
+  return {
+    learned: learned.size,
+    totalProblems: PROGRAM_QUEUE.length,
+    daysElapsed: Math.min(Math.max(index, 0), PROGRAM_LENGTH_DAYS),
+    totalDays: PROGRAM_LENGTH_DAYS,
+  };
 }

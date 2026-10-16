@@ -1,6 +1,6 @@
 import { getProblem } from '../data/neetcode150';
 import { createTimer, elapsedMs } from './timer';
-import type { Activity, ActivityType, AppState, Difficulty, ReviewType } from './types';
+import type { Activity, ActivityType, AppState, Difficulty, Outcome, ReviewType } from './types';
 
 export const REVIEW_TYPES: readonly ReviewType[] = ['recall', 'rebuild', 'resolve', 'blind', 'retry'];
 
@@ -105,4 +105,12 @@ export function updateActivity(
 export function markApproachFound(activity: Activity, now: number): Activity {
   if (activity.approachMs !== undefined) return activity;
   return { ...activity, approachMs: elapsedMs(activity.timer, now) };
+}
+
+/**
+ * Outcome the completion form starts on: revealing any hint means the problem was not solved alone, so
+ * `hint` is pre-selected. It is only a default; the user can still pick another outcome.
+ */
+export function suggestedOutcome(hintsUsed: number | undefined): Outcome | null {
+  return hintsUsed !== undefined && hintsUsed > 0 ? 'hint' : null;
 }

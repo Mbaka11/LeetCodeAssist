@@ -1,18 +1,21 @@
 import { useState } from 'react';
+import { AttemptHistory } from '../components/AttemptHistory';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { HintsSection } from '../components/HintsSection';
+import { LeetCodeLink } from '../components/LeetCodeLink';
 import { NotesForm } from '../components/NotesForm';
 import { localDateFromTimestamp } from '../core/dates';
-import { attemptHistory, isNotesLocked, nextReview } from '../core/problemSheet';
+import { attemptHistory, isNotesLocked, nextReview, openActivityToday } from '../core/problemSheet';
+import { programQueue, queuePosition } from '../core/queue';
 import { getProblemStatus } from '../core/state';
-import { formatElapsed } from '../core/timer';
 import type { AppState } from '../core/types';
 import { getProblem, problemUrl } from '../data/neetcode150';
-import { BENCHMARKS, PROGRAM_QUEUE } from '../data/program';
+import { BENCHMARKS } from '../data/program';
 import type { AppActions } from '../lib/actions';
-import { formatDate, formatMs } from '../lib/format';
-import { ACTIVITY_LABELS, OUTCOME_LABELS, STATUS_LABELS, STATUS_TONES, difficultyTone } from '../lib/instructions';
+import { formatDate } from '../lib/format';
+import { ACTIVITY_LABELS, STATUS_LABELS, STATUS_TONES, difficultyTone } from '../lib/instructions';
 import { useNow } from '../lib/useNow';
 
 export function ProblemView({
@@ -44,6 +47,8 @@ export function ProblemView({
   const locked = isNotesLocked(state, slug, today);
   const inBenchmark = BENCHMARKS.some((b) => b.easy === slug || b.medium === slug);
   const note = state.notes[slug];
+  const position = queuePosition(state, slug);
+  const openActivity = openActivityToday(state, slug, today);
 
   return (
     <div className="stack">
@@ -53,7 +58,7 @@ export function ProblemView({
           {problem.difficulty}
         </Badge>
         <Badge tone={STATUS_TONES[status]}>{STATUS_LABELS[status]}</Badge>
-        {PROGRAM_QUEUE.includes(slug) ? <Badge>30-day program</Badge> : null}
+        {position !== null ? <Badge>30-day program</Badge> : null}
         {inBenchmark ? <Badge tone="benchmark">Benchmark</Badge> : null}
       </div>
 
@@ -63,6 +68,12 @@ export function ProblemView({
           <dd>{problem.category}</dd>
           <dt>NeetCode order</dt>
           <dd>#{problem.neetcodeOrder}</dd>
+          <dt>Program position</dt>
+          <dd>
+            {position !== null
+              ? `${position} of ${programQueue(state).length}`
+              : 'Not in the 30-day program'}
+          </dd>
           <dt>Next review</dt>
           <dd>
             {review
@@ -71,9 +82,9 @@ export function ProblemView({
           </dd>
           <dt>Link</dt>
           <dd>
-            <a href={problem.url || problemUrl(slug)} target="_blank" rel="noreferrer">
+            <LeetCodeLink href={problem.url || problemUrl(slug)} className="" openPanel>
               Open on LeetCode ↗
-            </a>
+            </LeetCodeLink>
           </dd>
         </dl>
         <label className="choice">
@@ -85,6 +96,8 @@ export function ProblemView({
           I have already solved this problem
         </label>
       </Card>
+
+      <HintsSection slug={slug} activity={openActivity} actions={actions} />
 
       <Card title="Notes">
         {locked && !revealed ? (
@@ -103,32 +116,7 @@ export function ProblemView({
       </Card>
 
       <Card title="Attempt history">
-        {history.length === 0 ? (
-          <p className="muted">No completed attempts yet.</p>
-        ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Duration</th>
-                <th>Approach found</th>
-                <th>Outcome</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((a) => (
-                <tr key={a.id}>
-                  <td>{formatDate(a.completedAt!)}</td>
-                  <td>{ACTIVITY_LABELS[a.type]}</td>
-                  <td>{formatMs(a.totalMs ?? 0)}</td>
-                  <td>{a.approachMs !== undefined ? formatElapsed(a.approachMs) : '–'}</td>
-                  <td>{a.outcome ? OUTCOME_LABELS[a.outcome] : '–'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+        <AttemptHistory history={history} />
       </Card>
     </div>
   );

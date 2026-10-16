@@ -62,6 +62,16 @@ export interface Activity {
    * If it is not done it goes stale instead of becoming overdue debt.
    */
   extra?: boolean;
+  /**
+   * How many hints (1-3, in order: nudge, insight, sketch) were revealed during this attempt.
+   * Absent means none. Additive: older saved data simply lacks it.
+   */
+  hintsUsed?: number;
+  /**
+   * Set on a skipped `new` activity that was postponed: the problem moved back in the queue and is
+   * planned again later, unlike a plain skip which drops it from the program.
+   */
+  postponed?: boolean;
 }
 
 export interface Note {
@@ -86,7 +96,11 @@ export interface Settings {
   /** "HH:MM", 24h. */
   eveningNotify: string;
   language: 'python';
+  /** Roadmap layout. Optional so data saved before it existed stays valid; absent means `tree`. */
+  roadmapView?: RoadmapViewMode;
 }
+
+export type RoadmapViewMode = 'tree' | 'grid';
 
 export interface AppState {
   version: 1;
@@ -96,4 +110,9 @@ export interface AppState {
   notes: Record<string, Note>;
   problemStatus: Record<string, ProblemStatus>;
   checked: Record<string, boolean>;
+  /**
+   * Order of the new-problem queue after the user postponed problems (slugs, see `programQueue`).
+   * Absent means the default `PROGRAM_QUEUE` order.
+   */
+  queue?: string[];
 }

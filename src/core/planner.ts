@@ -3,7 +3,6 @@ import {
   BENCHMARKS,
   type Benchmark,
   NEW_PROBLEMS_PER_DAY,
-  PROGRAM_QUEUE,
   expectedNewDone,
   isConsolidationDay,
 } from '../data/program';
@@ -15,6 +14,7 @@ import {
   isReviewType,
 } from './activities';
 import { compareDates, dayIndex, diffDays } from './dates';
+import { programQueue } from './queue';
 import { CONSOLIDATION_TARGET_MIN, getProblemStatus } from './state';
 import type { Activity, AppState, Settings } from './types';
 
@@ -121,7 +121,7 @@ export function planDay(
   settings: Settings = state.settings,
   options: PlanOptions = {},
 ): DayPlan {
-  const queue = options.queue ?? PROGRAM_QUEUE;
+  const queue = options.queue ?? programQueue(state);
   const benchmarks = options.benchmarks ?? BENCHMARKS;
   const index = dayIndex(settings.startDate, date);
   const consolidation = isConsolidationDay(index);
@@ -310,7 +310,7 @@ export function planDay(
   if (!consolidation) {
     const consumed = new Set<string>();
     for (const a of state.activities) {
-      if (a.type !== 'new') continue;
+      if (a.type !== 'new' || a.postponed) continue; // a postponed problem is still in the queue
       if (a.status !== 'planned' || a.dueDate === date) consumed.add(a.slug);
     }
     const upcoming = queue.filter((slug) => !consumed.has(slug));

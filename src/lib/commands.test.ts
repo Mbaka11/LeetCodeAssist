@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { findActivity } from '../core/activities';
 import { planDay } from '../core/planner';
+import { POSTPONE_BEHIND, programQueue } from '../core/queue';
 import { StateValidationError } from '../core/state';
 import { START, day, newState } from '../core/testing';
+import { PROGRAM_QUEUE } from '../data/program';
 import type { AppState } from '../core/types';
 import * as commands from './commands';
 
@@ -218,5 +220,176 @@ describe('startExtraPractice', () => {
 
   it('rejects problems outside the NeetCode 150 list', () => {
     expect(() => commands.startExtraPractice(newState(), 'not-a-problem', at(START))).toThrow(/NeetCode 150/);
+  });
+});
+
+describe('revealHint', () => {
+  it('records the highest revealed hint on an open activity and never lowers it', () => {
+    const { state, newIds } = dayOne();
+    const id = newIds[0]!;
+    expect(findActivity(state, id)?.hintsUsed).toBeUndefined();
+    let next = commands.revealHint(state, id, 1);
+    expect(findActivity(next, id)?.hintsUsed).toBe(1);
+    next = commands.revealHint(next, id, 3);
+    expect(findActivity(next, id)?.hintsUsed).toBe(3);
+    expect(commands.revealHint(next, id, 2)).toBe(next);
+    expect(findActivity(next, id)?.hintsUsed).toBe(3);
+  });
+
+  it('keeps hintsUsed when the activity is completed', () => {
+    const { state, newIds, now } = dayOne();
+    const id = newIds[0]!;
+    let next = commands.startActivity(commands.revealHint(state, id, 2), id, now);
+    next = commands.completeActivity(next, id, { outcome: 'hint' }, now + 60_000);
+    expect(findActivity(next, id)).toMatchObject({ status: 'done', hintsUsed: 2, outcome: 'hint' });
+  });
+
+  it('rejects invalid levels and finished or unknown activities', () => {
+    const { state, newIds, now } = dayOne();
+    const id = newIds[0]!;
+    expect(() => commands.revealHint(state, id, 0)).toThrow(/Hint level/);
+    expect(() => commands.revealHint(state, id, 4)).toThrow(/Hint level/);
+    expect(() => commands.revealHint(state, id, 1.5)).toThrow(/Hint level/);
+    expect(() => commands.revealHint(state, 'nope', 1)).toThrow(/Unknown activity/);
+    const done = commands.completeActivity(state, id, { outcome: 'solo', totalMs: 60_000 }, now);
+    expect(() => commands.revealHint(done, id, 1)).toThrow(/already done/);
+  });
+});
+
+/** Day 1 with the first new problem done, so its recall (day 2), rebuild (day 4) and resolve (day 8) exist. */
+function withReviews(): { state: AppState; slug: string; recall: string; rebuild: string; resolve: string } {
+  const { state, newIds, now } = dayOne();
+  const id = newIds[0]!;
+  const slug = findActivity(state, id)!.slug;
+  const done = commands.completeActivity(state, id, { outcome: 'solo', totalMs: 60_000 }, now);
+  const idOf = (type: string): string => done.activities.find((a) => a.slug === slug && a.type === type)!.id;
+  return { state: done, slug, recall: idOf('recall'), rebuild: idOf('rebuild'), resolve: idOf('resolve') };
+}
+
+describe('rescheduleReview', () => {
+  it('moves the due date of a planned review and keeps everything else', () => {
+    const { state, recall } = withReviews();
+    const before = findActivity(state, recall)!;
+    const next = commands.rescheduleReview(state, recall, day(3), at(day(2)));
+    expect(findActivity(next, recall)).toEqual({ ...before, dueDate: day(3) });
+    expect(next.activities).toHaveLength(state.activities.length);
+    expect(planDay(next, day(2)).items.some((i) => i.activity.id === recall)).toBe(false);
+    expect(planDay(next, day(3)).items.some((i) => i.activity.id === recall)).toBe(true);
+  });
+
+  it('allows today and moving an overdue review to today', () => {
+    const { state, recall } = withReviews();
+    expect(planDay(state, day(3)).items.find((i) => i.activity.id === recall)?.overdue).toBe(true);
+    const next = commands.rescheduleReview(state, recall, day(3), at(day(3)));
+    expect(findActivity(next, recall)?.dueDate).toBe(day(3));
+    expect(planDay(next, day(3)).items.find((i) => i.activity.id === recall)?.overdue).toBe(false);
+  });
+
+  it('does nothing when the date is unchanged', () => {
+    const { state, recall } = withReviews();
+    expect(commands.rescheduleReview(state, recall, day(2), at(day(2)))).toBe(state);
+  });
+
+  it('rejects past dates, bad dates, new problems, started and finished activities', () => {
+    const { state, recall } = withReviews();
+    const now = at(day(3));
+    expect(() => commands.rescheduleReview(state, recall, day(2), now)).toThrow(/past/);
+    expect(() => commands.rescheduleReview(state, recall, '2025-02-30', now)).toThrow(/Invalid date/);
+    expect(() => commands.rescheduleReview(state, 'nope', day(5), now)).toThrow(/Unknown activity/);
+    const newId = state.activities.find((a) => a.type === 'new')!.id;
+    expect(() => commands.rescheduleReview(state, newId, day(5), now)).toThrow(/Only scheduled reviews/);
+    const started = commands.startActivity(state, recall, now);
+    expect(() => commands.rescheduleReview(started, recall, day(5), now)).toThrow(/in_progress/);
+    const done = commands.completeActivity(started, recall, { outcome: 'solo', totalMs: 1 }, now);
+    expect(() => commands.rescheduleReview(done, recall, day(5), now)).toThrow(/done/);
+    const extra = commands.startExtraPractice(state, 'median-of-two-sorted-arrays', now);
+    expect(() => commands.rescheduleReview(extra.state, extra.activityId, day(5), now)).toThrow(/Only scheduled reviews/);
+  });
+
+  it('keeps the stronger review when the move lands on a day that already has one for the problem', () => {
+    const { state, recall, rebuild } = withReviews();
+    // Moving the recall onto the rebuild's day: the weaker recall is skipped (kept in history).
+    const weaker = commands.rescheduleReview(state, recall, day(4), at(day(2)));
+    expect(findActivity(weaker, recall)?.status).toBe('skipped');
+    expect(findActivity(weaker, rebuild)?.status).toBe('planned');
+    // Moving the rebuild onto the recall's day: the recall is the weaker one and is skipped.
+    const stronger = commands.rescheduleReview(state, rebuild, day(2), at(day(2)));
+    expect(findActivity(stronger, rebuild)).toMatchObject({ status: 'planned', dueDate: day(2) });
+    expect(findActivity(stronger, recall)?.status).toBe('skipped');
+    expect(stronger.activities).toHaveLength(state.activities.length);
+  });
+});
+
+describe('postponeNew', () => {
+  it('skips the activity as postponed, moves the problem back and never drops it', () => {
+    const { state, newIds, now } = dayOne();
+    const id = newIds[0]!;
+    const slug = findActivity(state, id)!.slug;
+    const next = commands.postponeNew(state, id, now);
+    expect(findActivity(next, id)).toMatchObject({ status: 'skipped', postponed: true });
+    expect(next.activities).toHaveLength(state.activities.length);
+    // Still in the queue, now behind the next two problems.
+    const queue = programQueue(next);
+    expect(queue).toContain(slug);
+    expect(queue.indexOf(slug)).toBe(PROGRAM_QUEUE.indexOf(slug) + POSTPONE_BEHIND);
+    expect([...queue].sort()).toEqual([...PROGRAM_QUEUE].sort());
+  });
+
+  it('offers the postponed problem again later, after the following two, and replaces it today', () => {
+    const { state, newIds, now } = dayOne();
+    const id = newIds[0]!;
+    const slug = findActivity(state, id)!.slug;
+    const next = commands.postponeNew(state, id, now);
+    const today = planDay(next, START).items.filter((i) => i.activity.type === 'new');
+    expect(today.map((i) => i.activity.slug)).not.toContain(slug);
+    expect(today).toHaveLength(2);
+
+    // Do today's two, then the postponed one shows up on a later day instead of vanishing.
+    let later = commands.materializeToday(next, now);
+    for (const item of today) {
+      later = commands.completeActivity(later, item.activity.id, { outcome: 'solo', totalMs: 60_000 }, now);
+    }
+    const seen = new Set<string>();
+    for (let d = 2; d <= 4; d += 1) {
+      for (const item of planDay(later, day(d)).items) if (item.activity.type === 'new') seen.add(item.activity.slug);
+    }
+    expect(seen.has(slug)).toBe(true);
+  });
+
+  it('can be repeated: the problem keeps moving back and every problem stays in the queue', () => {
+    const { state, newIds, now } = dayOne();
+    const slug = findActivity(state, newIds[0]!)!.slug;
+    const once = commands.postponeNew(state, newIds[0]!, now);
+    const again = planDay(once, START).items.find((i) => i.activity.type === 'new')!;
+    const twice = commands.postponeNew(commands.materializeToday(once, now), again.activity.id, now);
+    expect(twice.activities.filter((a) => a.postponed)).toHaveLength(2);
+    expect(programQueue(twice)).toHaveLength(PROGRAM_QUEUE.length);
+    expect(programQueue(twice)).toContain(slug);
+    expect(programQueue(twice)).toContain(again.activity.slug);
+  });
+
+  it('pauses a running timer and rejects reviews, extra practice and finished activities', () => {
+    const { state, newIds, now } = dayOne();
+    const id = newIds[0]!;
+    const started = commands.startActivity(state, id, now);
+    const postponed = commands.postponeNew(started, id, now + 60_000);
+    expect(findActivity(postponed, id)?.timer).toMatchObject({ running: false, accumulatedMs: 60_000 });
+
+    const { state: reviewState, recall } = withReviews();
+    expect(() => commands.postponeNew(reviewState, recall, now)).toThrow(/Only new problems/);
+    const extra = commands.startExtraPractice(state, 'median-of-two-sorted-arrays', now);
+    expect(() => commands.postponeNew(extra.state, extra.activityId, now)).toThrow(/Only new problems/);
+    expect(() => commands.postponeNew(postponed, id, now)).toThrow(/already skipped/);
+  });
+
+  it('is not the destructive skip: a plain skip still drops the problem from the program', () => {
+    const { state, newIds, now } = dayOne();
+    const slug = findActivity(state, newIds[0]!)!.slug;
+    const skipped = commands.skipActivity(state, newIds[0]!, now);
+    const later = new Set<string>();
+    for (let d = 1; d <= 6; d += 1) {
+      for (const item of planDay(skipped, day(d)).items) later.add(item.activity.slug);
+    }
+    expect(later.has(slug)).toBe(false);
   });
 });

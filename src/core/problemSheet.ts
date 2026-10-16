@@ -1,5 +1,6 @@
 import { REVIEW_STRENGTH, isReviewType } from './activities';
 import { compareDates } from './dates';
+import { planDay } from './planner';
 import type { Activity, AppState, ReviewType } from './types';
 
 /** A planned review that is not stale optional practice (see `Activity.extra`). */
@@ -44,4 +45,21 @@ export function attemptHistory(state: AppState, slug: string): Activity[] {
       (a, b) =>
         compareDates(b.completedAt!, a.completedAt!) || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0),
     );
+}
+
+/**
+ * The activity of `slug` that is open today (planned or in progress): the one hints are recorded on.
+ * A started one wins; today's plan, its bonus and carried-over reviews are considered, so the activity may
+ * not be stored yet (the actions persist the plan before touching it).
+ */
+export function openActivityToday(state: AppState, slug: string, today: string): Activity | undefined {
+  const plan = planDay(state, today);
+  const candidates = [
+    ...plan.items,
+    ...(plan.bonus ? [plan.bonus] : []),
+    ...plan.carriedOver,
+  ]
+    .map((item) => item.activity)
+    .filter((a) => a.slug === slug && (a.status === 'planned' || a.status === 'in_progress'));
+  return candidates.find((a) => a.status === 'in_progress') ?? candidates[0];
 }

@@ -1,5 +1,6 @@
 import { useState, type MouseEvent } from 'react';
-import { estimatedMinutes } from '../core/activities';
+import { estimatedMinutes, isReviewType } from '../core/activities';
+import { addDays, localDateFromTimestamp } from '../core/dates';
 import { elapsedMs, formatElapsed } from '../core/timer';
 import type { Activity } from '../core/types';
 import { getProblem, problemUrl } from '../data/neetcode150';
@@ -8,7 +9,10 @@ import { formatDate, formatMinutes, formatMs } from '../lib/format';
 import { ACTIVITY_INSTRUCTIONS, ACTIVITY_LABELS, OUTCOME_LABELS, difficultyTone } from '../lib/instructions';
 import { problemHref } from '../lib/route';
 import { Badge } from './Badge';
+import { hintsLabel } from './AttemptHistory';
 import { Button } from './Button';
+import { LeetCodeLink } from './LeetCodeLink';
+import { MoveForm } from './MoveForm';
 import { OutcomeForm } from './OutcomeForm';
 
 export type CardVariant = 'planned' | 'bonus' | 'carried';
@@ -31,6 +35,7 @@ export function ActivityCard({
   openProblemSheet?: (slug: string) => void;
 }) {
   const [finishing, setFinishing] = useState(false);
+  const [moving, setMoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const problem = getProblem(activity.slug);
   const url = problem?.url ?? problemUrl(activity.slug);
@@ -38,8 +43,11 @@ export function ActivityCard({
   const running = activity.timer.running;
   const inProgress = activity.status === 'in_progress';
   const open = activity.status === 'planned' || inProgress;
-  const skipLabel =
-    activity.type === 'new' || activity.type === 'benchmark' || activity.extra ? 'Skip' : 'Postpone';
+  // New problems are postponed (back in the queue, never dropped); planned reviews are moved to another
+  // day; benchmarks and optional practice can only be skipped.
+  const postponable = activity.type === 'new' && !activity.extra;
+  const movable = isReviewType(activity.type) && !activity.extra && activity.status === 'planned';
+  const today = localDateFromTimestamp(now);
 
   const run = (task: Promise<void>): void => {
     setError(null);
@@ -94,6 +102,7 @@ export function ActivityCard({
           {activity.approachMs !== undefined
             ? ` · approach at ${formatElapsed(activity.approachMs)}`
             : ''}
+          {activity.hintsUsed ? ` · ${hintsLabel(activity.hintsUsed)}` : ''}
         </p>
       ) : null}
       {activity.status === 'skipped' ? <p className="muted">Skipped</p> : null}
@@ -133,15 +142,39 @@ export function ActivityCard({
             </Button>
           ) : null}
           <span className="spacer" />
-          <Button variant="ghost" onClick={() => run(actions.skip(activity.id))}>
-            {skipLabel}
-          </Button>
+          {postponable ? (
+            <Button
+              variant="ghost"
+              title="Moves this problem back in the queue, behind the next two. It stays in the program."
+              onClick={() => run(actions.postpone(activity.id))}
+            >
+              Postpone
+            </Button>
+          ) : movable ? (
+            <Button variant="ghost" aria-expanded={moving} onClick={() => setMoving(!moving)}>
+              Move…
+            </Button>
+          ) : (
+            <Button variant="ghost" onClick={() => run(actions.skip(activity.id))}>
+              {isReviewType(activity.type) && !activity.extra ? 'Stop, redo tomorrow' : 'Skip'}
+            </Button>
+          )}
         </div>
+      ) : null}
+
+      {moving && movable && !finishing ? (
+        <MoveForm
+          minDate={today}
+          initialDate={addDays(today, 1)}
+          onMove={(date) => actions.moveReview(activity.id, date)}
+          onCancel={() => setMoving(false)}
+        />
       ) : null}
 
       {finishing ? (
         <OutcomeForm
           initialMinutes={Math.round(elapsed / 60_000)}
+          hintsUsed={activity.hintsUsed}
           onCancel={() => setFinishing(false)}
           onSubmit={(outcome, totalMs) => {
             setFinishing(false);

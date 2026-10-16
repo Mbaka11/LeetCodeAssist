@@ -144,3 +144,44 @@ describe('app actions on a chrome.storage mock', () => {
     expect(mock.data[STORAGE_KEY]).toBeUndefined();
   });
 });
+
+describe('moving, postponing and hints through the store', () => {
+  it('reveals hints on a not-yet-persisted activity and keeps them across reloads', async () => {
+    const { actions, state } = await setup();
+    const planned = planDay(await state(), START).items.find((i) => i.activity.type === 'new')!;
+    expect(planned.persisted).toBe(false);
+    await actions.revealHint(planned.activity.id, 2);
+    const after = await state();
+    expect(after.activities.find((a) => a.id === planned.activity.id)?.hintsUsed).toBe(2);
+    await expect(actions.revealHint(planned.activity.id, 9)).rejects.toThrow(/Hint level/);
+  });
+
+  it('postpones a new problem: it is skipped, flagged and the queue order is saved', async () => {
+    const { actions, state } = await setup();
+    const planned = planDay(await state(), START).items.find((i) => i.activity.type === 'new')!;
+    await actions.postpone(planned.activity.id);
+    const after = await state();
+    expect(after.activities.find((a) => a.id === planned.activity.id)).toMatchObject({
+      status: 'skipped',
+      postponed: true,
+    });
+    expect(after.queue).toBeDefined();
+    expect(after.queue).toContain(planned.activity.slug);
+    expect(planDay(after, START).items.map((i) => i.activity.slug)).not.toContain(planned.activity.slug);
+  });
+
+  it('moves a review to another day and refuses a past day', async () => {
+    const { actions, clock, state } = await setup();
+    await actions.materializeToday();
+    const first = (await state()).activities.find((a) => a.type === 'new')!;
+    await actions.startActivity(first.id);
+    clock.now += 10 * 60_000;
+    await actions.completeActivity(first.id, 'solo');
+    const recall = (await state()).activities.find((a) => a.slug === first.slug && a.type === 'recall')!;
+    expect(recall.dueDate).toBe(day(2));
+
+    await actions.moveReview(recall.id, day(3));
+    expect((await state()).activities.find((a) => a.id === recall.id)?.dueDate).toBe(day(3));
+    await expect(actions.moveReview(recall.id, '2024-01-01')).rejects.toThrow(/past/);
+  });
+});

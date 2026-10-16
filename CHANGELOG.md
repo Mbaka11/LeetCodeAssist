@@ -1,0 +1,36 @@
+# Changelog
+
+All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
+fields are optional, so data saved by earlier versions keeps working.
+
+## 0.2.0
+
+### Added
+- **Roadmap tree view**: a Tree | Grid toggle (remembered in settings). The tree draws the NeetCode
+  prerequisite graph left to right with progress (worked / solo in review / consolidating) and
+  Easy/Medium/Hard counters per node; selecting a node lists its problems below.
+- **Calendar**: an overall progress header (program problems learned x/53, days elapsed x/30), a minutes
+  bar in every day cell, and a keyboard-accessible popover on hover or focus that lists the day's
+  activities with estimated minutes and a total. Future days show a **projected** plan computed with
+  the planner, assuming each day's plan is done as scheduled.
+- **Move…** for planned reviews (Today cards and Calendar day detail): pick a new date from today on;
+  history is kept and the merge rule still applies.
+- **Postpone** for new problems (replaces the destructive Skip): the problem moves back in the queue
+  behind the next two and is never removed from the program.
+- **Hints**: three progressive hints (nudge, insight, sketch) for the program and benchmark problems, in
+  the side panel and on the problem sheet. Each reveal is stored on the activity (`hintsUsed`), shown in
+  the attempt history, and pre-selects **Hint** in the outcome form (it can still be changed).
+- **Side panel**: richer problem view (difficulty, category, program position, today's activity and
+  instruction, timer, status, attempt history, notes, outcome form, next review) and an **Open a LeetCode
+  problem** state with today's checklist and an Open button per item.
+
+### Changed
+- The side panel is now **global for the window** instead of enabled per tab: it stays open while you
+  switch or open tabs. The keyboard shortcut opens it for the current window.
+- Clicking a LeetCode problem link in the dashboard also opens the side panel (best effort).
+- Skipping a started review now reads **Stop, redo tomorrow**; unstarted reviews use **Move…**.
+
+## 0.1.0
+
+- First release: 30-day program with queue-based planner, spaced reviews, timers, notes, roadmap grid,
+  calendar, side panel, notifications and JSON backup.

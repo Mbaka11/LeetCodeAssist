@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createActivity } from './activities';
-import { attemptHistory, isNotesLocked, nextReview } from './problemSheet';
+import { planDay } from './planner';
+import { attemptHistory, isNotesLocked, nextReview, openActivityToday } from './problemSheet';
 import { START, complete, day, newState, planAndComplete } from './testing';
 import type { ActivityType, AppState } from './types';
 
@@ -70,5 +71,28 @@ describe('nextReview and attemptHistory', () => {
       ['recall', 'solo', 4 * 60_000],
       ['new', 'hint', 35 * 60_000],
     ]);
+  });
+});
+
+describe('openActivityToday', () => {
+  it("finds the problem's planned activity in today's plan, persisted or not", () => {
+    const state = newState();
+    const planned = planDay(state, day(1)).items.find((i) => i.activity.type === 'new')!;
+    expect(openActivityToday(state, planned.activity.slug, day(1))?.id).toBe(planned.activity.id);
+    expect(openActivityToday(state, 'median-of-two-sorted-arrays', day(1))).toBeUndefined();
+  });
+
+  it('prefers a started activity and ignores finished ones', () => {
+    const state = newState();
+    const [first, second] = planDay(state, day(1)).items.filter((i) => i.activity.type === 'new');
+    const started = {
+      ...state,
+      activities: [
+        { ...first!.activity, status: 'done' as const, completedAt: day(1) },
+        { ...second!.activity, status: 'in_progress' as const },
+      ],
+    };
+    expect(openActivityToday(started, first!.activity.slug, day(1))).toBeUndefined();
+    expect(openActivityToday(started, second!.activity.slug, day(1))?.status).toBe('in_progress');
   });
 });

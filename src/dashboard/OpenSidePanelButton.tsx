@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Button } from '../components/Button';
-import { openSidePanelOnLeetCode } from '../lib/sidePanel';
+import { openSidePanelInWindow } from '../lib/sidePanel';
 
-/** Opens the side panel on a LeetCode tab. Chrome only allows this from a user gesture, so it lives behind a click. */
+/** Opens the global side panel in this window. Chrome only allows this from a user gesture, so it lives behind a click. */
 export function OpenSidePanelButton() {
   const [message, setMessage] = useState<string | null>(null);
   return (
@@ -11,11 +11,8 @@ export function OpenSidePanelButton() {
       <Button
         onClick={() => {
           setMessage(null);
-          openSidePanelOnLeetCode().then(
-            (result) => {
-              if (result === 'no-leetcode-tab') setMessage('Open a leetcode.com tab first.');
-            },
-            (e: unknown) => setMessage(e instanceof Error ? e.message : String(e)),
+          openSidePanelInWindow().catch((e: unknown) =>
+            setMessage(e instanceof Error ? e.message : String(e)),
           );
         }}
       >

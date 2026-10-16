@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isLeetCodeUrl, problemSlugFromUrl } from './leetcodeUrl';
+import { canNavigateTabTo, isLeetCodeUrl, problemSlugFromUrl } from './leetcodeUrl';
 
 describe('isLeetCodeUrl', () => {
   it('accepts leetcode.com over https only', () => {
@@ -32,5 +32,18 @@ describe('problemSlugFromUrl', () => {
 
   it('returns null instead of throwing on a malformed percent escape', () => {
     expect(problemSlugFromUrl('https://leetcode.com/problems/%')).toBeNull();
+  });
+});
+
+describe('canNavigateTabTo', () => {
+  it('allows LeetCode pages and empty tabs only', () => {
+    expect(canNavigateTabTo('https://leetcode.com/problemset/')).toBe(true);
+    expect(canNavigateTabTo('https://leetcode.com/problems/two-sum/')).toBe(true);
+    expect(canNavigateTabTo('chrome://newtab/')).toBe(true);
+    expect(canNavigateTabTo('about:blank')).toBe(true);
+    expect(canNavigateTabTo(undefined)).toBe(true);
+    expect(canNavigateTabTo('https://example.com/')).toBe(false);
+    expect(canNavigateTabTo('chrome://extensions/')).toBe(false);
+    expect(canNavigateTabTo('https://evil.example/leetcode.com/')).toBe(false);
   });
 });

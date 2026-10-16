@@ -240,3 +240,48 @@ describe('problemStats', () => {
     expect(getProblemStatus(newState(), 'two-sum')).toBe('untouched');
   });
 });
+
+describe('hintsUsed, postponed, roadmapView and queue (additive fields)', () => {
+  const base = newState();
+  const withActivity = (patch: Record<string, unknown>): unknown => {
+    const activity = createActivity([], { type: 'new', slug: 'two-sum', dueDate: day(1), createdAt: day(1) });
+    return { ...base, activities: [{ ...activity, ...patch }] };
+  };
+
+  it('round-trips hintsUsed, postponed, roadmapView and queue', () => {
+    const activity = {
+      ...createActivity([], { type: 'new', slug: 'two-sum', dueDate: day(1), createdAt: day(1) }),
+      hintsUsed: 2,
+      postponed: true,
+      status: 'skipped' as const,
+    };
+    const state: AppState = {
+      ...base,
+      settings: { ...base.settings, roadmapView: 'grid' },
+      activities: [activity],
+      queue: ['valid-anagram', 'two-sum'],
+    };
+    expect(deserializeState(serializeState(state))).toEqual(state);
+  });
+
+  it('accepts data saved before these fields existed and does not add them', () => {
+    const legacy = JSON.parse(serializeState(simulateDay(newState(), day(1)).state)) as AppState;
+    const restored = validateState(legacy);
+    expect(restored).toEqual(legacy);
+    expect('queue' in restored).toBe(false);
+    expect('roadmapView' in restored.settings).toBe(false);
+    expect(restored.activities.every((a) => !('hintsUsed' in a) && !('postponed' in a))).toBe(true);
+  });
+
+  it('rejects invalid values with a path', () => {
+    expect(() => validateState(withActivity({ hintsUsed: 4 }))).toThrow(/hintsUsed/);
+    expect(() => validateState(withActivity({ hintsUsed: 1.5 }))).toThrow(/hintsUsed/);
+    expect(() => validateState(withActivity({ hintsUsed: -1 }))).toThrow(/hintsUsed/);
+    expect(() => validateState(withActivity({ hintsUsed: '2' }))).toThrow(/hintsUsed/);
+    expect(() => validateState(withActivity({ postponed: 'yes' }))).toThrow(/postponed/);
+    expect(() => validateState({ ...base, settings: { ...base.settings, roadmapView: 'list' } })).toThrow(/roadmapView/);
+    expect(() => validateState({ ...base, queue: 'two-sum' })).toThrow(/queue/);
+    expect(() => validateState({ ...base, queue: ['a', 'a'] })).toThrow(/duplicate/);
+    expect(() => validateState({ ...base, queue: [1] })).toThrow(/queue\[0\]/);
+  });
+});
