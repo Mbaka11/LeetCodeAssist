@@ -130,6 +130,22 @@ describe('calendar entries: movable and postponable', () => {
   });
 });
 
+describe('postponed problems', () => {
+  it("do not count as planned: today's planned count is the plan, not plan plus the postponed problem", () => {
+    const base = materializePlan(newState(), planDay(newState(), day(1)));
+    const target = base.activities.find((a) => a.type === 'new')!;
+    const state = {
+      ...base,
+      activities: base.activities.map((a) =>
+        a.id === target.id ? { ...a, status: 'skipped' as const, postponed: true } : a,
+      ),
+    };
+    const first = calendarDays(state, day(1))[0]!;
+    expect(first.plannedCount).toBe(planDay(state, day(1)).items.length);
+    expect(first.plannedCount).toBe(calendarDays(base, day(1))[0]!.plannedCount);
+  });
+});
+
 describe('programProgress', () => {
   it('counts learned program problems and elapsed program days', () => {
     expect(programProgress(newState(), day(1))).toEqual({

@@ -57,9 +57,10 @@ Rules:
 Plans can be adjusted without losing anything:
 
 - **Move a review** (`Move…` on a Today card or in the Calendar day detail): choose a new date
-  (today or later). Only the `dueDate` of the planned review changes; its type and the history stay.
+  (today up to 60 days ahead). Only the `dueDate` of the planned review changes; its type and the history stay.
   If the problem already has a planned review on that day the stronger one is kept and the weaker one
-  is marked skipped (merge rule). Started or finished activities, benchmarks and optional practice
+  is marked skipped (merge rule); a day on which that problem's review is already in progress is
+  rejected. Started or finished activities, benchmarks and optional practice
   cannot be moved.
 - **Postpone a `new` problem** (replaces the destructive *Skip*): the activity is marked `skipped` with
   `postponed: true` (kept in history) and the problem moves back in the queue behind the **next two**

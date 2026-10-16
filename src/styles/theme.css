@@ -816,6 +816,15 @@ textarea.mono {
   gap: 6px;
 }
 
+.cal-popover[hidden] {
+  display: none;
+}
+
+.cal-popover-end {
+  left: auto;
+  right: 0;
+}
+
 .cal-popover p {
   margin: 0;
 }

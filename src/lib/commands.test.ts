@@ -149,6 +149,25 @@ describe('skipActivity', () => {
     );
     expect(replacement?.dueDate).toBe(day(3));
   });
+
+  it('keeps one review per problem per day when the retry lands on a day that already has one', () => {
+    const { state, slug, recall, rebuild, resolve } = withReviews();
+    const plannedReviewsOn = (s: AppState, date: string): string[] =>
+      s.activities
+        .filter((a) => a.slug === slug && a.dueDate === date && a.status === 'planned' && a.type !== 'new')
+        .map((a) => a.type);
+
+    // Skipping the recall on day 3: tomorrow (day 4) already holds the stronger rebuild, so no second review.
+    const weaker = commands.skipActivity(state, recall, at(day(3)));
+    expect(findActivity(weaker, recall)?.status).toBe('skipped');
+    expect(plannedReviewsOn(weaker, day(4))).toEqual(['rebuild']);
+    expect(weaker.activities).toHaveLength(state.activities.length);
+
+    // Skipping the resolve on day 3 puts a stronger review on day 4: the rebuild is marked skipped.
+    const stronger = commands.skipActivity(state, resolve, at(day(3)));
+    expect(plannedReviewsOn(stronger, day(4))).toEqual(['resolve']);
+    expect(findActivity(stronger, rebuild)?.status).toBe('skipped');
+  });
 });
 
 describe('notes, checks and settings', () => {
@@ -317,6 +336,24 @@ describe('rescheduleReview', () => {
     expect(findActivity(stronger, rebuild)).toMatchObject({ status: 'planned', dueDate: day(2) });
     expect(findActivity(stronger, recall)?.status).toBe('skipped');
     expect(stronger.activities).toHaveLength(state.activities.length);
+  });
+});
+
+describe('rescheduleReview limits', () => {
+  it('rejects moving a review more than MAX_MOVE_DAYS ahead and allows exactly that far', () => {
+    const { state, recall } = withReviews();
+    const now = at(day(2));
+    const limit = day(2 + commands.MAX_MOVE_DAYS);
+    expect(commands.rescheduleReview(state, recall, limit, now)).toBeDefined();
+    expect(() => commands.rescheduleReview(state, recall, day(3 + commands.MAX_MOVE_DAYS), now)).toThrow(/at most/);
+  });
+
+  it('rejects a day on which the problem already has a review in progress', () => {
+    const { state, recall, rebuild } = withReviews();
+    const started = commands.startActivity(state, rebuild, at(day(4)));
+    expect(() => commands.rescheduleReview(started, recall, day(4), at(day(2)))).toThrow(/in progress/);
+    // No second review was created or moved.
+    expect(findActivity(started, recall)?.dueDate).toBe(day(2));
   });
 });
 

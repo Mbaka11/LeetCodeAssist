@@ -30,7 +30,7 @@ export const HINTS: Record<string, Hint> = {
       '1) If lengths differ, return false. 2) Count characters of the first string. 3) Walk the second string and decrement counts, failing if a count would go below zero. 4) Otherwise they match. Time O(n), space O(1) for a fixed alphabet.',
   },
   'group-anagrams': {
-    nudge: 'Use a hash map whose key is some canonical form shared by all words that are anagrams of each other.',
+    nudge: 'Grouping needs a hash map: what could the words in one group have in common that you can use as a lookup key?',
     insight:
       'Anagrams become identical once their letters are normalised, for example sorted or turned into a vector of letter counts, so that normal form can serve as the group key.',
     sketch:
@@ -44,7 +44,7 @@ export const HINTS: Record<string, Hint> = {
       '1) Count occurrences in a map. 2) Create n+1 buckets and place each value in the bucket of its count. 3) Scan buckets from the highest count down, collecting values until you have k. Time O(n), space O(n).',
   },
   'longest-consecutive-sequence': {
-    nudge: 'A hash set can answer "is this number present?" instantly; think about where a consecutive run must begin.',
+    nudge: 'A hash set can answer "is this number present?" instantly; can you avoid re-counting the same run of numbers?',
     insight:
       'A number starts a run only if its predecessor is absent, so if you expand only from run starts, every element is visited a bounded number of times.',
     sketch:
@@ -67,7 +67,7 @@ export const HINTS: Record<string, Hint> = {
       '1) Set left = 0 and right = n-1. 2) Compute the sum. 3) If it equals the target, return the 1-based indices. 4) If it is too small move left up, otherwise move right down. Time O(n), space O(1).',
   },
   '3sum': {
-    nudge: 'Sort first, then reduce the problem to a two-pointer search for each fixed first element.',
+    nudge: 'Order the data first; what does a sorted array let you do when you look for a pair?',
     insight:
       'After sorting, fixing one value leaves a sorted two-sum problem, and skipping equal neighbours at every level removes duplicate triplets without any extra set.',
     sketch:
@@ -99,14 +99,14 @@ export const HINTS: Record<string, Hint> = {
       '1) Create an empty stack and a map from closer to opener. 2) Push each opener. 3) For a closer, fail if the stack is empty or its top is not the matching opener; otherwise pop. 4) Return whether the stack is empty. Time O(n), space O(n).',
   },
   'min-stack': {
-    nudge: 'Each stack entry can carry extra information alongside the value so the minimum is always available.',
+    nudge: 'The stack must report its minimum in constant time; what extra information could you keep as the stack changes?',
     insight:
       'The minimum of the stack only changes when you push or pop, so storing the minimum at the time of each push lets pop restore the previous minimum automatically.',
     sketch:
       '1) Store pairs (value, minimum so far) in one stack, or keep a second stack of minimums. 2) On push, the new minimum is min(value, previous minimum). 3) Pop removes the top pair. 4) top and getMin read the top pair. Every operation is O(1), space O(n).',
   },
   'daily-temperatures': {
-    nudge: 'A monotonic stack that keeps indices of days still waiting for a warmer day.',
+    nudge: 'For each day you are waiting for something later to arrive; what structure helps you remember the days still waiting?',
     insight:
       'A day waits only until the first later day that is strictly warmer, so when a warm day arrives it resolves every colder waiting day on top of the stack at once.',
     sketch:
@@ -152,14 +152,14 @@ export const HINTS: Record<string, Hint> = {
       '1) Create a dummy node and a tail pointer. 2) While both lists have nodes, link the smaller head to the tail and advance that list. 3) Attach the remaining non-empty list. 4) Return dummy.next. Time O(n+m), space O(1).',
   },
   'remove-nth-node-from-end-of-list': {
-    nudge: 'Two pointers with a fixed gap between them, so you find the target position in one pass.',
+    nudge: 'You do not know the length yet; can two pointers moving through the list in a single pass locate the node?',
     insight:
       'If the lead pointer is n steps ahead, then when it reaches the end the trailing pointer sits right before the node to delete; a dummy head covers removal of the first node.',
     sketch:
       '1) Add a dummy node before head. 2) Move a fast pointer n steps ahead of a slow pointer that starts at the dummy. 3) Advance both until fast is on the last node. 4) Set slow.next = slow.next.next. 5) Return dummy.next. Time O(n), space O(1).',
   },
   'reorder-list': {
-    nudge: 'Break the task into smaller list operations you already know: find the middle, reverse, and interleave.',
+    nudge: 'Split the job into smaller linked-list operations you already know.',
     insight:
       'The target order alternates nodes from the front and from the back, so reversing the second half lets you merge two forward-moving lists in place.',
     sketch:
@@ -251,7 +251,7 @@ export const HINTS: Record<string, Hint> = {
   'generate-parentheses': {
     nudge: 'Backtracking that builds the string character by character while only allowing choices that can still lead to a valid result.',
     insight:
-      'A prefix is extendable exactly when you have used fewer than n opening brackets and you only close a bracket when more openers than closers have been placed.',
+      'A prefix can still become valid exactly when it has at most n opening brackets and never more closers than openers, so you add "(" while openers < n and ")" only while closers < openers.',
     sketch:
       '1) Track the counts of opens and closes used. 2) If the string has length 2n, record it. 3) If opens < n, append "(" and recurse. 4) If closes < opens, append ")" and recurse. Time O(4^n/√n) (Catalan growth), space O(n) for the recursion.',
   },
@@ -279,7 +279,7 @@ export const HINTS: Record<string, Hint> = {
       '1) Scan every cell for unvisited land. 2) Run a DFS that marks the cell and returns 1 plus the sizes from its four neighbours. 3) Update the best area with each result. 4) Return it (0 if no land). Time O(m·n), space O(m·n).',
   },
   'clone-graph': {
-    nudge: 'Graph traversal combined with a map from original nodes to their copies.',
+    nudge: 'A graph traversal where you must remember something about each node you have already visited.',
     insight:
       'The map serves two roles: it prevents infinite loops on cycles and guarantees each original node has exactly one clone, which neighbours can link to.',
     sketch:
@@ -362,14 +362,14 @@ export const HINTS: Record<string, Hint> = {
       '1) Keep two variables: best excluding the previous house and best including up to it. 2) For each house, new = max(prev, prevPrev + value). 3) Shift the variables forward. 4) Return the final value. Time O(n), space O(1).',
   },
   'house-robber-ii': {
-    nudge: 'Reduce the circular arrangement to two runs of the linear house-robber problem.',
+    nudge: 'How does the circle change the linear house-robber choice? Start from the version you already know.',
     insight:
       'In a circle the first and last houses are adjacent, so the optimal plan never uses both; it is the better of "ignore the first house" and "ignore the last house".',
     sketch:
       '1) If there is a single house, return its value. 2) Solve the linear problem on houses 0..n-2. 3) Solve it on houses 1..n-1. 4) Return the larger result. Time O(n), space O(1).',
   },
   'longest-palindromic-substring': {
-    nudge: 'Grow palindromes outward from their centres instead of testing every substring.',
+    nudge: 'Testing every substring is too slow; what do all palindromes have in common structurally?',
     insight:
       'Every palindrome mirrors around a centre that is either a character (odd length) or a gap between two characters (even length), giving only 2n-1 centres to expand.',
     sketch:
@@ -394,12 +394,12 @@ export const HINTS: Record<string, Hint> = {
     insight:
       'A prefix can be segmented if some shorter segmentable prefix is followed by a dictionary word, so you only need a boolean for each prefix length.',
     sketch:
-      '1) Put the words in a set and let ok[0] = true. 2) For each end i from 1 to n, look for a split j < i where ok[j] is true and s[j..i) is in the set. 3) Set ok[i] accordingly. 4) Return ok[n]. Time O(n²) with a bounded word length helping, space O(n).',
+      '1) Put the words in a set and let ok[0] = true. 2) For each end i from 1 to n, look for a split j < i where ok[j] is true and s[j..i) is in the set. 3) Set ok[i] accordingly. 4) Return ok[n]. Only splits within the longest word length L need checking: O(n·L) splits, each costing O(L) to hash, so O(n·L²) time, space O(n).',
   },
 
   // ---- Hard ----
   'trapping-rain-water': {
-    nudge: 'Water above each bar is decided by the tallest bars on its left and right; two pointers can track this in one pass.',
+    nudge: 'What decides how much water sits on a single bar? Start with one bar, then think about doing it in one pass.',
     insight:
       'The water over a bar equals min(tallest to the left, tallest to the right) minus its height, and the pointer on the side with the smaller maximum can be resolved without knowing the other side exactly.',
     sketch:
@@ -422,14 +422,14 @@ export const HINTS: Record<string, Hint> = {
       '1) Create an empty set. 2) For each number, return true if it is in the set. 3) Otherwise add it. 4) Return false after the scan. Sorting and checking neighbours is an alternative. Time O(n), space O(n).',
   },
   'product-of-array-except-self': {
-    nudge: 'Split each answer into what lies to the left of the index and what lies to the right, without using division.',
+    nudge: 'Each answer depends on all the other elements, and division is not allowed; how can you split an answer into smaller pieces?',
     insight:
       'The product except self at index i is (product of everything before i) times (product of everything after i), and both parts can be built with one running product each.',
     sketch:
       '1) Fill the result so that result[i] is the product of all elements left of i. 2) Sweep from the right with a running product of elements right of i. 3) Multiply it into result[i] at each step. 4) Return result. Time O(n), extra space O(1) besides the output.',
   },
   'balanced-binary-tree': {
-    nudge: 'A recursive traversal that computes subtree heights while it checks the balance condition.',
+    nudge: 'A recursive traversal over the tree; consider how much work each node should do and how often it is visited.',
     insight:
       'If you let the height function also signal failure when a node\'s subtrees differ in height by more than one, each node is visited once instead of recomputing heights repeatedly.',
     sketch:

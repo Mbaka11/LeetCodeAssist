@@ -67,7 +67,9 @@ export default defineBackground(() => {
   chrome.sidePanel.setOptions({ path: SIDE_PANEL_PATH, enabled: true }).catch(report);
 
   // Keyboard shortcut: open the side panel in the window of the active tab. The window id comes from
-  // the event so the call happens inside the user gesture.
+  // the event so the call happens inside the user gesture. Without a tab the fallback below is best
+  // effort only: it awaits a lookup first, so Chrome may reject `open` for lack of a user gesture
+  // (the failure is reported, not fatal).
   chrome.commands.onCommand.addListener((command, tab) => {
     if (command !== 'open-side-panel') return;
     if (tab?.windowId !== undefined) {

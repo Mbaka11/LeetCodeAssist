@@ -13,7 +13,7 @@ fields are optional, so data saved by earlier versions keeps working.
   bar in every day cell, and a keyboard-accessible popover on hover or focus that lists the day's
   activities with estimated minutes and a total. Future days show a **projected** plan computed with
   the planner, assuming each day's plan is done as scheduled.
-- **Move…** for planned reviews (Today cards and Calendar day detail): pick a new date from today on;
+- **Move…** for planned reviews (Today cards and Calendar day detail): pick a new date from today up to 60 days ahead;
   history is kept and the merge rule still applies.
 - **Postpone** for new problems (replaces the destructive Skip): the problem moves back in the queue
   behind the next two and is never removed from the program.

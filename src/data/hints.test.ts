@@ -23,6 +23,15 @@ describe('HINTS', () => {
   });
 });
 
+describe('HINTS level 1', () => {
+  it('stays a nudge: short, and without the numbered steps or complexity of the sketch', () => {
+    for (const [slug, hint] of Object.entries(HINTS)) {
+      expect(hint.nudge.length, slug).toBeLessThanOrEqual(170);
+      expect(hint.nudge, slug).not.toMatch(/O\(|1\)/);
+    }
+  });
+});
+
 describe('getHints', () => {
   it('returns the hint for a known slug and undefined otherwise', () => {
     expect(getHints('two-sum')).toBe(HINTS['two-sum']);

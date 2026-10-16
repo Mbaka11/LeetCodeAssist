@@ -47,7 +47,7 @@ function skipPlanned(
  * of the existing planned review and the new one is kept, the other one is not scheduled
  * (or is marked skipped).
  */
-function scheduleReview(
+export function scheduleReview(
   activities: readonly Activity[],
   params: { type: ReviewType; slug: string; dueDate: string; createdAt: string },
 ): Activity[] {

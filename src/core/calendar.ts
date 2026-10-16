@@ -129,7 +129,7 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
     const isBonus = bonus.has(a.id);
     drafts.set(a.id, {
       entry: entryOf(a, isBonus && date < today ? 'skipped' : entryState),
-      planned: dueHere && !isBonus,
+      planned: dueHere && !isBonus && !a.postponed,
     });
   }
   if (plan) {

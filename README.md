@@ -68,8 +68,8 @@ you really need them.
 
 ### Moving, postponing and hints
 
-- **Move…** (Today cards and the Calendar day detail) reschedules a planned review to any day from
-  today on. Only the due date changes; the history stays.
+- **Move…** (Today cards and the Calendar day detail) reschedules a planned review to a day from
+  today up to 60 days ahead. Only the due date changes; the history stays.
 - **Postpone** replaces *Skip* for new problems: the problem moves back in the queue behind the next
   two and comes back later. It is never removed from the program.
 - **Hints**: every program problem has three progressive hints (nudge, insight, sketch). Reveal them one

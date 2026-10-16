@@ -1,4 +1,4 @@
-import { useId, useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useState, type FocusEvent } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -18,6 +18,7 @@ import { computeStreak } from '../core/state';
 import type { ActivityType, AppState } from '../core/types';
 import { getProblem } from '../data/neetcode150';
 import type { AppActions } from '../lib/actions';
+import { MAX_MOVE_DAYS } from '../lib/commands';
 import { formatDate, formatMinutes } from '../lib/format';
 import { ACTIVITY_LABELS, OUTCOME_LABELS } from '../lib/instructions';
 import { problemHref } from '../lib/route';
@@ -91,7 +92,7 @@ function DayCell({
   day: CalendarDay;
   selected: boolean;
   onSelect: () => void;
-  describedBy: string | undefined;
+  describedBy: string;
 }) {
   const classes = ['cal-day', `cal-${day.kind}`];
   if (selected) classes.push('selected');
@@ -106,7 +107,7 @@ function DayCell({
       className={classes.join(' ')}
       aria-pressed={selected}
       onClick={onSelect}
-      {...(describedBy ? { 'aria-describedby': describedBy } : {})}
+      aria-describedby={describedBy}
     >
       <span className="cal-head">
         <strong>Day {day.dayIndex}</strong>
@@ -219,13 +220,50 @@ export function DayPopoverContent({
   );
 }
 
-function DayPopover({ id, day, state, today }: { id: string; day: CalendarDay; state: AppState; today: string }) {
+/** Widest the popover gets (matches `max-width` in the stylesheet). */
+const POPOVER_MAX_WIDTH_PX = 340;
+
+/** Whether a popover opening at `cellLeft` would run past the right edge of the viewport. */
+export function popoverAlignsToEnd(cellLeft: number, viewportWidth: number): boolean {
+  return cellLeft + POPOVER_MAX_WIDTH_PX > viewportWidth;
+}
+
+/** The popover element is always mounted (so `aria-describedby` resolves); its content only while open. */
+function DayPopover({
+  id,
+  day,
+  state,
+  today,
+  open,
+  alignEnd,
+}: {
+  id: string;
+  day: CalendarDay;
+  state: AppState;
+  today: string;
+  open: boolean;
+  alignEnd: boolean;
+}) {
+  return (
+    <div
+      id={id}
+      role="group"
+      aria-label={`Plan for day ${day.dayIndex}`}
+      className={`cal-popover${alignEnd ? ' cal-popover-end' : ''}`}
+      hidden={!open}
+    >
+      {open ? <DayPopoverBody day={day} state={state} today={today} /> : null}
+    </div>
+  );
+}
+
+function DayPopoverBody({ day, state, today }: { day: CalendarDay; state: AppState; today: string }) {
   const projection = useMemo(
     () => (day.kind === 'future' ? projectDay(state, day.date, today) : null),
     [day.kind, day.date, state, today],
   );
   return (
-    <div id={id} role="tooltip" className="cal-popover">
+    <>
       {projection ? (
         <DayPopoverContent
           day={day}
@@ -247,11 +285,14 @@ function DayPopover({ id, day, state, today }: { id: string; day: CalendarDay; s
           totalMinutes={day.plannedMinutes}
         />
       )}
-    </div>
+    </>
   );
 }
 
-/** A day cell with a popover that opens on hover and keyboard focus and closes with Escape. */
+/**
+ * A day cell with a popover that opens on hover and keyboard focus and closes with Escape (also when
+ * only the mouse is over the cell) and on blur or when the pointer leaves.
+ */
 function DayCellWithPopover({
   day,
   selected,
@@ -266,27 +307,34 @@ function DayCellWithPopover({
   today: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [alignEnd, setAlignEnd] = useState(false);
   const popoverId = useId();
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [open]);
+
+  const show = (event: { currentTarget: HTMLElement }): void => {
+    setAlignEnd(popoverAlignsToEnd(event.currentTarget.getBoundingClientRect().left, window.innerWidth));
+    setOpen(true);
+  };
   return (
     <div
       className="cal-cell"
-      onMouseEnter={() => setOpen(true)}
+      onMouseEnter={show}
       onMouseLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)}
-      onBlur={(event) => {
+      onFocus={show}
+      onBlur={(event: FocusEvent<HTMLElement>) => {
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
       }}
-      onKeyDown={(event: KeyboardEvent) => {
-        if (event.key === 'Escape') setOpen(false);
-      }}
     >
-      <DayCell
-        day={day}
-        selected={selected}
-        onSelect={onSelect}
-        describedBy={open ? popoverId : undefined}
-      />
-      {open ? <DayPopover id={popoverId} day={day} state={state} today={today} /> : null}
+      <DayCell day={day} selected={selected} onSelect={onSelect} describedBy={popoverId} />
+      <DayPopover id={popoverId} day={day} state={state} today={today} open={open} alignEnd={alignEnd} />
     </div>
   );
 }
@@ -438,6 +486,7 @@ function DayDetail({
         <MoveForm
           key={moving.id}
           minDate={today}
+          maxDate={addDays(today, MAX_MOVE_DAYS)}
           initialDate={addDays(today, 1)}
           onMove={(date) => actions.moveReview(moving.id, date)}
           onCancel={() => setMovingId(null)}

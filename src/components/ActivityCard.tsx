@@ -5,6 +5,7 @@ import { elapsedMs, formatElapsed } from '../core/timer';
 import type { Activity } from '../core/types';
 import { getProblem, problemUrl } from '../data/neetcode150';
 import type { AppActions } from '../lib/actions';
+import { MAX_MOVE_DAYS } from '../lib/commands';
 import { formatDate, formatMinutes, formatMs } from '../lib/format';
 import { ACTIVITY_INSTRUCTIONS, ACTIVITY_LABELS, OUTCOME_LABELS, difficultyTone } from '../lib/instructions';
 import { problemHref } from '../lib/route';
@@ -165,6 +166,7 @@ export function ActivityCard({
       {moving && movable && !finishing ? (
         <MoveForm
           minDate={today}
+          maxDate={addDays(today, MAX_MOVE_DAYS)}
           initialDate={addDays(today, 1)}
           onMove={(date) => actions.moveReview(activity.id, date)}
           onCancel={() => setMoving(false)}

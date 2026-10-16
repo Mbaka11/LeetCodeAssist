@@ -14,7 +14,7 @@ import { addDays, compareDates, isValidDateString, localDateFromTimestamp } from
 import { materializePlan, planDay } from '../core/planner';
 import { getProblem } from '../data/neetcode150';
 import { postponeInQueue, programQueue } from '../core/queue';
-import { applyOutcome } from '../core/reviews';
+import { applyOutcome, scheduleReview } from '../core/reviews';
 import { MAX_HINTS, validateState } from '../core/state';
 import { pauseTimer, resumeTimer, startTimer } from '../core/timer';
 import type { Activity, AppState, Note, Outcome, ReviewType, Settings } from '../core/types';
@@ -89,7 +89,7 @@ export function completeActivity(
 
 /**
  * Skips an activity. A skipped review is never dropped (SPEC §4): unless it was optional practice,
- * the same review is planned again for tomorrow.
+ * the same review is planned again for tomorrow, following the one-review-per-problem-per-day merge rule.
  */
 export function skipActivity(state: AppState, id: string, now: number): AppState {
   const activity = requireOpen(state, id);
@@ -100,13 +100,15 @@ export function skipActivity(state: AppState, id: string, now: number): AppState
     timer: pauseTimer(a.timer, now),
   }));
   if (!isReviewType(activity.type) || activity.extra) return skipped;
-  const retry = createActivity(skipped.activities, {
-    type: activity.type,
-    slug: activity.slug,
-    dueDate: addDays(today, 1),
-    createdAt: today,
-  });
-  return { ...skipped, activities: [...skipped.activities, retry] };
+  return {
+    ...skipped,
+    activities: scheduleReview(skipped.activities, {
+      type: activity.type,
+      slug: activity.slug,
+      dueDate: addDays(today, 1),
+      createdAt: today,
+    }),
+  };
 }
 
 /**
@@ -122,10 +124,14 @@ export function revealHint(state: AppState, id: string, level: number): AppState
   return updateActivity(state, id, (a) => ({ ...a, hintsUsed: level }));
 }
 
+/** How far ahead (in days from today) a review can be moved. */
+export const MAX_MOVE_DAYS = 60;
+
 /**
- * Moves a planned review to another day (>= today). The review keeps its type and history; only its
- * due date changes. If the problem already has a planned review on that day the stronger one is kept
- * (SPEC §3 merge rule) and the weaker one is marked skipped.
+ * Moves a planned review to another day (today up to `MAX_MOVE_DAYS` ahead). The review keeps its type
+ * and history; only its due date changes. If the problem already has a planned review on that day the
+ * stronger one is kept (SPEC §3 merge rule) and the weaker one is marked skipped. A day on which that
+ * problem's review is already in progress is rejected.
  */
 export function rescheduleReview(state: AppState, id: string, newDate: string, now: number): AppState {
   const activity = findActivity(state, id);
@@ -137,7 +143,20 @@ export function rescheduleReview(state: AppState, id: string, newDate: string, n
   if (!isValidDateString(newDate)) throw new Error(`Invalid date: "${newDate}"`);
   const today = localDateFromTimestamp(now);
   if (compareDates(newDate, today) < 0) throw new Error('A review cannot be moved to a day in the past');
+  if (compareDates(newDate, addDays(today, MAX_MOVE_DAYS)) > 0) {
+    throw new Error(`A review can be moved at most ${MAX_MOVE_DAYS} days ahead`);
+  }
   if (newDate === activity.dueDate) return state;
+  const inProgress = state.activities.some(
+    (a) =>
+      a.id !== id &&
+      a.slug === activity.slug &&
+      a.status === 'in_progress' &&
+      !a.extra &&
+      isReviewType(a.type) &&
+      a.dueDate === newDate,
+  );
+  if (inProgress) throw new Error('This problem already has a review in progress on that day');
 
   const moved: Activity = { ...activity, dueDate: newDate };
   const clash = state.activities.find(

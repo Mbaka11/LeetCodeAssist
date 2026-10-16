@@ -8,7 +8,7 @@ import { defaultState } from '../core/state';
 import type { AppActions } from '../lib/actions';
 import { calendarDays } from '../core/calendar';
 import { projectDay } from '../core/projection';
-import { CalendarView, DayPopoverContent, entryRows } from './CalendarView';
+import { CalendarView, DayPopoverContent, entryRows, popoverAlignsToEnd } from './CalendarView';
 
 const actions = new Proxy({}, { get: () => () => Promise.resolve() }) as AppActions;
 const today = localDateFromTimestamp(Date.now());
@@ -30,9 +30,14 @@ describe('CalendarView (render smoke test)', () => {
     expect(html).toContain('Days elapsed');
     expect(html).toContain('1/30');
     expect(html.match(/<span class="cal-bar[ "]/g)).toHaveLength(30);
-    // Each day sits in a cell that can show the popover; it is not rendered until hover or focus.
+    // Each day sits in a cell with an always-mounted, hidden popover that its button points to; the
+    // popover content is only rendered on hover or focus.
     expect(html.match(/class="cal-cell"/g)).toHaveLength(30);
+    expect(html.match(/aria-describedby="/g)).toHaveLength(30);
+    expect(html.match(/class="cal-popover" hidden=""/g)).toHaveLength(30);
     expect(html).not.toContain('role="tooltip"');
+    expect(html).not.toContain('cal-popover-list');
+    expect(html).not.toContain('Assumes you do each day');
     expect(html).not.toContain(' title="Day');
     // Day detail of today lists the benchmark pair.
     expect(html).toContain('Day 1 ·');
@@ -47,6 +52,14 @@ describe('CalendarView (render smoke test)', () => {
     expect(html).toContain('Streak day');
     expect(html).toContain('Goal met');
     expect(html).toContain('carried');
+  });
+});
+
+describe('popoverAlignsToEnd', () => {
+  it('flips the popover to the right edge of the cell when it would overflow the viewport', () => {
+    expect(popoverAlignsToEnd(0, 1200)).toBe(false);
+    expect(popoverAlignsToEnd(800, 1200)).toBe(false);
+    expect(popoverAlignsToEnd(1100, 1200)).toBe(true);
   });
 });
 
