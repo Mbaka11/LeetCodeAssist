@@ -21,5 +21,10 @@ export function problemSlugFromUrl(url: string | undefined): string | null {
   const parsed = parse(url);
   if (parsed === null || !isLeetCodeUrl(url)) return null;
   const match = /(?:^|\/)problems\/([^/]+)/.exec(parsed.pathname);
-  return match?.[1] ? decodeURIComponent(match[1]) : null;
+  if (!match?.[1]) return null;
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return null; // malformed percent escape, e.g. /problems/%
+  }
 }

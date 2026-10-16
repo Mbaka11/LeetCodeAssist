@@ -29,4 +29,8 @@ describe('problemSlugFromUrl', () => {
     expect(problemSlugFromUrl('https://example.com/problems/two-sum/')).toBeNull();
     expect(problemSlugFromUrl(undefined)).toBeNull();
   });
+
+  it('returns null instead of throwing on a malformed percent escape', () => {
+    expect(problemSlugFromUrl('https://leetcode.com/problems/%')).toBeNull();
+  });
 });

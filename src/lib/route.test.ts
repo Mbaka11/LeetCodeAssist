@@ -20,4 +20,8 @@ describe('parseRoute', () => {
     expect(parseRoute(problemHref('3sum'))).toEqual({ view: 'problem', slug: '3sum' });
     expect(parseRoute('#/problem')).toEqual({ view: 'roadmap' });
   });
+
+  it('falls back to the roadmap on a malformed percent escape', () => {
+    expect(parseRoute('#/problem/%')).toEqual({ view: 'roadmap' });
+  });
 });
