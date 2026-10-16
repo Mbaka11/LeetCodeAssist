@@ -11,6 +11,8 @@ export interface AppActions {
   /** Persists today's plan so its activities (and their timers) survive reloads. */
   materializeToday(): Promise<void>;
   startActivity(id: string): Promise<void>;
+  /** Starts practice on a problem outside today's plan; see `commands.startExtraPractice`. */
+  startExtraPractice(slug: string): Promise<void>;
   pause(id: string): Promise<void>;
   resume(id: string): Promise<void>;
   markApproachFound(id: string): Promise<void>;
@@ -34,6 +36,8 @@ export function createActions(store: AppStore, now: Clock = Date.now): AppAction
       const t = now();
       return store.update((s) => commands.startActivity(commands.materializeToday(s, t), id, t));
     },
+    startExtraPractice: (slug) =>
+      store.update((s) => commands.startExtraPractice(s, slug, now()).state),
     pause: (id) => store.update((s) => commands.pauseActivity(s, id, now())),
     resume: (id) => store.update((s) => commands.resumeActivity(s, id, now())),
     markApproachFound: (id) => store.update((s) => commands.recordApproachFound(s, id, now())),

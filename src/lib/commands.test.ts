@@ -175,3 +175,48 @@ describe('notes, checks and settings', () => {
     expect(() => commands.updateSettings(state, { morningNotify: '8:30' })).toThrow(/morningNotify/);
   });
 });
+
+describe('startExtraPractice', () => {
+  it('starts an extra `new` for a problem that was never completed', () => {
+    const now = at(START);
+    const { state, activityId } = commands.startExtraPractice(newState(), 'median-of-two-sorted-arrays', now);
+    const activity = findActivity(state, activityId)!;
+    expect(activity).toMatchObject({
+      slug: 'median-of-two-sorted-arrays',
+      type: 'new',
+      extra: true,
+      status: 'in_progress',
+      dueDate: START,
+    });
+    expect(activity.timer.running).toBe(true);
+    // Skipping extra practice never plans a follow-up.
+    const skipped = commands.skipActivity(state, activityId, now);
+    expect(skipped.activities.filter((a) => a.slug === 'median-of-two-sorted-arrays')).toHaveLength(1);
+  });
+
+  it('starts an extra re-solve for a learned problem', () => {
+    const { state, newIds, now } = dayOne();
+    const slug = findActivity(state, newIds[0]!)!.slug;
+    let next = commands.startActivity(state, newIds[0]!, now);
+    next = commands.completeActivity(next, newIds[0]!, { outcome: 'solo' }, now + 25 * 60_000);
+    const started = commands.startExtraPractice(next, slug, now + 30 * 60_000);
+    expect(findActivity(started.state, started.activityId)).toMatchObject({
+      type: 'resolve',
+      extra: true,
+      status: 'in_progress',
+    });
+  });
+
+  it('starts the plan\'s own activity when the problem is already planned today', () => {
+    const { state, newIds, now } = dayOne();
+    const planned = findActivity(state, newIds[0]!)!;
+    const started = commands.startExtraPractice(state, planned.slug, now);
+    expect(started.activityId).toBe(planned.id);
+    expect(started.state.activities).toHaveLength(state.activities.length);
+    expect(findActivity(started.state, planned.id)?.status).toBe('in_progress');
+  });
+
+  it('rejects problems outside the NeetCode 150 list', () => {
+    expect(() => commands.startExtraPractice(newState(), 'not-a-problem', at(START))).toThrow(/NeetCode 150/);
+  });
+});

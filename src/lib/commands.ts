@@ -5,6 +5,7 @@
 import { createActivity, findActivity, isReviewType, markApproachFound, updateActivity } from '../core/activities';
 import { addDays, localDateFromTimestamp } from '../core/dates';
 import { materializePlan, planDay } from '../core/planner';
+import { getProblem } from '../data/neetcode150';
 import { applyOutcome } from '../core/reviews';
 import { validateState } from '../core/state';
 import { pauseTimer, resumeTimer, startTimer } from '../core/timer';
@@ -98,6 +99,43 @@ export function skipActivity(state: AppState, id: string, now: number): AppState
     createdAt: today,
   });
   return { ...skipped, activities: [...skipped.activities, retry] };
+}
+
+/**
+ * Starts practice on a problem that is not part of today's plan (for example one opened on LeetCode).
+ * A problem that was never completed becomes an extra `new` (finishing it starts its review cycle);
+ * a learned one becomes an extra `resolve`. Extra practice is optional: skipping it never plans a
+ * follow-up. Returns the id of the started activity, which is the plan's own activity when the
+ * problem is already planned today.
+ */
+export function startExtraPractice(
+  state: AppState,
+  slug: string,
+  now: number,
+): { state: AppState; activityId: string } {
+  if (!getProblem(slug)) throw new Error(`"${slug}" is not in the NeetCode 150 list`);
+  const today = localDateFromTimestamp(now);
+  const materialized = materializeToday(state, now);
+  const planned = planDay(materialized, today).items.find(
+    (item) =>
+      item.activity.slug === slug &&
+      (item.activity.status === 'planned' || item.activity.status === 'in_progress'),
+  );
+  if (planned) {
+    return { state: startActivity(materialized, planned.activity.id, now), activityId: planned.activity.id };
+  }
+  const learned = materialized.activities.some(
+    (a) => a.slug === slug && a.type === 'new' && a.status === 'done',
+  );
+  const activity = createActivity(materialized.activities, {
+    type: learned ? 'resolve' : 'new',
+    slug,
+    dueDate: today,
+    createdAt: today,
+    extra: true,
+  });
+  const withActivity = { ...materialized, activities: [...materialized.activities, activity] };
+  return { state: startActivity(withActivity, activity.id, now), activityId: activity.id };
 }
 
 export interface NoteFields {
