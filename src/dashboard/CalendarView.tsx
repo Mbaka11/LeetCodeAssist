@@ -32,9 +32,24 @@ const ENTRY_TONES: Record<EntryState, 'good' | 'neutral' | 'warn' | 'bad'> = {
   expected: 'neutral',
 };
 
-function StartDateForm({ state, actions }: { state: AppState; actions: AppActions }) {
+interface StartDateMessage {
+  ok: boolean;
+  text: string;
+}
+
+/** The message lives outside the form: a saved change re-keys (remounts) the form. */
+function StartDateForm({
+  state,
+  actions,
+  message,
+  setMessage,
+}: {
+  state: AppState;
+  actions: AppActions;
+  message: StartDateMessage | null;
+  setMessage: (message: StartDateMessage | null) => void;
+}) {
   const [value, setValue] = useState(state.settings.startDate);
-  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   return (
     <form
       className="row"
@@ -160,6 +175,7 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
   const today = localDateFromTimestamp(now);
   const days = useMemo(() => calendarDays(state, today), [state, today]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [startDateMessage, setStartDateMessage] = useState<StartDateMessage | null>(null);
 
   const selected =
     days.find((d) => d.date === selectedDate) ?? days.find((d) => d.kind === 'today') ?? days[0]!;
@@ -183,7 +199,13 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
             {...(goalDays > 0 ? { tone: 'good' as const } : {})}
           />
         </div>
-        <StartDateForm key={state.settings.startDate} state={state} actions={actions} />
+        <StartDateForm
+          key={state.settings.startDate}
+          state={state}
+          actions={actions}
+          message={startDateMessage}
+          setMessage={setStartDateMessage}
+        />
       </Card>
 
       <div className="calendar-grid">

@@ -10,6 +10,7 @@ import { attemptHistory, isNotesLocked, nextReview } from '../core/problemSheet'
 import { getProblemStatus } from '../core/state';
 import type { Activity, AppState } from '../core/types';
 import { getProblem, problemUrl } from '../data/neetcode150';
+import { BENCHMARKS } from '../data/program';
 import type { AppActions } from '../lib/actions';
 import { formatDate, formatMinutes } from '../lib/format';
 import { ACTIVITY_LABELS, STATUS_LABELS, STATUS_TONES, difficultyTone } from '../lib/instructions';
@@ -83,13 +84,39 @@ function NotesSection({
   );
 }
 
-function ExtraPractice({ state, actions, slug }: { state: AppState; actions: AppActions; slug: string }) {
+const BENCHMARK_SLUGS: ReadonlySet<string> = new Set(BENCHMARKS.flatMap((b) => [b.easy, b.medium]));
+
+function ExtraPractice({
+  state,
+  actions,
+  slug,
+  today,
+}: {
+  state: AppState;
+  actions: AppActions;
+  slug: string;
+  today: string;
+}) {
   const [error, setError] = useState<string | null>(null);
   const learned = state.activities.some((a) => a.slug === slug && a.type === 'new' && a.status === 'done');
+  const doneToday = state.activities.some(
+    (a) => a.slug === slug && a.status === 'done' && a.completedAt === today,
+  );
+  if (BENCHMARK_SLUGS.has(slug)) {
+    return (
+      <Card title="Reserved for a benchmark">
+        <p className="muted">
+          This problem is kept unseen for a benchmark day (1, 15 or 30), so it is not offered as practice.
+        </p>
+      </Card>
+    );
+  }
   return (
-    <Card title="Not in today's plan">
+    <Card title={doneToday ? 'Done today' : "Not in today's plan"}>
       <p className="muted">
-        {learned
+        {doneToday
+          ? 'You already finished this problem today. You can still start an optional extra attempt.'
+          : learned
           ? 'You have learned this problem already. Start an extra re-solve: it is optional and never becomes debt.'
           : 'Start it as extra practice: finishing it starts its review cycle like any new problem.'}
       </p>
@@ -230,7 +257,7 @@ export function ProblemPanel({ state, actions, slug, now, openDashboard }: Probl
         </Card>
       ) : null}
 
-      {hasOpen ? null : <ExtraPractice state={state} actions={actions} slug={slug} />}
+      {hasOpen ? null : <ExtraPractice state={state} actions={actions} slug={slug} today={today} />}
 
       <NotesSection state={state} actions={actions} slug={slug} locked={locked} />
     </div>

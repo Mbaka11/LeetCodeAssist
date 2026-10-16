@@ -15,14 +15,24 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function SettingsForm({ state, actions }: { state: AppState; actions: AppActions }) {
+/** The message lives outside the form: a saved change re-keys (remounts) the form. */
+function SettingsForm({
+  state,
+  actions,
+  message,
+  setMessage,
+}: {
+  state: AppState;
+  actions: AppActions;
+  message: Message | null;
+  setMessage: (message: Message | null) => void;
+}) {
   const { settings } = state;
   const [startDate, setStartDate] = useState(settings.startDate);
   const [target, setTarget] = useState(String(settings.dailyTargetMin));
   const [cap, setCap] = useState(String(settings.dailyCapMin));
   const [morning, setMorning] = useState(settings.morningNotify);
   const [evening, setEvening] = useState(settings.eveningNotify);
-  const [message, setMessage] = useState<Message | null>(null);
 
   const submit = (event: FormEvent): void => {
     event.preventDefault();
@@ -154,10 +164,17 @@ function DataSection({ actions }: { actions: AppActions }) {
 }
 
 export function SettingsView({ state, actions }: { state: AppState; actions: AppActions }) {
+  const [message, setMessage] = useState<Message | null>(null);
   return (
     <div className="stack narrow-left">
       <Card title="Settings">
-        <SettingsForm key={JSON.stringify(state.settings)} state={state} actions={actions} />
+        <SettingsForm
+          key={JSON.stringify(state.settings)}
+          state={state}
+          actions={actions}
+          message={message}
+          setMessage={setMessage}
+        />
       </Card>
       <Card title="Your data">
         <p className="muted">

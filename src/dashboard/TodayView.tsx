@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityCard } from '../components/ActivityCard';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -32,6 +32,12 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
   const now = useNow(anyRunning ? 1000 : 30_000);
   const today = localDateFromTimestamp(now);
   const plan = useMemo(() => planDay(state, today), [state, today]);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const report = (task: Promise<void>): void => {
+    setActionError(null);
+    task.catch((e: unknown) => setActionError(e instanceof Error ? e.message : String(e)));
+  };
 
   const needsMaterializing =
     plan.items.some((i) => !i.persisted) || (plan.bonus !== null && !plan.bonus.persisted);
@@ -48,11 +54,12 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
           {daysLeft === 1 ? 'tomorrow' : `in ${daysLeft} days`}). There is nothing to do before then.
         </p>
         <div className="row">
-          <Button variant="primary" onClick={() => void actions.updateSettings({ startDate: today })}>
+          <Button variant="primary" onClick={() => report(actions.updateSettings({ startDate: today }))}>
             Start today instead
           </Button>
           <a href="#/settings">Change the start date in Settings</a>
         </div>
+        {actionError ? <p className="error">{actionError}</p> : null}
       </Card>
     );
   }
@@ -80,7 +87,7 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
 
   const startNext = (item: PlanItem): void => {
     const id = item.activity.id;
-    void (item.activity.status === 'in_progress' ? actions.resume(id) : actions.startActivity(id));
+    report(item.activity.status === 'in_progress' ? actions.resume(id) : actions.startActivity(id));
   };
 
   return (
@@ -132,6 +139,7 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
           ) : null
         }
       >
+        {actionError ? <p className="error">{actionError}</p> : null}
         {plan.items.length === 0 ? (
           <p className="muted">Nothing is scheduled today.</p>
         ) : (
