@@ -169,6 +169,19 @@ describe('applyOutcome: resolve', () => {
     expect(plannedOf(state, SLUG, 'rebuild')).toHaveLength(0);
   });
 
+  it('does not schedule a new blind after a solo extra resolve on a mastered problem', () => {
+    const learned = atResolve();
+    const mastered = { ...learned, problemStatus: { ...learned.problemStatus, [SLUG]: 'mastered' as const } };
+    const stripped = {
+      ...mastered,
+      activities: mastered.activities.filter((a) => !(a.slug === SLUG && a.type === 'blind')),
+    };
+    const resolve = plannedOf(stripped, SLUG, 'resolve')[0]!;
+    const state = complete(stripped, resolve.id, 'solo', day(30));
+    expect(state.problemStatus[SLUG]).toBe('mastered');
+    expect(plannedOf(state, SLUG, 'blind')).toHaveLength(0);
+  });
+
   it('keeps blind anchored to the new completion when resolve is done late', () => {
     const learned = atResolve();
     const resolve = plannedOf(learned, SLUG, 'resolve')[0]!;

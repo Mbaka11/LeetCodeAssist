@@ -362,6 +362,20 @@ describe('planDay: benchmarks', () => {
     expect(plan.carriedOver.length).toBeGreaterThan(0);
   });
 
+  it('keeps a benchmark started on an earlier day listed until it is finished', () => {
+    let state = materializePlan(newState(), planDay(newState(), day(1)));
+    const first = activitiesOf(state, BENCHMARKS[0]!.easy, 'benchmark')[0]!;
+    state = {
+      ...state,
+      activities: state.activities.map((a) =>
+        a.id === first.id ? { ...a, status: 'in_progress' as const } : a,
+      ),
+    };
+    const next = planDay(state, day(2));
+    expect(itemKeys(next)).toContain(`benchmark:${BENCHMARKS[0]!.easy}`);
+    expect(itemKeys(next)).not.toContain(`benchmark:${BENCHMARKS[0]!.medium}`);
+  });
+
   it('does not plan a benchmark on other days or re-create a skipped one', () => {
     let state = newState();
     expect(itemKeys(planDay(state, day(2))).some((k) => k.startsWith('benchmark'))).toBe(false);

@@ -155,7 +155,7 @@ export function applyOutcome(state: AppState, activityId: string, completion: Co
     case 'resolve': {
       if (outcome === 'solo') {
         if (next.problemStatus[slug] !== 'mastered') next = withStatus(next, slug, 'reviewed');
-        if (!hasPlanned(activities, slug, 'blind')) {
+        if (next.problemStatus[slug] !== 'mastered' && !hasPlanned(activities, slug, 'blind')) {
           // resolve-day + 14: blind stays 21 days after the original `new`.
           schedule('blind', 14);
         }

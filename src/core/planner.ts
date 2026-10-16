@@ -216,6 +216,12 @@ export function planDay(
     }
   }
 
+  // A benchmark started on an earlier day and still running must stay finishable.
+  for (const a of state.activities) {
+    if (a.type !== 'benchmark' || a.status !== 'in_progress' || a.dueDate >= date) continue;
+    benchmarkItems.push(toItem(a));
+  }
+
   // 3. New problems already committed for today (done, started, or materialized).
   const queueIndex = (slug: string): number => {
     const i = queue.indexOf(slug);
