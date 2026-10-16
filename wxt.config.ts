@@ -11,5 +11,11 @@ export default defineConfig({
     host_permissions: ['https://leetcode.com/*'],
     side_panel: { default_path: 'sidepanel.html' },
     action: { default_title: 'LeetCode Assist' },
+    commands: {
+      'open-side-panel': {
+        suggested_key: { default: 'Alt+Shift+L' },
+        description: 'Open the LeetCode Assist side panel',
+      },
+    },
   },
 });

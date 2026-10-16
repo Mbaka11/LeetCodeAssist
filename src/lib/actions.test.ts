@@ -85,6 +85,22 @@ describe('app actions on a chrome.storage mock', () => {
     expect(planDay(await state(), day(2)).items.map((i) => i.activity.id)).toContain(recall.id);
   });
 
+  it('starts extra practice on a problem outside the plan and finishes it into a review cycle', async () => {
+    const { actions, clock, state } = await setup();
+    await actions.startExtraPractice('median-of-two-sorted-arrays');
+    const started = (await state()).activities.find((a) => a.slug === 'median-of-two-sorted-arrays')!;
+    expect(started).toMatchObject({ type: 'new', extra: true, status: 'in_progress' });
+
+    clock.now += 30 * 60_000;
+    await actions.completeActivity(started.id, 'solo');
+    const after = await state();
+    expect(after.problemStatus['median-of-two-sorted-arrays']).toBe('learning');
+    expect(
+      after.activities.filter((a) => a.slug === 'median-of-two-sorted-arrays' && a.type === 'recall'),
+    ).toHaveLength(1);
+    await expect(actions.startExtraPractice('nope')).rejects.toThrow(/NeetCode 150/);
+  });
+
   it('saves notes, toggles checks and updates settings', async () => {
     const { actions, state } = await setup();
     await actions.saveNote('two-sum', {

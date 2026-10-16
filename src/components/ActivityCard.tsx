@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 import { estimatedMinutes } from '../core/activities';
 import { elapsedMs, formatElapsed } from '../core/timer';
 import type { Activity } from '../core/types';
 import { getProblem, problemUrl } from '../data/neetcode150';
 import type { AppActions } from '../lib/actions';
 import { formatDate, formatMinutes, formatMs } from '../lib/format';
-import { ACTIVITY_INSTRUCTIONS, ACTIVITY_LABELS, OUTCOME_LABELS } from '../lib/instructions';
+import { ACTIVITY_INSTRUCTIONS, ACTIVITY_LABELS, OUTCOME_LABELS, difficultyTone } from '../lib/instructions';
 import { problemHref } from '../lib/route';
 import { Badge } from './Badge';
 import { Button } from './Button';
@@ -18,11 +18,17 @@ export function ActivityCard({
   now,
   actions,
   variant = 'planned',
+  compact = false,
+  openProblemSheet,
 }: {
   activity: Activity;
   now: number;
   actions: AppActions;
   variant?: CardVariant;
+  /** Side panel layout: no category and no LeetCode link (the problem is already open). */
+  compact?: boolean;
+  /** Replaces the default in-page link to the problem sheet (the side panel opens the dashboard). */
+  openProblemSheet?: (slug: string) => void;
 }) {
   const [finishing, setFinishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,20 +57,33 @@ export function ActivityCard({
         {variant === 'carried' ? (
           <Badge tone="bad">{`Due ${formatDate(activity.dueDate)}`}</Badge>
         ) : null}
-        <a className="activity-title" href={problemHref(activity.slug)}>
+        <a
+          className="activity-title"
+          href={problemHref(activity.slug)}
+          {...(openProblemSheet
+            ? {
+                onClick: (event: MouseEvent<HTMLAnchorElement>) => {
+                  event.preventDefault();
+                  openProblemSheet(activity.slug);
+                },
+              }
+            : {})}
+        >
           {problem?.title ?? activity.slug}
         </a>
         {problem ? (
-          <Badge tone={problem.difficulty === 'Easy' ? 'easy' : problem.difficulty === 'Medium' ? 'medium' : 'hard'}>
+          <Badge tone={difficultyTone(problem.difficulty)}>
             {problem.difficulty}
           </Badge>
         ) : null}
-        {problem ? <span className="muted">{problem.category}</span> : null}
+        {problem && !compact ? <span className="muted">{problem.category}</span> : null}
         <span className="spacer" />
         <span className="muted">~{formatMinutes(estimatedMinutes(activity.type, activity.slug))}</span>
-        <a className="link-out" href={url} target="_blank" rel="noreferrer">
-          LeetCode ↗
-        </a>
+        {compact ? null : (
+          <a className="link-out" href={url} target="_blank" rel="noreferrer">
+            LeetCode ↗
+          </a>
+        )}
       </div>
 
       {open ? <p className="instruction">{ACTIVITY_INSTRUCTIONS[activity.type]}</p> : null}

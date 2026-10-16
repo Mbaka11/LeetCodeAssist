@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { Route } from '../lib/route';
 
 const LINKS: { view: Route['view']; href: string; label: string }[] = [
@@ -7,7 +8,7 @@ const LINKS: { view: Route['view']; href: string; label: string }[] = [
   { view: 'settings', href: '#/settings', label: 'Settings' },
 ];
 
-export function NavBar({ route }: { route: Route }) {
+export function NavBar({ route, actions }: { route: Route; actions?: ReactNode }) {
   return (
     <header className="navbar">
       <span className="brand">LeetCode Assist</span>
@@ -23,6 +24,12 @@ export function NavBar({ route }: { route: Route }) {
           </a>
         ))}
       </nav>
+      {actions ? (
+        <>
+          <span className="spacer" />
+          {actions}
+        </>
+      ) : null}
     </header>
   );
 }

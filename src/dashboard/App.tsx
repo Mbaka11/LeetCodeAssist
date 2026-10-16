@@ -4,8 +4,10 @@ import { ConfirmButton } from '../components/ConfirmButton';
 import { NavBar } from '../components/NavBar';
 import { parseRoute, type Route } from '../lib/route';
 import { useAppState } from '../lib/useAppState';
-import { PlaceholderView } from './PlaceholderView';
+import { CalendarView } from './CalendarView';
+import { OpenSidePanelButton } from './OpenSidePanelButton';
 import { ProblemView } from './ProblemView';
+import { RoadmapView } from './RoadmapView';
 import { SettingsView } from './SettingsView';
 import { SetupView } from './SetupView';
 import { TodayView } from './TodayView';
@@ -49,15 +51,11 @@ export function App() {
   const { state } = snapshot;
   return (
     <>
-      <NavBar route={route} />
+      <NavBar route={route} actions={<OpenSidePanelButton />} />
       <main className="page">
         {route.view === 'today' ? <TodayView state={state} actions={actions} /> : null}
-        {route.view === 'calendar' ? (
-          <PlaceholderView title="Calendar" text="Day-by-day planned, done and carried counts arrive in the next stage." />
-        ) : null}
-        {route.view === 'roadmap' ? (
-          <PlaceholderView title="Roadmap" text="The NeetCode categories with progress counters arrive in the next stage." />
-        ) : null}
+        {route.view === 'calendar' ? <CalendarView state={state} actions={actions} /> : null}
+        {route.view === 'roadmap' ? <RoadmapView state={state} actions={actions} /> : null}
         {route.view === 'problem' ? (
           <ProblemView key={route.slug} slug={route.slug} state={state} actions={actions} />
         ) : null}

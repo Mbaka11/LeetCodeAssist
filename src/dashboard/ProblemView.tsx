@@ -7,29 +7,13 @@ import { localDateFromTimestamp } from '../core/dates';
 import { attemptHistory, isNotesLocked, nextReview } from '../core/problemSheet';
 import { getProblemStatus } from '../core/state';
 import { formatElapsed } from '../core/timer';
-import type { AppState, ProblemStatus } from '../core/types';
+import type { AppState } from '../core/types';
 import { getProblem, problemUrl } from '../data/neetcode150';
 import { BENCHMARKS, PROGRAM_QUEUE } from '../data/program';
 import type { AppActions } from '../lib/actions';
 import { formatDate, formatMs } from '../lib/format';
-import { ACTIVITY_LABELS, OUTCOME_LABELS } from '../lib/instructions';
+import { ACTIVITY_LABELS, OUTCOME_LABELS, STATUS_LABELS, STATUS_TONES, difficultyTone } from '../lib/instructions';
 import { useNow } from '../lib/useNow';
-
-const STATUS_LABELS: Record<ProblemStatus, string> = {
-  untouched: 'Untouched',
-  learning: 'Learning',
-  consolidating: 'Consolidating',
-  reviewed: 'Reviewed',
-  mastered: 'Mastered',
-};
-
-const STATUS_TONES: Record<ProblemStatus, 'neutral' | 'warn' | 'good'> = {
-  untouched: 'neutral',
-  learning: 'neutral',
-  consolidating: 'warn',
-  reviewed: 'good',
-  mastered: 'good',
-};
 
 export function ProblemView({
   slug,
@@ -65,7 +49,7 @@ export function ProblemView({
     <div className="stack">
       <div className="day-header">
         <h1>{problem.title}</h1>
-        <Badge tone={problem.difficulty === 'Easy' ? 'easy' : problem.difficulty === 'Medium' ? 'medium' : 'hard'}>
+        <Badge tone={difficultyTone(problem.difficulty)}>
           {problem.difficulty}
         </Badge>
         <Badge tone={STATUS_TONES[status]}>{STATUS_LABELS[status]}</Badge>

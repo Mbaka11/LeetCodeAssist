@@ -560,3 +560,137 @@ textarea.mono {
     padding: 0 12px;
   }
 }
+
+/* Calendar */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.cal-day {
+  font: inherit;
+  color: var(--text);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.cal-day:hover {
+  border-color: var(--accent);
+}
+
+.cal-day.cal-today {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.cal-day.cal-future {
+  background: var(--surface-2);
+}
+
+.cal-day.goal-met {
+  border-left: 4px solid var(--good);
+}
+
+.cal-day.selected {
+  outline: 2px solid var(--text);
+  outline-offset: 1px;
+}
+
+.cal-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cal-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 1px;
+}
+
+.cal-counts {
+  font-size: 0.85rem;
+}
+
+/* Roadmap */
+.roadmap-tier {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.category > * + * {
+  margin-top: 10px;
+}
+
+.category-stats,
+.category-after {
+  font-size: 0.85rem;
+}
+
+.category summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.problem-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.problem-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.problem-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Side panel */
+.panel {
+  padding: 12px;
+  min-width: 0;
+}
+
+.panel .card {
+  padding: 12px 14px;
+}
+
+.panel-title {
+  font-size: 1.15rem;
+  margin: 0 0 8px;
+}
+
+.panel .activity-head {
+  gap: 6px;
+}
+
+@media (max-width: 640px) {
+  .roadmap-tier {
+    grid-template-columns: 1fr;
+  }
+}

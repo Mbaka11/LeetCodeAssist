@@ -1,4 +1,4 @@
-import type { ActivityType, Outcome } from '../core/types';
+import type { ActivityType, Difficulty, Outcome, ProblemStatus } from '../core/types';
 
 export const ACTIVITY_LABELS: Record<ActivityType, string> = {
   new: 'New',
@@ -35,3 +35,23 @@ export const OUTCOME_DESCRIPTIONS: Record<Outcome, string> = {
   solution: 'Read the solution',
   stuck: 'Could not finish',
 };
+
+export const STATUS_LABELS: Record<ProblemStatus, string> = {
+  untouched: 'Untouched',
+  learning: 'Learning',
+  consolidating: 'Consolidating',
+  reviewed: 'Reviewed',
+  mastered: 'Mastered',
+};
+
+export const STATUS_TONES: Record<ProblemStatus, 'neutral' | 'warn' | 'good'> = {
+  untouched: 'neutral',
+  learning: 'neutral',
+  consolidating: 'warn',
+  reviewed: 'good',
+  mastered: 'good',
+};
+
+export function difficultyTone(difficulty: Difficulty): 'easy' | 'medium' | 'hard' {
+  return difficulty === 'Easy' ? 'easy' : difficulty === 'Medium' ? 'medium' : 'hard';
+}
