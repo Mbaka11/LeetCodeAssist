@@ -1,3 +1,8 @@
+import { openDashboard } from '../lib/openDashboard';
+
 export default defineBackground(() => {
-  // Placeholder: alarms, notifications and badge are added in a later stage.
+  chrome.action.onClicked.addListener(() => {
+    void openDashboard();
+  });
+  // Alarms, notifications and the badge are added in a later stage.
 });
