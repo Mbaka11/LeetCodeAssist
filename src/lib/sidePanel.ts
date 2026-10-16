@@ -4,8 +4,8 @@ export type OpenSidePanelResult = 'opened' | 'no-leetcode-tab';
 
 /** Opens the side panel on a LeetCode tab (the active one when possible). Must run from a user gesture. */
 export async function openSidePanelOnLeetCode(): Promise<OpenSidePanelResult> {
-  const tabs = (await chrome.tabs.query({})).filter((tab) => tab.id !== undefined && isLeetCodeUrl(tab.url));
-  const current = await chrome.windows.getCurrent();
+  const [allTabs, current] = await Promise.all([chrome.tabs.query({}), chrome.windows.getCurrent()]);
+  const tabs = allTabs.filter((tab) => tab.id !== undefined && isLeetCodeUrl(tab.url));
   const target =
     tabs.find((tab) => tab.active && tab.windowId === current.id) ??
     tabs.find((tab) => tab.active) ??
