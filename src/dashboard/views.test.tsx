@@ -1,11 +1,13 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { createActivity } from '../core/activities';
+import { simulateDay } from '../core/testing';
 import { addDays, localDateFromTimestamp } from '../core/dates';
 import { defaultState } from '../core/state';
 import type { AppState } from '../core/types';
 import type { AppActions } from '../lib/actions';
 import { ProblemView } from './ProblemView';
+import { LogsView } from './LogsView';
 import { SettingsView } from './SettingsView';
 import { SetupView } from './SetupView';
 import { TodayView } from './TodayView';
@@ -104,5 +106,46 @@ describe('dashboard views (render smoke tests)', () => {
     expect(html).toContain('Export JSON');
     expect(html).toContain('Import JSON');
     expect(html).toContain('Reset all data');
+  });
+
+  it('Settings shows the budget table with the defaults and a reset button', () => {
+    const html = renderToStaticMarkup(<SettingsView state={defaultState(today)} actions={actions} />);
+    expect(html).toContain('Time budgets');
+    expect(html).toContain('Reset to defaults');
+    expect(html).toContain('Save budgets');
+    for (const label of ['Easy', 'Medium', 'Hard']) expect(html).toContain(`<th>${label}</th>`);
+    expect(html).toContain('aria-label="Recall Medium budget in minutes" value="15"');
+    expect(html).toContain('aria-label="New Hard budget in minutes" value="50"');
+    expect(html.match(/budget in minutes/g)).toHaveLength(18);
+  });
+
+  it('Settings shows saved budget overrides', () => {
+    const state = defaultState(today);
+    const custom: AppState = { ...state, settings: { ...state.settings, budgets: { recall: { Medium: 12 } } } };
+    const html = renderToStaticMarkup(<SettingsView state={custom} actions={actions} />);
+    expect(html).toContain('aria-label="Recall Medium budget in minutes" value="12"');
+    expect(html).toContain('aria-label="Recall Easy budget in minutes" value="5"');
+  });
+
+  it('Logs shows the empty state with the filters and a disabled export', () => {
+    const html = renderToStaticMarkup(<LogsView state={defaultState(today)} />);
+    expect(html).toContain('Nothing logged yet');
+    expect(html).toContain('Search title');
+    expect(html).toContain('Export CSV (0)');
+    expect(html).toContain('Solo rate');
+  });
+
+  it('Logs lists completed activities with links, budget and delta', () => {
+    const start = addDays(today, -1);
+    let state = defaultState(start);
+    state = simulateDay(state, start, { minutes: 30 }).state;
+    const html = renderToStaticMarkup(<LogsView state={state} />);
+    expect(html).toContain('href="#/problem/two-sum"');
+    expect(html).toContain('Two Sum');
+    expect(html).toContain('Arrays &amp; Hashing');
+    expect(html).toContain('+5 min'); // Easy new, 30 min logged against a 25 min budget
+    expect(html).toContain('Done');
+    expect(html).toContain('Total time');
+    expect(html).not.toContain('Nothing logged yet');
   });
 });

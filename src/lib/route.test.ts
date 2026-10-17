@@ -6,6 +6,7 @@ describe('parseRoute', () => {
     expect(parseRoute('#/today')).toEqual({ view: 'today' });
     expect(parseRoute('#/calendar')).toEqual({ view: 'calendar' });
     expect(parseRoute('#/roadmap')).toEqual({ view: 'roadmap' });
+    expect(parseRoute('#/logs')).toEqual({ view: 'logs' });
     expect(parseRoute('#/settings')).toEqual({ view: 'settings' });
   });
 

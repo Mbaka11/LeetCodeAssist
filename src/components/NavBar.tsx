@@ -5,6 +5,7 @@ const LINKS: { view: Route['view']; href: string; label: string }[] = [
   { view: 'today', href: '#/today', label: 'Today' },
   { view: 'calendar', href: '#/calendar', label: 'Calendar' },
   { view: 'roadmap', href: '#/roadmap', label: 'Roadmap' },
+  { view: 'logs', href: '#/logs', label: 'Logs' },
   { view: 'settings', href: '#/settings', label: 'Settings' },
 ];
 

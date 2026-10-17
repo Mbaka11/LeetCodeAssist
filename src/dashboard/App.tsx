@@ -5,6 +5,7 @@ import { NavBar } from '../components/NavBar';
 import { parseRoute, type Route } from '../lib/route';
 import { useAppState } from '../lib/useAppState';
 import { CalendarView } from './CalendarView';
+import { LogsView } from './LogsView';
 import { OpenSidePanelButton } from './OpenSidePanelButton';
 import { ProblemView } from './ProblemView';
 import { RoadmapView } from './RoadmapView';
@@ -52,10 +53,11 @@ export function App() {
   return (
     <>
       <NavBar route={route} actions={<OpenSidePanelButton />} />
-      <main className="page">
+      <main className={route.view === 'logs' ? 'page page-wide' : 'page'}>
         {route.view === 'today' ? <TodayView state={state} actions={actions} /> : null}
         {route.view === 'calendar' ? <CalendarView state={state} actions={actions} /> : null}
         {route.view === 'roadmap' ? <RoadmapView state={state} actions={actions} /> : null}
+        {route.view === 'logs' ? <LogsView state={state} /> : null}
         {route.view === 'problem' ? (
           <ProblemView key={route.slug} slug={route.slug} state={state} actions={actions} />
         ) : null}
