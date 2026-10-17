@@ -238,6 +238,15 @@ describe('startExtraPractice', () => {
     expect(findActivity(started.state, planned.id)?.status).toBe('in_progress');
   });
 
+  it('starts the planned bonus problem instead of creating a duplicate extra', () => {
+    const { state, now } = dayOne();
+    const bonus = planDay(state, START).bonus!;
+    const started = commands.startExtraPractice(state, bonus.activity.slug, now);
+    expect(started.activityId).toBe(bonus.activity.id);
+    expect(started.state.activities).toHaveLength(state.activities.length);
+    expect(findActivity(started.state, bonus.activity.id)?.status).toBe('in_progress');
+  });
+
   it('rejects problems outside the NeetCode 150 list', () => {
     expect(() => commands.startExtraPractice(newState(), 'not-a-problem', at(START))).toThrow(/NeetCode 150/);
   });

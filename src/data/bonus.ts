@@ -35,8 +35,6 @@ export const BONUS_POOL: readonly string[] = [
   'longest-common-subsequence',
   // Greedy
   'partition-labels',
-  // Intervals
-  'meeting-rooms',
   // Math & Geometry
   'rotate-image',
   // Bit Manipulation

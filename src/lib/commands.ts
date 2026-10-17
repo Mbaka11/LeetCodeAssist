@@ -221,7 +221,8 @@ export function startExtraPractice(
   if (!getProblem(slug)) throw new Error(`"${slug}" is not in the NeetCode 150 list`);
   const today = localDateFromTimestamp(now);
   const materialized = materializeToday(state, now);
-  const planned = planDay(materialized, today).items.find(
+  const todayPlan = planDay(materialized, today);
+  const planned = [...todayPlan.items, ...(todayPlan.bonus ? [todayPlan.bonus] : [])].find(
     (item) =>
       item.activity.slug === slug &&
       (item.activity.status === 'planned' || item.activity.status === 'in_progress'),

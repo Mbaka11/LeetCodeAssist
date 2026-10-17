@@ -304,5 +304,8 @@ describe('bonus-pool problems in the calendar', () => {
     expect(programProgress(done, day(2)).learned).toBe(2);
     const doneBonus = done.activities.find((a) => a.id === bonus[0]!.id)!;
     expect(doneBonus.status).toBe('done');
+
+    const later = calendarDays(done, day(3))[0]!;
+    expect(later.entries.find((e) => e.bonus)).toMatchObject({ id: bonus[0]!.id, state: 'done' });
   });
 });

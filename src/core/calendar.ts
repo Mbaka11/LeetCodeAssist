@@ -79,7 +79,7 @@ interface Draft {
   entry: CalendarEntry;
   /** Counts towards the day's planned total. */
   planned: boolean;
-  /** Counts towards the day's plan-done ratio: planned, due this day, not optional practice. */
+  /** Counts towards the day's plan-done ratio: planned, due this day, and not optional practice, postponed or the bonus. */
   core: boolean;
 }
 
@@ -150,7 +150,7 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
     if (entryState === null) continue;
     const isBonus = bonus.has(a.id);
     drafts.set(a.id, {
-      entry: entryOf(a, isBonus && date < today ? 'skipped' : entryState),
+      entry: entryOf(a, isBonus && date < today && a.status !== 'done' ? 'skipped' : entryState),
       planned: dueHere && !isBonus && !a.postponed,
       core: dueHere && !isBonus && isCoreActivity(a, date),
     });

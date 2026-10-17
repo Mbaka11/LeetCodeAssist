@@ -466,7 +466,7 @@ export const HINTS: Record<string, Hint> = {
       '1) Scan the tokens left to right. 2) Push every number. 3) For an operator, pop the right operand first, then the left one, apply the operator and push the result. 4) Division truncates toward zero. 5) The single value left on the stack is the answer. Time O(n), space O(n).',
   },
   'car-fleet': {
-    nudge: 'Sort the cars by how close they are to the target, then compare arrival times from the front of the road backwards.',
+    nudge: 'Think about how a fast car behaves once it reaches a slower one ahead of it.',
     insight:
       'A car can never pass the one ahead; it can only catch up and then move at that car\'s pace. So going from the car nearest the target, a car starts a new fleet only if it would arrive later than the fleet ahead.',
     sketch:
@@ -522,7 +522,7 @@ export const HINTS: Record<string, Hint> = {
       '1) Count the tasks and find the highest frequency f and how many tasks share it, c. 2) The frames give (f - 1) * (n + 1) + c slots. 3) Return the larger of that value and the total number of tasks. 4) Alternatively simulate with a max-heap and a cooldown queue. Time O(n), space O(1) for 26 letters.',
   },
   'subsets-ii': {
-    nudge: 'The same take-or-skip backtracking as for plain subsets, plus a way to avoid building an identical subset twice: sort first.',
+    nudge: 'The same take-or-skip backtracking as for plain subsets, plus a way to avoid building an identical subset twice.',
     insight:
       'After sorting, equal values sit side by side. At one level of the recursion, trying a value equal to the one just tried there would repeat a subset, so each distinct value is chosen once per level.',
     sketch:
@@ -584,15 +584,8 @@ export const HINTS: Record<string, Hint> = {
     sketch:
       '1) Record the last index of every letter. 2) Scan with index i, tracking the start of the piece and its end. 3) For each character set end = max(end, last[char]). 4) When i equals end, record a piece of size end - start + 1 and start the next one at i + 1. Time O(n), space O(1) for a fixed alphabet.',
   },
-  'meeting-rooms': {
-    nudge: 'Can one person attend every meeting? Put the intervals in order and only neighbours need to be compared.',
-    insight:
-      'After sorting by start time, any overlap must show up between two consecutive meetings: if a meeting overlapped a later one, it would also overlap the one in between.',
-    sketch:
-      '1) Sort the intervals by start time. 2) Walk through them pair by pair. 3) If a meeting starts before the previous one ends, return false. 4) If no pair overlaps, return true. Time O(n log n), space O(1) beyond sorting.',
-  },
   'rotate-image': {
-    nudge: 'Rotating in place can be split into simpler in-place moves of the whole matrix, such as mirroring it.',
+    nudge: 'Rotating in place can be split into simpler in-place moves of the whole matrix.',
     insight:
       'A clockwise quarter turn equals a transpose followed by reversing every row. Both steps only swap elements inside the same matrix, so no second matrix is needed.',
     sketch:
