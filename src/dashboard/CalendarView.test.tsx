@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { addDays, localDateFromTimestamp } from '../core/dates';
 import { simulateDay } from '../core/testing';
 import { getProblem } from '../data/neetcode150';
+import { PROGRAM_QUEUE } from '../data/program';
 import { formatMinutes } from '../lib/format';
 import { defaultState } from '../core/state';
 import type { AppActions } from '../lib/actions';
@@ -31,7 +32,7 @@ describe('CalendarView (render smoke test)', () => {
     expect(html).toContain('planned');
     // Overall progress and the per-day minutes bar.
     expect(html).toContain('Problems learned');
-    expect(html).toContain('0/53');
+    expect(html).toContain(`0/${PROGRAM_QUEUE.length}`);
     expect(html).toContain('Days elapsed');
     expect(html).toContain('1/30');
     expect(html.match(/<span class="cal-bar[ "]/g)).toHaveLength(30);

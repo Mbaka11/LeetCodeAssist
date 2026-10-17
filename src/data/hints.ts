@@ -151,6 +151,13 @@ export const HINTS: Record<string, Hint> = {
     sketch:
       '1) Create a dummy node and a tail pointer. 2) While both lists have nodes, link the smaller head to the tail and advance that list. 3) Attach the remaining non-empty list. 4) Return dummy.next. Time O(n+m), space O(1).',
   },
+  'linked-list-cycle': {
+    nudge: 'Two pointers moving through the list at different speeds, or a record of the nodes you have already visited.',
+    insight:
+      'If the list has a cycle, a pointer moving two steps at a time eventually laps one moving a single step and they meet; without a cycle the fast pointer simply reaches the end.',
+    sketch:
+      '1) Start slow and fast at the head. 2) While fast and fast.next exist, move slow one step and fast two. 3) If they ever point to the same node, return true. 4) If fast falls off the end, return false. Time O(n), space O(1); a visited set also works with O(n) space.',
+  },
   'remove-nth-node-from-end-of-list': {
     nudge: 'You do not know the length yet; can two pointers moving through the list in a single pass locate the node?',
     insight:
@@ -187,6 +194,13 @@ export const HINTS: Record<string, Hint> = {
       'Two trees are identical exactly when their roots match in presence and value and both pairs of corresponding subtrees are identical; a null on only one side is an immediate mismatch.',
     sketch:
       '1) If both nodes are null, return true. 2) If only one is null or the values differ, return false. 3) Return the result of comparing left with left and right with right. Time O(n), space O(h).',
+  },
+  'subtree-of-another-tree': {
+    nudge: 'Recursion that reuses an existing tree-comparison routine at every node.',
+    insight:
+      'subRoot is a subtree exactly when some node of root has a subtree identical to it, so you only need to try each node as a starting point and compare the two trees from there.',
+    sketch:
+      '1) Write isSame(a, b): both null is true, one null or different values is false, otherwise compare both pairs of children. 2) In isSubtree(root, subRoot) an empty root gives false. 3) Return true if isSame(root, subRoot) holds, else recurse on root.left and root.right. Time O(n·m), space O(h).',
   },
   'binary-tree-level-order-traversal': {
     nudge: 'Breadth-first search with a queue, processing the tree one layer at a time.',
@@ -397,20 +411,41 @@ export const HINTS: Record<string, Hint> = {
       '1) Put the words in a set and let ok[0] = true. 2) For each end i from 1 to n, look for a split j < i where ok[j] is true and s[j..i) is in the set. 3) Set ok[i] accordingly. 4) Return ok[n]. Only splits within the longest word length L need checking: O(n·L) splits, each costing O(L) to hash, so O(n·L²) time, space O(n).',
   },
 
-  // ---- Hard ----
-  'trapping-rain-water': {
-    nudge: 'What decides how much water sits on a single bar? Start with one bar, then think about doing it in one pass.',
+  // ---- Math & Bit Manipulation ----
+  'plus-one': {
+    nudge: 'Simulate grade-school addition on the digit array, working from the least significant end.',
     insight:
-      'The water over a bar equals min(tallest to the left, tallest to the right) minus its height, and the pointer on the side with the smaller maximum can be resolved without knowing the other side exactly.',
+      'Only digits equal to 9 produce a carry. Add one at the last digit and stop as soon as a digit below 9 absorbs it; if every digit was 9, the result is a 1 followed by zeros.',
     sketch:
-      '1) Place pointers at both ends and keep the left and right running maximums. 2) Handle the side whose current height is lower. 3) If it is below its side\'s maximum, add the difference as water; otherwise update the maximum. 4) Move that pointer inward until they meet. Time O(n), space O(1).',
+      '1) Walk i from the last index to the first. 2) If digits[i] < 9, increment it and return the array. 3) Otherwise set digits[i] to 0 and continue with the carry. 4) If the loop ends, all digits were 9: return [1] followed by the zeros. Time O(n), space O(1) besides the result.',
   },
-  'merge-k-sorted-lists': {
-    nudge: 'You repeatedly need the smallest among k candidates, which suggests a heap, or merging the lists pairwise.',
+  'number-of-1-bits': {
+    nudge: 'Bit manipulation: look at the number one bit at a time, or find a trick that removes bits as you count them.',
     insight:
-      'At any moment the next output node is the smallest among the current heads of the k lists, so a heap of size k always has it on top and the heap size never grows with n.',
+      'n & (n - 1) clears the lowest set bit, so the number of times you can repeat it before reaching zero is exactly the number of 1 bits, regardless of the zeros in between.',
     sketch:
-      '1) Push the head of each non-empty list into a min-heap keyed by value. 2) Pop the smallest node and append it to the result. 3) Push that node\'s next, if any. 4) Repeat until the heap is empty. Time O(N log k), space O(k). Divide-and-conquer pairwise merging gives the same time.',
+      '1) Set count = 0. 2) While n is not zero, replace n with n & (n - 1) and add one to count. 3) Return count. Checking each of the 32 bits with a shift and a mask also works. Time O(k) for k set bits, space O(1).',
+  },
+  'counting-bits': {
+    nudge: 'Dynamic programming over the numbers themselves: reuse the answer of a smaller number you already computed.',
+    insight:
+      'Shifting a number right by one drops its last bit, so bits(i) equals bits(i >> 1) plus its lowest bit (i & 1); an earlier answer always supplies the rest.',
+    sketch:
+      '1) Make an array ans of size n + 1 with ans[0] = 0. 2) For i from 1 to n, set ans[i] = ans[i >> 1] + (i & 1). 3) Return ans. Time O(n), space O(n) for the output.',
+  },
+  'reverse-bits': {
+    nudge: 'Bit manipulation in a fixed-width loop: build the result by taking bits from one end and placing them at the other.',
+    insight:
+      'Over exactly 32 steps, shift the result left to make room, copy in the lowest bit of n, then shift n right; the first bit read ends up as the highest bit of the result.',
+    sketch:
+      '1) Set result = 0. 2) Repeat 32 times: result = (result << 1) | (n & 1), then shift n right (unsigned). 3) Return result as an unsigned value. Time O(1) for a fixed 32 bits, space O(1).',
+  },
+  'missing-number': {
+    nudge: 'Use what you know about the full range 0..n: a sum formula, or an operation that cancels matching values.',
+    insight:
+      'The array holds every number from 0 to n except one, so the expected total minus the actual total is the missing value; XOR of all indices and values cancels pairs the same way.',
+    sketch:
+      '1) Compute expected = n·(n+1)/2. 2) Subtract every element of the array from it. 3) The remainder is the missing number. Alternatively XOR all indices 0..n with all elements. Time O(n), space O(1).',
   },
 
   // ---- Benchmark problems ----

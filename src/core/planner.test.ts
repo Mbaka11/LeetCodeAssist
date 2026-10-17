@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { BONUS_POOL } from '../data/bonus';
 import { getProblem } from '../data/neetcode150';
-import { BENCHMARKS, PROGRAM_QUEUE } from '../data/program';
-import { createActivity, estimatedMinutes } from './activities';
+import { BENCHMARKS, MAX_NEW_PROBLEMS_PER_DAY, NEW_PROBLEMS_PER_DAY, PROGRAM_QUEUE } from '../data/program';
+import { createActivity, estimatedMinutes, isReviewType } from './activities';
+import { diffDays } from './dates';
 import { programProgress } from './calendar';
-import { materializePlan, planDay } from './planner';
+import { SOFT_OVERFLOW_MIN, coreNewCount, materializePlan, planDay } from './planner';
 import { problemStats } from './state';
 import {
   START,
@@ -203,11 +204,11 @@ describe('planDay: reviews', () => {
     // two-sum is Easy, 3sum Medium, trapping-rain-water Hard.
     const slugs = ['two-sum', '3sum', 'trapping-rain-water'];
     const table: Record<ActivityType, [number, number, number]> = {
-      recall: [5, 15, 20],
-      rebuild: [10, 20, 25],
-      retry: [10, 20, 25],
-      resolve: [15, 30, 40],
-      blind: [15, 25, 35],
+      recall: [5, 8, 10],
+      rebuild: [10, 15, 18],
+      retry: [10, 15, 18],
+      resolve: [15, 25, 30],
+      blind: [15, 20, 25],
       new: [25, 40, 50],
       benchmark: [30, 30, 30],
     };
@@ -215,19 +216,19 @@ describe('planDay: reviews', () => {
       expect(slugs.map((slug) => estimatedMinutes(type, slug))).toEqual(minutes);
     }
     expect(estimatedMinutes('new', 'unknown-problem')).toBe(40); // counts as Medium
-    expect(estimatedMinutes('recall', 'unknown-problem')).toBe(15);
+    expect(estimatedMinutes('recall', 'unknown-problem')).toBe(8);
   });
 
   it('plans fewer new problems when reviews fill the budget', () => {
     let state = newState();
-    // 5 overdue Medium resolves = 150 min; one Easy (25) fits under 180, a second one (175 + 25) does not.
-    for (const slug of mediumSlugs.slice(0, 5)) state = addPlanned(state, 'resolve', slug, day(2));
+    // 6 overdue Medium resolves = 150 min; one Easy (25) fits under 180, a second one (175 + 25) does not.
+    for (const slug of mediumSlugs.slice(0, 6)) state = addPlanned(state, 'resolve', slug, day(2));
     const plan = planDay(state, day(3));
-    expect(plan.items.filter((i) => i.activity.type === 'resolve')).toHaveLength(5);
+    expect(plan.items.filter((i) => i.activity.type === 'resolve')).toHaveLength(6);
     expect(plan.items.filter((i) => i.activity.type === 'new')).toHaveLength(1);
     expect(plan.bonus).toBeNull();
     // Raise the review load until no new problem fits.
-    for (const slug of mediumSlugs.slice(5, 7)) state = addPlanned(state, 'resolve', slug, day(2));
+    for (const slug of mediumSlugs.slice(6, 8)) state = addPlanned(state, 'resolve', slug, day(2));
     const crowded = planDay(state, day(3));
     expect(crowded.items.filter((i) => i.activity.type === 'new')).toHaveLength(0);
     expect(crowded.bonus).toBeNull();
@@ -291,8 +292,8 @@ describe('planDay: missed days and the cap', () => {
     const plan = planDay(state, day(2), { ...state.settings, dailyCapMin: 100, dailyTargetMin: 90 });
     expect(plan.capMinutes).toBe(100);
     expect(plan.plannedMinutes).toBeLessThanOrEqual(100);
-    expect(plan.items).toHaveLength(3); // 3 x 30 min
-    expect(plan.carriedOver).toHaveLength(7);
+    expect(plan.items).toHaveLength(4); // 4 x 25 min
+    expect(plan.carriedOver).toHaveLength(6);
   });
 
   it('always shows at least one review, even if it alone exceeds the cap', () => {
@@ -450,10 +451,12 @@ describe('planDay: the 30-day program with a perfect user', () => {
 
   const { state: finalState, plans } = run(60, true);
 
-  it('respects the cap every day and keeps benchmark and consolidation days right', () => {
+  it('respects the cap (plus the soft overflow of a third Easy problem) and keeps benchmark and consolidation days right', () => {
     plans.forEach((plan, i) => {
       const n = i + 1;
-      expect(plan.plannedMinutes, `day ${n}`).toBeLessThanOrEqual(plan.capMinutes);
+      const newCount = plan.items.filter((x) => x.activity.type === 'new').length;
+      const limit = newCount > NEW_PROBLEMS_PER_DAY ? plan.capMinutes + SOFT_OVERFLOW_MIN : plan.capMinutes;
+      expect(plan.plannedMinutes, `day ${n}`).toBeLessThanOrEqual(limit);
       const types = plan.items.map((x) => x.activity.type);
       if ([7, 14, 21, 28].includes(n)) expect(types).not.toContain('new');
       expect(types.filter((t) => t === 'benchmark').length).toBe([1, 15, 30].includes(n) ? 2 : 0);
@@ -468,8 +471,13 @@ describe('planDay: the 30-day program with a perfect user', () => {
     );
     expect(learned.size).toBe(PROGRAM_QUEUE.length);
     for (const slug of PROGRAM_QUEUE) expect(learned.has(slug)).toBe(true);
-    const day2 = plans[1]!.items.filter((i) => i.activity.type === 'new');
-    expect(day2).toHaveLength(2);
+    for (const plan of plans) {
+      const news = plan.items.filter((i) => i.activity.type === 'new').map((i) => i.activity.slug);
+      expect(news.length).toBeLessThanOrEqual(MAX_NEW_PROBLEMS_PER_DAY);
+      // Only an Easy problem may be the third of a day.
+      if (news.length > NEW_PROBLEMS_PER_DAY) expect(getProblem(news[2]!)?.difficulty).toBe('Easy');
+    }
+    expect(plans[1]!.items.filter((i) => i.activity.type === 'new').length).toBeGreaterThanOrEqual(2);
   });
 
   it('never puts reserved benchmark problems into the learning queue', () => {
@@ -562,7 +570,7 @@ describe('planDay: the bonus pool', () => {
 
   it('does not consume the program queue', () => {
     const afterBonus = simulateDay(newState(), day(1), { bonus: true }).state;
-    expect(newSlugs(planDay(afterBonus, day(2)))).toEqual(PROGRAM_QUEUE.slice(2, 4));
+    expect(newSlugs(planDay(afterBonus, day(2)))).toEqual(PROGRAM_QUEUE.slice(2, 5)); // 2 + an Easy third
   });
 
   it('returns a skipped bonus to the pool: tomorrow it comes first again', () => {
@@ -665,5 +673,122 @@ describe('planDay: the bonus pool', () => {
   it('works with a custom pool', () => {
     const plan = planDay(newState(), day(1), undefined, { bonusPool: ['valid-sudoku'] });
     expect(plan.bonus?.activity.slug).toBe('valid-sudoku');
+  });
+});
+
+describe('planDay: the soft overflow for a third Easy problem', () => {
+  const newSlugs = (plan: ReturnType<typeof planDay>): string[] =>
+    plan.items.filter((i) => i.activity.type === 'new').map((i) => i.activity.slug);
+  const easyQueue = ['two-sum', 'valid-anagram', 'valid-palindrome', 'binary-search'];
+
+  it('plans a third new problem on a normal day when the next one is Easy', () => {
+    const afterDayOne = simulateDay(newState(), day(1)).state;
+    const plan = planDay(afterDayOne, day(2));
+    // group-anagrams and top-k-frequent-elements are Medium, valid-palindrome is Easy.
+    expect(newSlugs(plan)).toEqual(['group-anagrams', 'top-k-frequent-elements', 'valid-palindrome']);
+    expect(plan.plannedMinutes).toBeLessThanOrEqual(plan.capMinutes + SOFT_OVERFLOW_MIN);
+  });
+
+  it('plans only two when the next problem is Medium', () => {
+    expect(newSlugs(planDay(newState(), day(1)))).toEqual(['two-sum', 'valid-anagram']);
+  });
+
+  it('plans only two when the third Easy problem would exceed cap + the soft overflow', () => {
+    const state = newState();
+    const options = { queue: easyQueue };
+    const budgets = { new: { Easy: 40 } };
+    const tight = planDay(state, day(2), { ...state.settings, dailyCapMin: 80, budgets }, options);
+    expect(newSlugs(tight)).toEqual(['two-sum', 'valid-anagram']); // 80 + 40 > 80 + 30
+    const roomy = planDay(state, day(2), { ...state.settings, dailyCapMin: 90, budgets }, options);
+    expect(newSlugs(roomy)).toEqual(['two-sum', 'valid-anagram', 'valid-palindrome']); // 120 = 90 + 30
+  });
+
+  it('never plans a fourth new problem', () => {
+    expect(newSlugs(planDay(newState(), day(2), undefined, { queue: easyQueue }))).toHaveLength(3);
+  });
+
+  it('keeps a persisted third Easy problem as a core problem, not as the bonus', () => {
+    const state = materializePlan(newState(), planDay(newState(), day(2), undefined, { queue: easyQueue }));
+    const replanned = planDay(state, day(2), undefined, { queue: easyQueue });
+    expect(newSlugs(replanned)).toEqual(['two-sum', 'valid-anagram', 'valid-palindrome']);
+    expect(replanned.items.filter((i) => i.activity.type === 'new').every((i) => i.persisted)).toBe(true);
+    expect(replanned.bonus === null || BONUS_POOL.includes(replanned.bonus.activity.slug)).toBe(true);
+  });
+
+  it('does not offer a problem postponed today again as the Easy third problem', () => {
+    let state = materializePlan(newState(), planDay(newState(), day(2), undefined, { queue: easyQueue }));
+    const first = state.activities.find((a) => a.type === 'new' && a.slug === 'two-sum')!;
+    state = {
+      ...state,
+      activities: state.activities.map((a) => (a.id === first.id ? { ...a, status: 'skipped' as const, postponed: true } : a)),
+    };
+    // two-sum moved behind the next two: the queue is now valid-anagram, valid-palindrome, two-sum, binary-search.
+    const queue = ['valid-anagram', 'valid-palindrome', 'two-sum', 'binary-search'];
+    expect(newSlugs(planDay(state, day(2), undefined, { queue }))).not.toContain('two-sum');
+  });
+
+  it('adds no new problem on a consolidation day', () => {
+    expect(newSlugs(planDay(newState(), day(7), undefined, { queue: easyQueue }))).toEqual([]);
+  });
+
+  it('counts the core problems of a day: two, plus a third only when it is Easy', () => {
+    expect(coreNewCount([])).toBe(0);
+    expect(coreNewCount(['two-sum'])).toBe(1);
+    expect(coreNewCount(['two-sum', 'valid-anagram'])).toBe(2);
+    expect(coreNewCount(['two-sum', 'valid-anagram', 'valid-palindrome'])).toBe(3);
+    expect(coreNewCount(['two-sum', 'valid-anagram', '3sum'])).toBe(2);
+    expect(coreNewCount(['two-sum', 'valid-anagram', 'valid-palindrome', 'binary-search'])).toBe(3);
+  });
+});
+
+describe('planDay: the whole queue by day 30', () => {
+  // A perfect user who works exactly the plan (no bonus), planned day by day like the projection does.
+  const projected: { plan: ReturnType<typeof planDay>; learnedSoFar: number }[] = [];
+  let state = newState();
+  for (let d = 1; d <= 30; d += 1) {
+    const result = simulateDay(state, day(d));
+    state = result.state;
+    projected.push({
+      plan: result.plan,
+      learnedSoFar: new Set(
+        state.activities.filter((a) => a.type === 'new' && a.status === 'done').map((a) => a.slug),
+      ).size,
+    });
+  }
+  const day30State = state;
+
+  it('introduces every program problem by day 30', () => {
+    expect(projected[29]!.learnedSoFar).toBe(PROGRAM_QUEUE.length);
+    for (const slug of PROGRAM_QUEUE) {
+      expect(activitiesOf(day30State, slug, 'new').some((a) => a.status === 'done'), slug).toBe(true);
+    }
+  });
+
+  it('keeps every day within the cap plus the soft overflow', () => {
+    projected.forEach(({ plan }, i) => {
+      expect(plan.plannedMinutes, `day ${i + 1}`).toBeLessThanOrEqual(plan.capMinutes + SOFT_OVERFLOW_MIN);
+    });
+  });
+
+  it('keeps consolidation days free of new problems', () => {
+    for (const n of [7, 14, 21, 28]) {
+      expect(projected[n - 1]!.plan.items.some((i) => i.activity.type === 'new'), `day ${n}`).toBe(false);
+    }
+  });
+
+  it('never leaves a review waiting more than a day', () => {
+    projected.forEach(({ plan }, i) => {
+      for (const item of plan.items) {
+        if (!isReviewType(item.activity.type) || item.activity.extra) continue;
+        expect(diffDays(item.activity.dueDate, plan.date), `day ${i + 1} ${item.activity.id}`).toBeLessThanOrEqual(1);
+      }
+    });
+  });
+
+  it('expects the whole queue on day 30 and is on pace after working the plan', () => {
+    const pace = planDay(day30State, day(30)).pace;
+    expect(pace.expected).toBe(PROGRAM_QUEUE.length);
+    expect(pace.actual).toBe(PROGRAM_QUEUE.length);
+    expect(pace.label).toBe('on pace');
   });
 });

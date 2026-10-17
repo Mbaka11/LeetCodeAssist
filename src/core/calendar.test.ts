@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PROGRAM_QUEUE } from '../data/program';
 import { calendarDays, programProgress } from './calendar';
 import { createActivity } from './activities';
 import { materializePlan, planDay } from './planner';
@@ -152,7 +153,7 @@ describe('programProgress', () => {
   it('counts learned program problems and elapsed program days', () => {
     expect(programProgress(newState(), day(1))).toEqual({
       learned: 0,
-      totalProblems: 53,
+      totalProblems: PROGRAM_QUEUE.length,
       daysElapsed: 1,
       totalDays: 30,
     });
@@ -239,12 +240,21 @@ describe('plan done', () => {
     const state = stateWith(day(2), [
       { type: 'new', slug: 'two-sum', status: 'done' },
       { type: 'new', slug: 'valid-anagram', status: 'done' },
-      { type: 'new', slug: 'contains-duplicate' }, // unstarted third problem: the bonus
+      { type: 'new', slug: 'top-k-frequent-elements' }, // unstarted third problem, not Easy: the bonus
       { type: 'new', slug: 'group-anagrams', status: 'skipped', postponed: true },
       { type: 'blind', slug: 'two-sum', status: 'done', extra: true },
       { type: 'blind', slug: 'valid-anagram', extra: true },
     ]);
     expect(dayTwo(state)).toMatchObject({ coreCount: 2, coreDoneCount: 2, planDone: true });
+  });
+
+  it('counts a third Easy new problem as core, not as the bonus', () => {
+    const state = stateWith(day(2), [
+      { type: 'new', slug: 'two-sum', status: 'done' },
+      { type: 'new', slug: 'valid-anagram', status: 'done' },
+      { type: 'new', slug: 'valid-palindrome' }, // Easy: the soft-overflow third problem
+    ]);
+    expect(dayTwo(state)).toMatchObject({ coreCount: 3, coreDoneCount: 2, planDone: false });
   });
 
   it('is neither done nor counted on a day without core activities', () => {

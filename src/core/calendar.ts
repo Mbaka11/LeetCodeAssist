@@ -9,7 +9,7 @@ import {
 } from '../data/program';
 import { estimatedMinutes, expectedNewMinutes, isReviewType } from './activities';
 import { compareDates, dateFromDayIndex, dayIndex } from './dates';
-import { planDay } from './planner';
+import { coreNewCount, planDay } from './planner';
 import { dailyTargetMinutes, dayProgress, isPlanDone } from './state';
 import type { Activity, ActivityType, AppState, BudgetOverrides, Outcome } from './types';
 
@@ -127,9 +127,8 @@ function bonusIds(state: AppState, date: string): Set<string> {
   const queued = due.filter((a) => !isBonusProblem(a.slug));
   const committed = queued.filter((a) => a.status !== 'planned' && !a.postponed).length;
   const unstarted = queued.filter((a) => a.status === 'planned');
-  return new Set(
-    [...pool, ...unstarted.slice(Math.max(0, NEW_PROBLEMS_PER_DAY - committed))].map((a) => a.id),
-  );
+  const coreCount = coreNewCount(queued.filter((a) => !a.postponed).map((a) => a.slug));
+  return new Set([...pool, ...unstarted.slice(Math.max(0, coreCount - committed))].map((a) => a.id));
 }
 
 /** Days up to and including today: the stored history, plus today's not yet persisted plan. */

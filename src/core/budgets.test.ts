@@ -27,6 +27,11 @@ describe('review budgets by difficulty', () => {
       expect(Medium).toBeLessThan(Hard);
     }
     expect(DEFAULT_BUDGETS.new).toEqual({ Easy: 25, Medium: 40, Hard: 50 });
+    expect(DEFAULT_BUDGETS.recall).toEqual({ Easy: 5, Medium: 8, Hard: 10 });
+    expect(DEFAULT_BUDGETS.rebuild).toEqual({ Easy: 10, Medium: 15, Hard: 18 });
+    expect(DEFAULT_BUDGETS.retry).toEqual({ Easy: 10, Medium: 15, Hard: 18 });
+    expect(DEFAULT_BUDGETS.resolve).toEqual({ Easy: 15, Medium: 25, Hard: 30 });
+    expect(DEFAULT_BUDGETS.blind).toEqual({ Easy: 15, Medium: 20, Hard: 25 });
   });
 
   it('applies partial overrides and falls back to the defaults for the rest', () => {
@@ -34,7 +39,7 @@ describe('review budgets by difficulty', () => {
     // two-sum is Easy, 3sum Medium, trapping-rain-water Hard.
     expect(estimatedMinutes('recall', '3sum', overrides)).toBe(7);
     expect(estimatedMinutes('recall', 'two-sum', overrides)).toBe(5);
-    expect(estimatedMinutes('recall', 'trapping-rain-water', overrides)).toBe(20);
+    expect(estimatedMinutes('recall', 'trapping-rain-water', overrides)).toBe(10);
     expect(estimatedMinutes('new', 'trapping-rain-water', overrides)).toBe(60);
     expect(estimatedMinutes('new', '3sum', overrides)).toBe(40);
     expect(estimatedMinutes('recall', 'made-up', overrides)).toBe(7); // unknown problem = Medium
@@ -46,7 +51,7 @@ describe('review budgets by difficulty', () => {
 
   it('builds the full table shown in Settings', () => {
     const table = effectiveBudgets({ blind: { Hard: 45 } });
-    expect(table.blind).toEqual({ Easy: 15, Medium: 25, Hard: 45 });
+    expect(table.blind).toEqual({ Easy: 15, Medium: 20, Hard: 45 });
     expect(table.recall).toEqual(DEFAULT_BUDGETS.recall);
     expect(Object.keys(table).sort()).toEqual([...BUDGETED_TYPES].sort());
     expect(effectiveBudgets()).toEqual(DEFAULT_BUDGETS);

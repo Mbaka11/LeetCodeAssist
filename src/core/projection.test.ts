@@ -25,7 +25,8 @@ describe('projectDay', () => {
     const recalls = projection.items.filter((i) => i.type === 'recall').map((i) => i.slug);
     expect(recalls.sort()).toEqual([...dayOne].sort());
     const newSlugs = projection.items.filter((i) => i.type === 'new').map((i) => i.slug);
-    expect(newSlugs).toHaveLength(2);
+    expect(newSlugs.length).toBeGreaterThanOrEqual(2);
+    expect(newSlugs.length).toBeLessThanOrEqual(3);
     expect(newSlugs.some((slug) => dayOne.includes(slug))).toBe(false);
     expect(projection.totalMinutes).toBe(projection.items.reduce((n, i) => n + i.minutes, 0));
   });

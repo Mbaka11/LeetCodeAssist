@@ -114,7 +114,7 @@ describe('dashboard views (render smoke tests)', () => {
     expect(html).toContain('Reset to defaults');
     expect(html).toContain('Save budgets');
     for (const label of ['Easy', 'Medium', 'Hard']) expect(html).toContain(`<th>${label}</th>`);
-    expect(html).toContain('aria-label="Recall Medium budget in minutes" value="15"');
+    expect(html).toContain('aria-label="Recall Medium budget in minutes" value="8"');
     expect(html).toContain('aria-label="New Hard budget in minutes" value="50"');
     expect(html.match(/budget in minutes/g)).toHaveLength(18);
   });

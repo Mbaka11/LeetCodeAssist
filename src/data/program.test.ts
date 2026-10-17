@@ -9,21 +9,45 @@ import {
   expectedNewDone,
 } from './program';
 
+/** Easy problems of the NeetCode 150 that need LeetCode Premium, so the plan leaves them out. */
+const PREMIUM_ONLY: ReadonlySet<string> = new Set(['meeting-rooms']);
+
 describe('PROGRAM_QUEUE', () => {
-  it('has about 53 unique problems that all exist in the NeetCode 150', () => {
-    expect(PROGRAM_QUEUE).toHaveLength(53);
+  it('has 48-52 unique problems that all exist in the NeetCode 150', () => {
+    expect(PROGRAM_QUEUE.length).toBeGreaterThanOrEqual(48);
+    expect(PROGRAM_QUEUE.length).toBeLessThanOrEqual(52);
     expect(new Set(PROGRAM_QUEUE).size).toBe(PROGRAM_QUEUE.length);
     for (const slug of PROGRAM_QUEUE) {
       expect(PROBLEMS_BY_SLUG.has(slug), slug).toBe(true);
     }
   });
 
-  it('is mostly Easy/Medium with at most 2 Hard, both at the end', () => {
-    const difficulties = PROGRAM_QUEUE.map((slug) => PROBLEMS_BY_SLUG.get(slug)!.difficulty);
-    const hardIndexes = difficulties.flatMap((d, i) => (d === 'Hard' ? [i] : []));
-    expect(hardIndexes.length).toBeLessThanOrEqual(2);
-    for (const index of hardIndexes) {
-      expect(index).toBeGreaterThanOrEqual(PROGRAM_QUEUE.length - 3);
+  it('has no Hard problem and is only Easy and Medium', () => {
+    for (const slug of PROGRAM_QUEUE) {
+      expect(PROBLEMS_BY_SLUG.get(slug)!.difficulty, slug).not.toBe('Hard');
+    }
+  });
+
+  it('contains every free Easy problem exactly once, except the benchmark ones and the Premium-only one', () => {
+    const reserved = new Set(BENCHMARKS.flatMap((b) => [b.easy, b.medium]));
+    const freeEasy = [...PROBLEMS_BY_SLUG.values()]
+      .filter((p) => p.difficulty === 'Easy' && !PREMIUM_ONLY.has(p.slug) && !reserved.has(p.slug))
+      .map((p) => p.slug);
+    expect(freeEasy.length).toBeGreaterThanOrEqual(20);
+    for (const slug of freeEasy) {
+      expect(PROGRAM_QUEUE.filter((s) => s === slug), slug).toHaveLength(1);
+    }
+    for (const slug of PREMIUM_ONLY) {
+      expect(PROGRAM_QUEUE).not.toContain(slug);
+    }
+  });
+
+  it('keeps the core Mediums of the main patterns', () => {
+    const mediums = PROGRAM_QUEUE.filter((slug) => PROBLEMS_BY_SLUG.get(slug)!.difficulty === 'Medium');
+    expect(mediums.length).toBeGreaterThanOrEqual(18);
+    const categories = new Set(PROGRAM_QUEUE.map((slug) => PROBLEMS_BY_SLUG.get(slug)!.category));
+    for (const category of ['Arrays & Hashing', 'Two Pointers', 'Stack', 'Trees', 'Graphs', '1-D Dynamic Programming']) {
+      expect(categories.has(category), category).toBe(true);
     }
   });
 
@@ -88,8 +112,13 @@ describe('expectedNewDone', () => {
     expect(expectedNewDone(6)).toBe(12);
     expect(expectedNewDone(7)).toBe(12);
     expect(expectedNewDone(8)).toBe(14);
-    expect(expectedNewDone(30)).toBe(52);
-    expect(expectedNewDone(60)).toBe(52);
+    expect(expectedNewDone(30, 100)).toBe(52);
     expect(expectedNewDone(30, 10)).toBe(10);
+  });
+
+  it('reaches the whole queue by day 30 and stays there', () => {
+    expect(expectedNewDone(30)).toBe(PROGRAM_QUEUE.length);
+    expect(expectedNewDone(60)).toBe(PROGRAM_QUEUE.length);
+    expect(expectedNewDone(29)).toBeLessThanOrEqual(PROGRAM_QUEUE.length);
   });
 });

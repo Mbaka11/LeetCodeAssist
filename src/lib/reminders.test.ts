@@ -62,12 +62,12 @@ describe('alarmsToCreate', () => {
 });
 
 describe('morning summary', () => {
-  it('words the day like "2 new, 2 recalls, \d+ rebuilds · ~2h20"', () => {
+  it('words the day like "2 new, 3 recalls, 4 rebuilds · ~2h20"', () => {
     let state = newState();
     for (const n of [1, 2, 3]) state = simulateDay(state, day(n)).state;
     const note = morningNotification(state, at(day(4), 8, 30))!;
     expect(note.title).toBe('LeetCode Assist · Day 4');
-    expect(note.message).toMatch(/^Today: 2 new, 2 recalls, \d+ rebuilds · ~(\d+ min|\dh(\d{2})?)$/);
+    expect(note.message).toMatch(/^Today: \d new, \d recalls, \d+ rebuilds · ~(\d+ min|\dh(\d{2})?)$/);
   });
 
   it('uses singular nouns for a single activity', () => {

@@ -3,7 +3,11 @@
  * the reserved benchmark problems. All slugs refer to src/data/neetcode150.ts.
  */
 
-/** Ordered queue of new problems (53), NeetCode roadmap order, 2 Hard at the very end. */
+/**
+ * Ordered queue of new problems (50), NeetCode roadmap order, no Hard. It holds every free Easy problem of
+ * the NeetCode 150 except the benchmark ones (the premium-only Easy `meeting-rooms` is left out) and the
+ * core Mediums of each pattern; the remaining Mediums are the first bonus-pool problems of their category.
+ */
 export const PROGRAM_QUEUE: readonly string[] = [
   // Arrays & Hashing
   'two-sum',
@@ -28,12 +32,15 @@ export const PROGRAM_QUEUE: readonly string[] = [
   // Linked List
   'reverse-linked-list',
   'merge-two-sorted-lists',
+  'linked-list-cycle',
   'remove-nth-node-from-end-of-list',
   'reorder-list',
   // Trees
   'invert-binary-tree',
   'maximum-depth-of-binary-tree',
+  'diameter-of-binary-tree',
   'same-tree',
+  'subtree-of-another-tree',
   'binary-tree-level-order-traversal',
   'lowest-common-ancestor-of-a-binary-search-tree',
   // Heap / Priority Queue
@@ -47,32 +54,26 @@ export const PROGRAM_QUEUE: readonly string[] = [
   // Graphs
   'number-of-islands',
   'max-area-of-island',
-  'clone-graph',
   'course-schedule',
   // Intervals
   'merge-intervals',
-  'insert-interval',
   // Greedy
   'maximum-subarray',
   'jump-game',
-  'jump-game-ii',
-  'gas-station',
   // 1-D Dynamic Programming
   'climbing-stairs',
   'min-cost-climbing-stairs',
   'house-robber',
-  'house-robber-ii',
-  'longest-palindromic-substring',
-  'decode-ways',
   'coin-change',
   // Mixed finish
   'longest-consecutive-sequence',
-  'word-break',
-  'generate-parentheses',
-  'word-search',
-  // Hard (at most two, at the very end)
-  'trapping-rain-water',
-  'merge-k-sorted-lists',
+  // Math & Geometry, Bit Manipulation (Easy)
+  'plus-one',
+  'single-number',
+  'number-of-1-bits',
+  'counting-bits',
+  'reverse-bits',
+  'missing-number',
 ];
 
 export interface Benchmark {
@@ -98,7 +99,11 @@ export const CONSOLIDATION_DAYS: readonly number[] = [7, 14, 21, 28];
 
 export const PROGRAM_LENGTH_DAYS = 30;
 
+/** New problems on a normal day. */
 export const NEW_PROBLEMS_PER_DAY = 2;
+
+/** A third new problem is allowed on a normal day when it is Easy and fits the soft overflow (SPEC §4). */
+export const MAX_NEW_PROBLEMS_PER_DAY = 3;
 
 export interface DaySkeleton {
   day: number;
@@ -160,8 +165,9 @@ export function benchmarkForDay(day: number): Benchmark | undefined {
 }
 
 /**
- * Number of new problems a user on schedule has completed by the end of program day `day`
- * (2 per non-consolidation day, capped by the queue length).
+ * Number of new problems a user on schedule has completed by the end of program day `day`: 2 per normal
+ * day, capped by the queue length. The queue must stay within 2 x the normal days so that this reaches the
+ * whole queue by day 30 (checked in program.test.ts); the planner is a little faster on Easy days.
  */
 export function expectedNewDone(day: number, queueLength: number = PROGRAM_QUEUE.length): number {
   const lastDay = Math.min(Math.max(day, 0), PROGRAM_LENGTH_DAYS);

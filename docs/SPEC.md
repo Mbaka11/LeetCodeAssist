@@ -20,15 +20,18 @@ Benchmark problems are reserved and never appear in the learning queue.
 - Default target **150 min**, hard planning cap **180 min** (both configurable).
 - Consolidation days **7, 14, 21, 28**: no new problems, target **90 min** (reviews,
   failed items, and "blind" mixed practice).
-- Normal day: 2 new problems from the queue. An optional **bonus** is offered after them (also on
-  consolidation days and after the queue is exhausted) only if planned time plus its estimate stays ≤ cap.
-  A bonus never becomes debt.
-- The bonus comes from the **bonus pool** (`BONUS_POOL`, `src/data/bonus.ts`): ~20 extra NeetCode 150
-  problems that are not in the 53-problem program or the benchmarks, ordered by roadmap category and
-  difficulty, mostly Medium (≤ 2 Hard). It is the first pool problem that is not done, started or already
+- Normal day: 2 new problems from the queue, and a **third** one when the next queue problem is Easy and the
+  day's planned minutes with it stay ≤ cap + **30 min** (the *soft overflow*, `SOFT_OVERFLOW_MIN` in
+  `src/core/planner.ts`); reviews, the first two new problems and the bonus still respect the plain cap, so a
+  day can reach at most cap + 30. An optional **bonus** is offered after them (also on consolidation days and
+  after the queue is exhausted) only if planned time plus its estimate stays ≤ cap. A bonus never becomes debt.
+- The bonus comes from the **bonus pool** (`BONUS_POOL`, `src/data/bonus.ts`): about 28 extra NeetCode 150
+  problems that are not in the program queue or the benchmarks, ordered by roadmap category and
+  difficulty, all Medium except one Hard (every free Easy problem is in the program). The Mediums that did not
+  fit the queue come first in their category, so they are the first bonuses offered. It is the first pool problem that is not done, started or already
   planned today; a skipped one returns to the pool (it is not offered again the same day, first in line
   tomorrow). A completed bonus starts the normal review cycle (D+1/3/7/21) and counts as worked in the
-  roadmap, but it **does not count toward pace** and not toward the *x*/53 program counter, and it never
+  roadmap, but it **does not count toward pace** and not toward the *x*/*N* program counter (*N* = the queue length), and it never
   consumes the program queue.
 
 ## 3. Activity types & review cycle
@@ -36,11 +39,11 @@ Benchmark problems are reserved and never appear in the learning queue.
 | Type | When | Instruction | Budget Easy / Medium / Hard (min) |
 |---|---|---|---:|
 | `new` | queue | Search, code, understand, write notes. Help ladder: hint at 15–20 min without an approach, read the solution at 35–45 min then **re-code it from memory**. | 25 / 40 / 50 |
-| `recall` | done + 1 day | Without notes: state the approach, why it works, time/space complexity. | 5 / 15 / 20 |
-| `rebuild` | done + 3 days | Rebuild the algorithm in pseudocode or code, check edge cases. | 10 / 20 / 25 |
-| `resolve` | done + 7 days | Solve from a blank editor, no hints, no old solution. | 15 / 30 / 40 |
-| `blind` | done + 21 days | Solve with the category hidden. Solved alone ⇒ **mastered**. | 15 / 25 / 35 |
-| `retry` | next day after a failure | Targeted redo of a failed review. | 10 / 20 / 25 |
+| `recall` | done + 1 day | Without notes: state the approach, why it works, time/space complexity. | 5 / 8 / 10 |
+| `rebuild` | done + 3 days | Rebuild the algorithm in pseudocode or code, check edge cases. | 10 / 15 / 18 |
+| `resolve` | done + 7 days | Solve from a blank editor, no hints, no old solution. | 15 / 25 / 30 |
+| `blind` | done + 21 days | Solve with the category hidden. Solved alone ⇒ **mastered**. | 15 / 20 / 25 |
+| `retry` | next day after a failure | Targeted redo of a failed review. | 10 / 15 / 18 |
 | `benchmark` | days 1, 15, 30 | Timed unseen Easy + Medium. Once done, each problem enters the normal review cycle (D+1/3/7/21) like a `new` problem. | 30 per problem (60 for the pair) |
 
 **Budgets depend on the problem difficulty.** A problem outside NeetCode 150 counts as Medium. The values
@@ -96,19 +99,25 @@ Problem status: `untouched` → `learning` (new done) → `consolidating` (a rev
 
 ## 4. Queue-based planner (no fixed dates for new problems)
 
-- New problems come from an **ordered queue** (~50 problems, NeetCode roadmap order,
-  mostly Easy/Medium, ≤ 2 Hard near the end). Queue = `src/data/program.ts`. The optional bonus is
-  not part of the queue (see §2).
+- New problems come from an **ordered queue** (50 problems, NeetCode roadmap order, Easy and Medium only,
+  no Hard). Queue = `src/data/program.ts`. It holds every free Easy problem of the NeetCode 150 except the
+  benchmark ones (the Premium-only Easy *Meeting Rooms* is left out) plus the core Mediums of each pattern; the
+  other Mediums are bonus-pool problems. The size is chosen so that, with reviews on time, a user who does the
+  plan has **all queue problems introduced by day 30** (a test projects the whole program day by day and
+  checks it). The optional bonus is not part of the queue (see §2).
 - Planner for a day (pure function `planDay(state, date, settings)`):
   1. Overdue + due reviews, sorted by priority: `retry`, `recall`, `rebuild`, `resolve`, `blind`;
      overdue first. Reviews never get dropped; if they exceed the cap, the remainder is
      shown as "carried over" and spread forward (max cap per day).
   2. Benchmark if it's day 1/15/30.
   3. Fill remaining budget with the next queue items (2 normally, 0 on consolidation days,
-     fewer if reviews fill the budget). Then the optional bonus from the bonus pool if it fits under
-     the cap.
-  4. **Pace indicator**: `actualNewDone - expectedNewDone(dayIndex)` ("+2 ahead" / "−1 behind"); only
-     program-queue problems count, bonus-pool problems do not.
+     fewer if reviews fill the budget); a third one when it is Easy and the day stays ≤ cap + 30 (soft
+     overflow, §2). A problem postponed today is not offered again today. Then the optional bonus from the
+     bonus pool if it fits under the cap.
+  4. **Pace indicator**: `actualNewDone - expectedNewDone(dayIndex, queueLength)` ("+2 ahead" /
+     "−1 behind"); `expectedNewDone` is 2 per normal day capped by the real queue length, so it reaches the
+     whole queue by day 30 (the queue stays within 2 × the 26 normal days). Only program-queue problems
+     count, bonus-pool problems do not.
 - Missing days never produce an impossible day: the cap is always respected.
 - The queue order is `PROGRAM_QUEUE` unless the user postponed problems (`AppState.queue`).
 - History is append-only; past activities are never rewritten.
@@ -159,7 +168,7 @@ key, versioned), JSON export/import from Settings.
    - **Today**: planned vs logged time, ordered activity list, "Start next activity",
      per-activity instruction, timer (start/pause/resume, "approach found" button),
      outcome form, pace indicator, streak.
-   - **Calendar**: an overall progress header (program problems learned *x*/53 and days elapsed
+   - **Calendar**: an overall progress header (program problems learned *x*/*N* (*N* = queue length) and days elapsed
      *d*/30), start date picker, days 1–30 (+ overflow), planned/done/carried counts and minutes per
      day with a small minutes bar per cell, streak (≥ 1 activity done and ≥ 30 min logged) separate
      from **Plan done** (a past or current day whose *core* activities are ≥ 80% done: activities
@@ -195,7 +204,7 @@ key, versioned), JSON export/import from Settings.
    `setOptions({ path, enabled: true })` once (no per-tab enabling), so the panel stays open while
    the user switches or opens tabs and follows the active tab's URL.
    - On a LeetCode problem page (`/problems/<slug>/`): title, difficulty, category, program position
-     (*n*/53, or *Bonus problem*), status, next review, today's activity with its instruction, timer and outcome form (or
+     (*n*/*N* with *N* the queue length, or *Bonus problem*), status, next review, today's activity with its instruction, timer and outcome form (or
      an offer to start extra practice), **hints** (three progressive *Reveal hint 1/2/3* buttons),
      notes (hidden during reviews until *Reveal*) and the attempt history including hints used.
    - On any other page: an **Open a LeetCode problem** state with today's checklist; each item has an

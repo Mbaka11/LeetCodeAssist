@@ -3,6 +3,7 @@ import { getProblem } from '../data/neetcode150';
 import {
   BENCHMARKS,
   type Benchmark,
+  MAX_NEW_PROBLEMS_PER_DAY,
   NEW_PROBLEMS_PER_DAY,
   expectedNewDone,
   isConsolidationDay,
@@ -21,6 +22,27 @@ import type { Activity, AppState, Settings } from './types';
 
 /** Minimum age (days since the `new` was completed) for consolidation-day blind practice. */
 const EXTRA_PRACTICE_MIN_AGE_DAYS = 3;
+
+/**
+ * Soft overflow (SPEC §4): a third new problem is allowed on a normal day when the next queue problem is
+ * Easy and the day's planned minutes with it stay <= cap + this many minutes. The cap itself still limits
+ * reviews, the first two new problems and the bonus.
+ */
+export const SOFT_OVERFLOW_MIN = 30;
+
+function isEasy(slug: string): boolean {
+  return getProblem(slug)?.difficulty === 'Easy';
+}
+
+/**
+ * How many of a day's committed queue problems (in queue order) are core rather than the optional bonus:
+ * the daily two, plus a third when it is Easy (see `SOFT_OVERFLOW_MIN`).
+ */
+export function coreNewCount(slugs: readonly string[]): number {
+  const third = slugs[NEW_PROBLEMS_PER_DAY];
+  if (third !== undefined && isEasy(third)) return MAX_NEW_PROBLEMS_PER_DAY;
+  return Math.min(slugs.length, NEW_PROBLEMS_PER_DAY);
+}
 
 export interface PlanItem {
   activity: Activity;
@@ -260,7 +282,7 @@ export function planDay(
   const poolSlugs = new Set(bonusPool);
   const todaysPool = todaysNew.filter((a) => poolSlugs.has(a.slug));
   const todaysQueue = todaysNew.filter((a) => !poolSlugs.has(a.slug));
-  const coreCount = consolidation ? todaysQueue.length : NEW_PROBLEMS_PER_DAY;
+  const coreCount = consolidation ? todaysQueue.length : coreNewCount(todaysQueue.map((a) => a.slug));
   const overflow = todaysQueue.slice(coreCount);
   const committedBonus = todaysPool[0] ?? overflow[0];
   const newItems = todaysQueue.slice(0, coreCount).map(toItem);
@@ -348,11 +370,16 @@ export function planDay(
   }
   let queueExhausted = true;
   if (!consolidation) {
-    const upcoming = queue.filter((slug) => !consumed.has(slug));
+    // A problem skipped or postponed today is not offered again today, even as the Easy third problem.
+    const upcoming = queue.filter((slug) => !consumed.has(slug) && !skippedToday.has(slug));
     let next = 0;
-    while (newItems.length < NEW_PROBLEMS_PER_DAY && next < upcoming.length) {
+    while (next < upcoming.length) {
       const slug = upcoming[next]!;
-      if (used + estimatedMinutes('new', slug, budgets) > capMinutes) break;
+      let limit: number;
+      if (newItems.length < NEW_PROBLEMS_PER_DAY) limit = capMinutes;
+      else if (newItems.length < MAX_NEW_PROBLEMS_PER_DAY && isEasy(slug)) limit = capMinutes + SOFT_OVERFLOW_MIN;
+      else break;
+      if (used + estimatedMinutes('new', slug, budgets) > limit) break;
       const item = makeVirtual({ type: 'new', slug, dueDate: date, createdAt: date });
       newItems.push(item);
       used += item.minutes;

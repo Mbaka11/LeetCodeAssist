@@ -4,9 +4,9 @@ import { CATEGORY_NAMES, PROBLEMS_BY_SLUG } from './neetcode150';
 import { BENCHMARKS, PROGRAM_QUEUE } from './program';
 
 describe('BONUS_POOL', () => {
-  it('has 18-22 unique problems that all exist in the NeetCode 150', () => {
+  it('has 18-35 unique problems that all exist in the NeetCode 150', () => {
     expect(BONUS_POOL.length).toBeGreaterThanOrEqual(18);
-    expect(BONUS_POOL.length).toBeLessThanOrEqual(22);
+    expect(BONUS_POOL.length).toBeLessThanOrEqual(35);
     expect(new Set(BONUS_POOL).size).toBe(BONUS_POOL.length);
     for (const slug of BONUS_POOL) {
       expect(PROBLEMS_BY_SLUG.has(slug), slug).toBe(true);
@@ -20,11 +20,11 @@ describe('BONUS_POOL', () => {
     }
   });
 
-  it('is mostly Medium with a few Easy and at most 2 Hard', () => {
+  it('is mostly Medium with at most 1 Hard and no Easy (every free Easy is in the program)', () => {
     const count = (difficulty: string): number =>
       BONUS_POOL.filter((slug) => PROBLEMS_BY_SLUG.get(slug)!.difficulty === difficulty).length;
-    expect(count('Hard')).toBeLessThanOrEqual(2);
-    expect(count('Easy')).toBeGreaterThanOrEqual(1);
+    expect(count('Hard')).toBeLessThanOrEqual(1);
+    expect(count('Easy')).toBe(0);
     expect(count('Medium')).toBeGreaterThan(BONUS_POOL.length / 2);
   });
 

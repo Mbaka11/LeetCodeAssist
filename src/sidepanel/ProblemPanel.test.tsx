@@ -5,6 +5,7 @@ import { localDateFromTimestamp } from '../core/dates';
 import { planDay } from '../core/planner';
 import { defaultState } from '../core/state';
 import type { AppState } from '../core/types';
+import { PROGRAM_QUEUE } from '../data/program';
 import type { AppActions } from '../lib/actions';
 import { ProblemPanel } from './ProblemPanel';
 
@@ -86,7 +87,7 @@ describe('ProblemPanel (render smoke test)', () => {
     const slug = planned.activity.slug;
     const html = render(base, slug);
     expect(html).toContain('Program problem');
-    expect(html).toContain('of 53');
+    expect(html).toContain(`of ${PROGRAM_QUEUE.length}`);
     expect(html).toContain('Untouched');
     expect(html).toContain('Search, code, understand, write notes');
     expect(html).toContain('Hints');

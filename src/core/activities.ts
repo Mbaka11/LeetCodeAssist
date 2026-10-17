@@ -50,11 +50,11 @@ export const DIFFICULTIES: readonly Difficulty[] = ['Easy', 'Medium', 'Hard'];
 /** Default time budgets in minutes per activity type and difficulty (SPEC §3). */
 export const DEFAULT_BUDGETS: Readonly<Record<BudgetedType, Readonly<Record<Difficulty, number>>>> = {
   new: { Easy: 25, Medium: 40, Hard: 50 },
-  recall: { Easy: 5, Medium: 15, Hard: 20 },
-  rebuild: { Easy: 10, Medium: 20, Hard: 25 },
-  retry: { Easy: 10, Medium: 20, Hard: 25 },
-  resolve: { Easy: 15, Medium: 30, Hard: 40 },
-  blind: { Easy: 15, Medium: 25, Hard: 35 },
+  recall: { Easy: 5, Medium: 8, Hard: 10 },
+  rebuild: { Easy: 10, Medium: 15, Hard: 18 },
+  retry: { Easy: 10, Medium: 15, Hard: 18 },
+  resolve: { Easy: 15, Medium: 25, Hard: 30 },
+  blind: { Easy: 15, Medium: 20, Hard: 25 },
 };
 
 /** Difficulty used for problems outside NeetCode 150. */
