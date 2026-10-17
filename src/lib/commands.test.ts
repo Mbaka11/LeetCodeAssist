@@ -419,7 +419,7 @@ describe('postponeNew', () => {
     expect(() => commands.postponeNew(postponed, id, now)).toThrow(/already skipped/);
   });
 
-  it('is not the destructive skip: a plain skip still drops the problem from the program', () => {
+  it('a plain skip no longer drops the problem: it returns to the queue', () => {
     const { state, newIds, now } = dayOne();
     const slug = findActivity(state, newIds[0]!)!.slug;
     const skipped = commands.skipActivity(state, newIds[0]!, now);
@@ -427,6 +427,6 @@ describe('postponeNew', () => {
     for (let d = 1; d <= 6; d += 1) {
       for (const item of planDay(skipped, day(d)).items) later.add(item.activity.slug);
     }
-    expect(later.has(slug)).toBe(false);
+    expect(later.has(slug)).toBe(true);
   });
 });

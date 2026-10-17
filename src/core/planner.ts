@@ -133,11 +133,20 @@ export function planDay(
     state.activities.filter((a) => a.type === 'new' && a.status === 'done').map((a) => a.slug),
   );
   const expected = expectedNewDone(index, queue.length);
+  // Today's own problems are not "due" yet: being behind means missing what earlier days required, and
+  // being ahead means exceeding what today requires. In between is on pace.
+  const expectedBeforeToday = expectedNewDone(index - 1, queue.length);
+  const paceDelta =
+    doneNew.size < expectedBeforeToday
+      ? doneNew.size - expectedBeforeToday
+      : doneNew.size > expected
+        ? doneNew.size - expected
+        : 0;
   const pace: Pace = {
     actual: doneNew.size,
     expected,
-    delta: doneNew.size - expected,
-    label: paceLabel(doneNew.size - expected),
+    delta: paceDelta,
+    label: paceLabel(paceDelta),
   };
 
   const persistedIds = new Set(state.activities.map((a) => a.id));
@@ -311,6 +320,7 @@ export function planDay(
     const consumed = new Set<string>();
     for (const a of state.activities) {
       if (a.type !== 'new' || a.postponed) continue; // a postponed problem is still in the queue
+      if (a.status === 'skipped') continue; // a skipped problem goes back to the queue
       if (a.status !== 'planned' || a.dueDate === date) consumed.add(a.slug);
     }
     const upcoming = queue.filter((slug) => !consumed.has(slug));

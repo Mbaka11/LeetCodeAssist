@@ -56,7 +56,7 @@ describe('planDay: day 1', () => {
   it('reports the targets and the pace relative to the schedule', () => {
     expect(plan.targetMinutes).toBe(150);
     expect(plan.capMinutes).toBe(180);
-    expect(plan.pace).toEqual({ actual: 0, expected: 2, delta: -2, label: '\u22122 behind' });
+    expect(plan.pace).toEqual({ actual: 0, expected: 2, delta: 0, label: 'on pace' });
   });
 
   it('returns an empty plan before the start date', () => {
@@ -90,7 +90,7 @@ describe('planDay: materialization and stability', () => {
     expect(planDay(state, day(1)).remainingMinutes).toBe(0);
   });
 
-  it('does not offer queue problems that were already started, done or skipped', () => {
+  it('does not offer queue problems that were already started or done; a skipped one returns to the queue', () => {
     let state = newState();
     state = materializePlan(state, planDay(state, day(1)));
     const [first, second] = plannedOf(state, 'two-sum', 'new').concat(plannedOf(state, 'valid-anagram', 'new'));
@@ -103,7 +103,7 @@ describe('planDay: materialization and stability', () => {
     };
     const plan = planDay(state, day(2));
     const news = plan.items.filter((i) => i.activity.type === 'new').map((i) => i.activity.slug);
-    expect(news).toEqual(['group-anagrams', 'top-k-frequent-elements']);
+    expect(news).toEqual(['valid-anagram', 'group-anagrams']);
   });
 
   it('re-offers a planned problem that was never done, and never carries a bonus as debt', () => {
@@ -410,7 +410,8 @@ describe('planDay: pace', () => {
       }
       return s;
     };
-    expect(planDay(state, day(2)).pace.label).toBe('\u22124 behind');
+    expect(planDay(state, day(1)).pace.label).toBe('on pace');
+    expect(planDay(state, day(2)).pace.label).toBe('\u22122 behind');
     state = doneNew(PROGRAM_QUEUE.slice(0, 4));
     expect(planDay(state, day(2)).pace).toMatchObject({ actual: 4, expected: 4, delta: 0, label: 'on pace' });
     state = doneNew(PROGRAM_QUEUE.slice(4, 7));
