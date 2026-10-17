@@ -116,19 +116,35 @@ function stateOnDate(a: Activity, date: string, today: string, carriedIds: Reado
   return carriedIds.has(a.id) ? 'carried' : 'open';
 }
 
+/** A bonus-pool problem: optional work offered by the planner (see `DayPlan.bonuses`), never debt. */
+function isBonusActivity(a: Activity): boolean {
+  return a.type === 'new' && isBonusProblem(a.slug);
+}
+
 /**
- * Ids of persisted, unstarted new problems beyond the daily two: the optional bonus. Not finishing
- * it is not a miss, so it neither counts as planned nor as missed.
+ * Where a bonus-pool activity shows in the calendar: a finished one on the day it was completed, a started one
+ * today, a skipped one on its due date. Planned offers are not history: today's come from the plan.
  */
-function bonusIds(state: AppState, date: string): Set<string> {
-  const due = state.activities.filter((a) => a.type === 'new' && !a.extra && a.dueDate === date);
-  // Bonus-pool problems are always the bonus; a queue problem beyond the daily two is one too (older data).
-  const pool = due.filter((a) => isBonusProblem(a.slug));
-  const queued = due.filter((a) => !isBonusProblem(a.slug));
+function bonusEntryState(a: Activity, date: string, today: string): EntryState | null {
+  if (a.status === 'done') return a.completedAt === date ? 'done' : null;
+  if (a.status === 'in_progress') return date === today ? 'open' : null;
+  if (a.status === 'skipped') return a.dueDate === date ? 'skipped' : null;
+  return null;
+}
+
+/**
+ * Ids of persisted, unstarted queue problems beyond the daily two (saved by an older version as the bonus). Not
+ * finishing one is not a miss, so it neither counts as planned nor as missed. Bonus-pool problems are handled
+ * by `isBonusActivity`.
+ */
+function overflowBonusIds(state: AppState, date: string): Set<string> {
+  const queued = state.activities.filter(
+    (a) => a.type === 'new' && !a.extra && a.dueDate === date && !isBonusProblem(a.slug),
+  );
   const committed = queued.filter((a) => a.status !== 'planned' && !a.postponed).length;
   const unstarted = queued.filter((a) => a.status === 'planned');
   const coreCount = coreNewCount(queued.filter((a) => !a.postponed).map((a) => a.slug));
-  return new Set([...pool, ...unstarted.slice(Math.max(0, coreCount - committed))].map((a) => a.id));
+  return new Set(unstarted.slice(Math.max(0, coreCount - committed)).map((a) => a.id));
 }
 
 /** Days up to and including today: the stored history, plus today's not yet persisted plan. */
@@ -137,9 +153,16 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
   const drafts = new Map<string, Draft>();
   const plan = date === today ? planDay(state, date) : null;
   const carriedIds = new Set(plan?.carriedOver.map((i) => i.activity.id));
-  const bonus = bonusIds(state, date);
+  const bonus = overflowBonusIds(state, date);
 
   for (const a of state.activities) {
+    if (isBonusActivity(a)) {
+      const bonusState = bonusEntryState(a, date, today);
+      if (bonusState !== null) {
+        drafts.set(a.id, { entry: entryOf(a, bonusState, budgets), planned: false, core: false });
+      }
+      continue;
+    }
     const dueHere = a.dueDate === date;
     if (!dueHere && !(a.status === 'done' && a.completedAt === date)) continue;
     if (a.extra && a.status === 'planned') continue; // optional practice that was never started
@@ -170,6 +193,12 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
       const existing = drafts.get(item.activity.id);
       if (!existing) drafts.set(item.activity.id, { entry: entryOf(item.activity, 'carried', budgets), planned: false, core: false });
     }
+    // Today's stored open offers are listed (flagged `bonus`) but never planned, core, carried or missed.
+    for (const item of plan.bonuses) {
+      if (item.persisted && !drafts.has(item.activity.id)) {
+        drafts.set(item.activity.id, { entry: entryOf(item.activity, 'open', budgets), planned: false, core: false });
+      }
+    }
   }
   return [...drafts.values()];
 }
@@ -178,7 +207,7 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
 function draftsAfterToday(state: AppState, date: string, index: number): Draft[] {
   const budgets = state.settings.budgets;
   const entries: CalendarEntry[] = state.activities
-    .filter((a) => a.dueDate === date && a.status === 'planned' && !a.extra)
+    .filter((a) => a.dueDate === date && a.status === 'planned' && !a.extra && !isBonusActivity(a))
     .map((a) => entryOf(a, 'open', budgets));
   const benchmark = BENCHMARKS.find((b) => b.day === index);
   if (benchmark) {
@@ -258,6 +287,11 @@ export function calendarDays(state: AppState, today: string): CalendarDay[] {
   };
   for (const a of state.activities) {
     if (a.extra && a.status === 'planned') continue;
+    if (isBonusActivity(a)) {
+      // Offers are not scheduled work: only a finished bonus puts a day on the calendar.
+      if (a.status === 'done') consider(a.completedAt);
+      continue;
+    }
     if (a.status === 'planned' || a.status === 'in_progress') consider(a.dueDate);
     if (a.status === 'done') {
       consider(a.completedAt);

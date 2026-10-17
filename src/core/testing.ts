@@ -51,7 +51,7 @@ export function planAndComplete(
 ): AppState {
   const plan = planDay(state, date);
   const next = materializePlan(state, plan);
-  const target = [...plan.items, ...(plan.bonus ? [plan.bonus] : [])].find(
+  const target = [...plan.items, ...plan.bonuses].find(
     (i) => i.activity.slug === slug && i.activity.type === type,
   );
   if (!target) throw new Error(`No ${type} for ${slug} in the plan of ${date}`);
@@ -63,7 +63,7 @@ export interface SimulatedDay {
   state: AppState;
 }
 
-/** Plans, persists and completes every planned item of `date` (optionally the bonus too). */
+/** Plans, persists and completes every planned item of `date` (optionally the day's open bonus offers too). */
 export function simulateDay(
   state: AppState,
   date: string,
@@ -71,7 +71,7 @@ export function simulateDay(
 ): SimulatedDay {
   const plan = planDay(state, date);
   let next = materializePlan(state, plan);
-  const items = [...plan.items, ...(options.bonus && plan.bonus ? [plan.bonus] : [])];
+  const items = [...plan.items, ...(options.bonus ? plan.bonuses : [])];
   for (const item of items) {
     if (item.activity.status === 'done') continue;
     next = complete(next, item.activity.id, options.outcome ?? 'solo', date, options.minutes ?? item.minutes);

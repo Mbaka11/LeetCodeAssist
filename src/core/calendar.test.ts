@@ -301,12 +301,12 @@ describe('plan done', () => {
 });
 
 describe('bonus-pool problems in the calendar', () => {
-  it('flags the bonus entry, does not plan it or let it be postponed, and keeps the program counter', () => {
+  it('flags the bonus entries, does not plan them or let them be postponed, and keeps the program counter', () => {
     const base = materializePlan(newState(), planDay(newState(), day(1)));
     const today = calendarDays(base, day(1))[0]!;
     const bonus = today.entries.filter((e) => e.bonus);
-    expect(bonus).toHaveLength(1);
-    expect(bonus[0]).toMatchObject({ type: 'new', postponable: false });
+    expect(bonus).toHaveLength(2);
+    expect(bonus[0]).toMatchObject({ type: 'new', postponable: false, state: 'open' });
     expect(today.entries.filter((e) => e.type === 'new' && !e.bonus).every((e) => e.postponable)).toBe(true);
     expect(today.plannedCount).toBe(planDay(base, day(1)).items.length);
 
@@ -317,5 +317,39 @@ describe('bonus-pool problems in the calendar', () => {
 
     const later = calendarDays(done, day(3))[0]!;
     expect(later.entries.find((e) => e.bonus)).toMatchObject({ id: bonus[0]!.id, state: 'done' });
+  });
+
+  it('keeps offers and finished bonuses out of planned, core and plan-done counts', () => {
+    const base = materializePlan(newState(), planDay(newState(), day(1)));
+    const plan = planDay(base, day(1));
+    const before = calendarDays(base, day(1))[0]!;
+    expect(before.plannedCount).toBe(plan.items.length);
+    expect(before.plannedMinutes).toBe(plan.plannedMinutes);
+    expect(before.coreCount).toBe(plan.items.length);
+
+    // Finish both offers and one core item: only the core item counts for the plan-done ratio.
+    let state = base;
+    for (const offer of plan.bonuses) state = complete(state, offer.activity.id, 'solo', day(1), 30);
+    state = complete(state, plan.items[0]!.activity.id, 'solo', day(1), 10);
+    const after = calendarDays(state, day(1))[0]!;
+    expect(after.plannedCount).toBe(plan.items.length);
+    expect(after.plannedMinutes).toBe(plan.plannedMinutes);
+    expect(after.coreCount).toBe(plan.items.length);
+    expect(after.coreDoneCount).toBe(1);
+    expect(after.planDone).toBe(false);
+    // Their time is logged and they are listed as done bonus entries on the day they were completed.
+    expect(after.doneCount).toBe(3);
+    expect(after.loggedMinutes).toBe(70);
+    expect(after.entries.filter((e) => e.bonus && e.state === 'done')).toHaveLength(2);
+  });
+
+  it('lists a bonus on the day it was completed, not on the day an older offer was created', () => {
+    const base = materializePlan(newState(), planDay(newState(), day(1)));
+    const offer = planDay(base, day(5)).bonuses[0]!;
+    const state = complete(base, offer.activity.id, 'solo', day(5), 30);
+    const days = calendarDays(state, day(6));
+    const entriesOf = (n: number) => days[n - 1]!.entries.filter((e) => e.id === offer.activity.id);
+    expect(entriesOf(1)).toHaveLength(0);
+    expect(entriesOf(5)).toMatchObject([{ state: 'done', bonus: true }]);
   });
 });

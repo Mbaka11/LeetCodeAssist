@@ -1,6 +1,7 @@
-import { CATEGORY_NAMES, NEETCODE_150 } from '../data/neetcode150';
+import { CATEGORY_NAMES } from '../data/neetcode150';
 import { isConsolidationDay } from '../data/program';
 import { BUDGETED_TYPES, DIFFICULTIES } from './activities';
+import { catalogProblems, type CatalogId } from './catalog';
 import { addDays, dayIndex, isValidDateString } from './dates';
 import type {
   Activity,
@@ -427,7 +428,8 @@ function emptyCounts(): ProblemCounts {
   return { total: 0, worked: 0, soloInReview: 0, consolidating: 0 };
 }
 
-export function problemStats(state: AppState): ProblemStats {
+/** Roadmap counters for a catalog (the NeetCode 150 unless `catalog` says otherwise); the state is shared. */
+export function problemStats(state: AppState, catalog: CatalogId = 'neetcode150'): ProblemStats {
   const overall = emptyCounts();
   const byCategory = new Map<string, CategoryStats>(
     CATEGORY_NAMES.map((category) => [category, { category, ...emptyCounts() }]),
@@ -438,7 +440,7 @@ export function problemStats(state: AppState): ProblemStats {
     Hard: emptyCounts(),
   };
 
-  for (const problem of NEETCODE_150) {
+  for (const problem of catalogProblems(catalog)) {
     const status = getProblemStatus(state, problem.slug);
     const buckets: ProblemCounts[] = [
       overall,

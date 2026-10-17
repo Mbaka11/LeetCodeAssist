@@ -15,6 +15,7 @@ import {
   estimatedMinutes,
   isReviewType,
 } from './activities';
+import { BONUS_SLOTS, openBonusOffers, selectBonusSlugs, type BonusHold } from './bonus';
 import { compareDates, dayIndex, diffDays } from './dates';
 import { programQueue } from './queue';
 import { CONSOLIDATION_TARGET_MIN, getProblemStatus } from './state';
@@ -70,12 +71,26 @@ export interface DayPlan {
   dayIndex: number;
   isConsolidationDay: boolean;
   isBenchmarkDay: boolean;
-  /** Ordered list for the day: reviews, benchmark pair, new problems. Excludes the bonus. */
+  /** Ordered list for the day: reviews, benchmark pair, new problems. Excludes the bonus offers. */
   items: PlanItem[];
   /**
-   * Optional extra new problem from the bonus pool (`BONUS_POOL`); never becomes debt, and does not
-   * count toward pace or the program queue.
+   * Up to `BONUS_SLOTS` optional, uncompleted bonus problems from the pool (`BONUS_POOL`). They are offers:
+   * never debt, never part of `items`, `plannedMinutes`, the badge or the plan-done ratio, and they do not count
+   * toward pace or the program queue. Open offers (planned or started, kept in the order they were created)
+   * are sticky across reloads and days; a completed or skipped one is replaced at once, as often as the user
+   * completes them. They are shown even when the core plan already fills the cap (see `bonusRoomMinutes`).
    */
+  bonuses: PlanItem[];
+  /** Bonus problems completed today (optional work that is already done); not replaced by `bonuses`. */
+  completedBonuses: PlanItem[];
+  /** Why fewer than `BONUS_SLOTS` offers are shown (prerequisites not ready, pool exhausted); null otherwise. */
+  bonusHold: BonusHold | null;
+  /**
+   * Minutes of the daily cap that the core items leave free. An offer longer than this is overtime the
+   * user chooses deliberately; it is still outside the core budget.
+   */
+  bonusRoomMinutes: number;
+  /** TEMPORARY alias of `bonuses[0]`, kept until every UI caller uses `bonuses` (removed in the UI stage). */
   bonus: PlanItem | null;
   /** Due reviews that did not fit under the cap today; they stay planned and are re-planned tomorrow. */
   carriedOver: PlanItem[];
@@ -208,6 +223,10 @@ export function planDay(
     isConsolidationDay: consolidation,
     isBenchmarkDay: benchmark !== undefined,
     items: [],
+    bonuses: [],
+    completedBonuses: [],
+    bonusHold: null,
+    bonusRoomMinutes: 0,
     bonus: null,
     carriedOver: [],
     mergedAway: [],
@@ -277,19 +296,16 @@ export function planDay(
         (isMandatory(a, date) || (a.status === 'planned' && a.dueDate === date)),
     )
     .sort((a, b) => queueIndex(a.slug) - queueIndex(b.slug) || (a.id < b.id ? -1 : 1));
-  // A committed bonus-pool problem is today's bonus; the rest are core problems from the queue (a queue
-  // problem beyond the daily two, saved by an older version as the bonus, still counts as the bonus).
+  // Bonus-pool problems are never core: they are handled as offers below. The rest are core problems from the
+  // queue (a queue problem beyond the daily two, saved by an older version as the bonus, still counts as one
+  // bonus offer).
   const poolSlugs = new Set(bonusPool);
-  const todaysPool = todaysNew.filter((a) => poolSlugs.has(a.slug));
   const todaysQueue = todaysNew.filter((a) => !poolSlugs.has(a.slug));
   const coreCount = consolidation ? todaysQueue.length : coreNewCount(todaysQueue.map((a) => a.slug));
   const overflow = todaysQueue.slice(coreCount);
-  const committedBonus = todaysPool[0] ?? overflow[0];
+  const legacyOverflowBonus = overflow[0];
   const newItems = todaysQueue.slice(0, coreCount).map(toItem);
-  let bonus: PlanItem | null = committedBonus ? toItem(committedBonus) : null;
-  newItems.push(
-    ...[...todaysPool, ...overflow].filter((a) => a !== committedBonus).map(toItem),
-  );
+  newItems.push(...overflow.slice(1).map(toItem));
 
   const sum = (items: readonly PlanItem[]): number => items.reduce((n, i) => n + i.minutes, 0);
   let used = sum(reviewItems) + sum(benchmarkItems) + sum(newItems);
@@ -368,7 +384,6 @@ export function planDay(
     if (a.status === 'skipped') continue; // a skipped problem goes back to the queue
     if (a.status !== 'planned' || a.dueDate === date) consumed.add(a.slug);
   }
-  let queueExhausted = true;
   if (!consolidation) {
     // A problem skipped or postponed today is not offered again today, even as the Easy third problem.
     const upcoming = queue.filter((slug) => !consumed.has(slug) && !skippedToday.has(slug));
@@ -385,35 +400,55 @@ export function planDay(
       used += item.minutes;
       next += 1;
     }
-    queueExhausted = next >= upcoming.length;
-  }
-
-  // The bonus comes from the pool, not the queue: the first pool problem that is not worked yet (one
-  // skipped today is offered again tomorrow). Offered once the day's own problems are placed, also on
-  // consolidation days and after the queue is exhausted, and only when it fits under the cap.
-  if (bonus === null && (consolidation || newItems.length >= NEW_PROBLEMS_PER_DAY || queueExhausted)) {
-    const slug = bonusPool.find((s) => !consumed.has(s) && !skippedToday.has(s));
-    if (slug !== undefined && used + estimatedMinutes('new', slug, budgets) <= capMinutes) {
-      bonus = makeVirtual({ type: 'new', slug, dueDate: date, createdAt: date });
-    }
   }
 
   reviewItems.sort(reviewOrder);
   const items = [...reviewItems, ...benchmarkItems, ...newItems];
+  const plannedMinutes = sum(items);
+
+  // Bonus offers come from the pool, not the queue, and never displace core work: they are chosen after the
+  // core plan is final, whether or not they fit under the cap.
+  // An offer is never overdue: it is optional and keeps its place instead of becoming debt.
+  const toOffer = (activity: Activity): PlanItem => ({ ...toItem(activity), overdue: false });
+  const completedBonuses = state.activities
+    .filter(
+      (a) =>
+        a.type === 'new' && a.status === 'done' && a.completedAt === date && poolSlugs.has(a.slug),
+    )
+    .map(toOffer);
+  const legacyDone = legacyOverflowBonus?.status === 'done';
+  if (legacyOverflowBonus && legacyDone) completedBonuses.push(toOffer(legacyOverflowBonus));
+  const legacyOpen = legacyOverflowBonus && !legacyDone ? [toOffer(legacyOverflowBonus)] : [];
+  const slots = BONUS_SLOTS - legacyOpen.length;
+  const stored = openBonusOffers(state, poolSlugs, slots).map(toOffer);
+  const selection = selectBonusSlugs(state, {
+    pool: bonusPool,
+    count: slots - stored.length,
+    coreSlugs: items.map((i) => i.activity.slug),
+    exclude: new Set([...stored, ...legacyOpen].map((i) => i.activity.slug)),
+  });
+  const offers = selection.slugs.map((slug) =>
+    makeVirtual({ type: 'new', slug, dueDate: date, createdAt: date }),
+  );
+  const bonuses = [...legacyOpen, ...stored, ...offers];
   return {
     ...empty,
     items,
-    bonus,
+    bonuses,
+    completedBonuses,
+    bonusHold: selection.hold,
+    bonusRoomMinutes: Math.max(0, capMinutes - plannedMinutes),
+    bonus: bonuses[0] ?? null,
     carriedOver,
     mergedAway,
-    plannedMinutes: sum(items),
+    plannedMinutes,
     remainingMinutes: sum(items.filter((i) => i.activity.status !== 'done')),
   };
 }
 
-/** Persists the activities of a plan that do not exist yet (new problems, benchmarks, practice, bonus). */
+/** Persists the activities of a plan that do not exist yet (new problems, benchmarks, practice, bonus offers). */
 export function materializePlan(state: AppState, plan: DayPlan): AppState {
-  const missing = [...plan.items, ...(plan.bonus ? [plan.bonus] : [])]
+  const missing = [...plan.items, ...plan.bonuses]
     .filter((item) => !item.persisted)
     .map((item) => item.activity);
   if (missing.length === 0) return state;

@@ -92,15 +92,29 @@ export function completeActivity(
 /**
  * Skips an activity. A skipped review is never dropped (SPEC §4): unless it was optional practice,
  * the same review is planned again for tomorrow, following the one-review-per-problem-per-day merge rule.
+ * Skipping a bonus offer postpones it (the planner suggests it again only behind the problems never skipped)
+ * and also retires planned duplicates of that problem stored by older versions, so it is not offered again
+ * through them.
  */
 export function skipActivity(state: AppState, id: string, now: number): AppState {
   const activity = requireOpen(state, id);
   const today = localDateFromTimestamp(now);
-  const skipped = updateActivity(state, id, (a) => ({
+  const skippedOne = updateActivity(state, id, (a) => ({
     ...a,
     status: 'skipped',
     timer: pauseTimer(a.timer, now),
   }));
+  const retireTwins = activity.type === 'new' && isBonusProblem(activity.slug);
+  const skipped: AppState = retireTwins
+    ? {
+        ...skippedOne,
+        activities: skippedOne.activities.map((a) =>
+          a.type === 'new' && a.slug === activity.slug && a.status === 'planned'
+            ? { ...a, status: 'skipped' as const }
+            : a,
+        ),
+      }
+    : skippedOne;
   if (!isReviewType(activity.type) || activity.extra) return skipped;
   return {
     ...skipped,
@@ -222,7 +236,7 @@ export function startExtraPractice(
   const today = localDateFromTimestamp(now);
   const materialized = materializeToday(state, now);
   const todayPlan = planDay(materialized, today);
-  const planned = [...todayPlan.items, ...(todayPlan.bonus ? [todayPlan.bonus] : [])].find(
+  const planned = [...todayPlan.items, ...todayPlan.bonuses].find(
     (item) =>
       item.activity.slug === slug &&
       (item.activity.status === 'planned' || item.activity.status === 'in_progress'),

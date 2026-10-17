@@ -633,6 +633,133 @@ export const HINTS: Record<string, Hint> = {
     sketch:
       '1) Start with result 0. 2) XOR it with every element. 3) Return the result. Time O(n), space O(1).',
   },
+  // ---- Bonus pool additions ----
+  'valid-sudoku': {
+    nudge: 'Think of three families of constraints (rows, columns, boxes) and a set for each that remembers the digits already seen.',
+    insight:
+      'A board is valid exactly when no digit repeats inside any row, column or 3x3 box, and the box of cell (r, c) is identified by r // 3 and c // 3, so a single pass is enough.',
+    sketch:
+      '1) Keep a set for each row, each column and each of the nine boxes. 2) For every filled cell compute its box index from r // 3 and c // 3. 3) If the digit is already in any of the three sets return false, otherwise add it to all three. 4) Return true after the scan. Time O(81), effectively constant; space O(81).',
+  },
+  'container-with-most-water': {
+    nudge: 'The two ends of the array form a container: consider two pointers that start at the outside and move inward.',
+    insight:
+      'The area is limited by the shorter wall, so moving the taller wall inward can never help (the width shrinks and the height stays capped by the short wall); only moving the shorter wall can find a better container.',
+    sketch:
+      '1) Put left at 0 and right at n-1. 2) Compute min(height[left], height[right]) * (right - left) and keep the maximum. 3) Move the pointer at the shorter wall inward. 4) Stop when the pointers meet. Time O(n), space O(1).',
+  },
+  'longest-repeating-character-replacement': {
+    nudge: 'A window of the string that you can grow and shrink while tracking letter counts.',
+    insight:
+      'A window can become one repeated letter with at most k edits exactly when its length minus the count of its most common letter is at most k, so you only need that count while the window slides.',
+    sketch:
+      '1) Keep letter counts of the window and the highest count seen so far (it is fine not to lower it when shrinking). 2) Extend right by one and update the counts. 3) While length - highest count > k, move left forward and update the counts. 4) Record the window length. Time O(n), space O(26).',
+  },
+  'permutation-in-string': {
+    nudge: 'A permutation has the same letter counts as the pattern, so compare counts over a window of fixed length.',
+    insight:
+      'A window of the long string with the length of the pattern is a permutation of it exactly when both have equal letter counts, and sliding the window by one letter changes only two counts.',
+    sketch:
+      '1) If the pattern is longer than the text return false. 2) Count the letters of the pattern and of the first window. 3) Slide the window: add the entering letter, remove the leaving one, and compare the counts (or track how many letters match). 4) Return true on any match. Time O(n), space O(26).',
+  },
+  'time-based-key-value-store': {
+    nudge: 'Each key needs its own history ordered by time; think about what makes the lookup of the latest value at or before a time fast.',
+    insight:
+      'Calls to set arrive with increasing timestamps, so the list of each key is already sorted and the answer to get is the last entry whose timestamp is at most the query: a binary search.',
+    sketch:
+      '1) Map each key to a list of (timestamp, value) pairs appended in order. 2) For set, append to the list of that key. 3) For get, binary search for the last timestamp <= t and return its value, or the empty string when there is none. Set is O(1), get is O(log n), space O(n).',
+  },
+  'copy-list-with-random-pointer': {
+    nudge: 'You must build new nodes whose random pointers refer to new nodes, so you need a way to translate each old node into its copy.',
+    insight:
+      'Random pointers can point forward or backward, so the copies cannot be wired in one simple pass: first create every copy with a way to find the copy of any node, then connect next and random through that mapping.',
+    sketch:
+      '1) First pass: create a copy of every node and store old node -> copy in a map. 2) Second pass: for each old node set copy.next = map[old.next] and copy.random = map[old.random], with null mapping to null. 3) Return the copy of the head. Time O(n), space O(n); weaving the copies into the list brings space down to O(1).',
+  },
+  'add-two-numbers': {
+    nudge: 'The digits are stored in reverse order, which is the order in which you add by hand: walk both lists together with a carry.',
+    insight:
+      'The sum can be built digit by digit from the heads because the lowest digit comes first. Keep going while either list has nodes or a carry remains, and treat a missing digit as 0.',
+    sketch:
+      '1) Use a dummy head and a carry of 0. 2) While either list has a node or the carry is non-zero, add the available digits and the carry. 3) Append a node with sum % 10 and set carry = sum // 10. 4) Advance both pointers and return dummy.next. Time O(max(m, n)), space O(1) beyond the output.',
+  },
+  'count-good-nodes-in-binary-tree': {
+    nudge: 'A tree traversal where you carry information down from the root to every node.',
+    insight:
+      'A node is good when no ancestor on its path is larger, so the only thing a node needs to know about its path is the maximum value seen on the way down.',
+    sketch:
+      '1) Run a DFS from the root that passes down the maximum value of the path so far. 2) If node.val >= that maximum, count the node and raise the maximum for its children. 3) Recurse into both children and add their counts. Time O(n), space O(h) for the recursion depth.',
+  },
+  'construct-binary-tree-from-preorder-and-inorder-traversal': {
+    nudge: 'One traversal tells you the root, the other tells you how to split left from right: think recursion on sub-ranges.',
+    insight:
+      'The first preorder value is the root, and its position in the inorder list splits the other values into the left subtree (before it) and the right subtree (after it); the size of the left part also tells you how to split the preorder list.',
+    sketch:
+      '1) Map each inorder value to its index. 2) Build(preLeft, preRight, inLeft, inRight): take preorder[preLeft] as the root and look up its inorder index. 3) The left subtree has (index - inLeft) nodes: recurse on the matching ranges for the left and the right child. 4) Return the root. Time O(n), space O(n).',
+  },
+  'letter-combinations-of-a-phone-number': {
+    nudge: 'Each digit contributes one choice among a few letters: a backtracking tree whose depth equals the number of digits.',
+    insight:
+      'Every complete combination picks exactly one letter per digit in order, so a partial answer of length i is only extended with the letters of digit i, and an empty input has no combinations at all.',
+    sketch:
+      '1) Return an empty list for empty input. 2) Map each digit to its letters. 3) Recurse on the digit index with the current prefix: at the end add the prefix to the results, otherwise try every letter of the current digit. Time O(4^n * n), space O(n) for the recursion plus the output.',
+  },
+  'pacific-atlantic-water-flow': {
+    nudge: 'Instead of asking where the water of each cell goes, ask which cells can be reached when you flow backwards from each ocean.',
+    insight:
+      'Water moves to equal or lower neighbours, so walking uphill (to equal or higher neighbours) from the border finds every cell that drains into that ocean; the answer is the cells reached from both oceans.',
+    sketch:
+      '1) Start a DFS or BFS from every Pacific border cell and mark the cells reachable by moving to neighbours that are not lower. 2) Do the same from the Atlantic border. 3) Return the cells marked in both sets. Time O(m*n), space O(m*n).',
+  },
+  'palindromic-substrings': {
+    nudge: 'Every palindrome has a centre: consider expanding outward from each possible centre.',
+    insight:
+      'A palindrome mirrors around its centre, which is a character (odd length) or a gap between two characters (even length), so there are 2n-1 centres, and an expansion stops as soon as the two ends differ.',
+    sketch:
+      '1) For every index i expand from (i, i) for odd lengths and from (i, i+1) for even lengths. 2) While both ends are inside the string and equal, count one palindrome and move outward. 3) Return the total. Time O(n^2), space O(1).',
+  },
+  'maximum-product-subarray': {
+    nudge: 'A sign can turn the best value into the worst one: think about tracking more than one running value per position.',
+    insight:
+      'A negative number turns the smallest product so far into the largest, so at every position both the maximum and the minimum product of a subarray ending there matter. A zero resets both.',
+    sketch:
+      '1) Keep the maximum and minimum product of subarrays ending at the current element, starting from the first element. 2) For each next x the candidates are x, max * x and min * x: the largest becomes the new maximum and the smallest the new minimum (use the old values for both). 3) Track the best maximum seen. Time O(n), space O(1).',
+  },
+  'longest-increasing-subsequence': {
+    nudge: 'Define the best subsequence that ends at each position, or think about a sorted structure of the smallest possible tails.',
+    insight:
+      'The best subsequence ending at i extends the best one ending at an earlier, smaller value, which gives a quadratic DP; keeping for each length the smallest tail value gives a sorted array that you can binary search.',
+    sketch:
+      '1) Keep an array tails where tails[k] is the smallest last value of an increasing subsequence of length k+1. 2) For each number, binary search the first tail that is >= it and replace it, or append the number when there is none. 3) The answer is the length of tails. Time O(n log n), space O(n).',
+  },
+  'partition-equal-subset-sum': {
+    nudge: 'If the total is odd it is impossible; otherwise this is a yes/no question about reaching a target sum with some of the numbers.',
+    insight:
+      'Splitting into two equal halves means finding a subset that sums to half of the total, a 0/1 subset-sum: each number is used at most once, so the reachable sums are updated from large to small.',
+    sketch:
+      '1) Compute the sum; if it is odd return false, else target = sum / 2. 2) Keep a boolean array reachable[0..target] with reachable[0] true. 3) For each number loop the sums from target down to that number and set reachable[s] |= reachable[s - num]. 4) Return reachable[target]. Time O(n * target), space O(target).',
+  },
+  'spiral-matrix': {
+    nudge: 'Walk the border layer by layer and shrink the boundaries after each side.',
+    insight:
+      'The spiral is four straight runs (right, down, left, up) that repeat on a matrix whose boundaries move inward by one; the main bug risk is walking a row or column twice once one dimension runs out.',
+    sketch:
+      '1) Keep top, bottom, left and right boundaries. 2) Walk the top row left to right then top++, and the right column downward then right--. 3) If top <= bottom walk the bottom row right to left then bottom--; if left <= right walk the left column upward then left++. 4) Repeat until the boundaries cross. Time O(m*n), space O(1) beyond the output.',
+  },
+  'set-matrix-zeroes': {
+    nudge: 'Record which rows and columns must be cleared before you change anything, otherwise freshly written zeros confuse the scan.',
+    insight:
+      'A cell must become zero when its row or column contains an original zero. The first row and first column can serve as the markers for the other rows and columns, if you remember separately whether they themselves held a zero.',
+    sketch:
+      '1) Note whether the first row and the first column contain a zero. 2) For every other cell that is zero, set the marker of its row (first column) and of its column (first row) to zero. 3) Zero every other cell whose row marker or column marker is zero. 4) Finally clear the first row and first column if they held a zero. Time O(m*n), space O(1).',
+  },
+  'sum-of-two-integers': {
+    nudge: 'Addition can be rebuilt from bit operations: which operation gives the sum without carries and which one gives the carries?',
+    insight:
+      'XOR adds two numbers while ignoring carries, and AND shifted left by one is exactly the carry. Repeating this until no carry is left produces the sum; in Python mask to 32 bits to emulate fixed-width integers.',
+    sketch:
+      '1) Use a 32-bit mask. 2) While b is not 0 compute carry = (a & b) << 1, then a = (a ^ b) & mask and b = carry & mask. 3) If a is above the largest positive 32-bit value, convert it back to a negative number with ~(a ^ mask). 4) Return a. Time O(1) (at most 32 rounds), space O(1).',
+  },
 };
 
 export function getHints(slug: string): Hint | undefined {

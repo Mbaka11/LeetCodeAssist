@@ -1,4 +1,5 @@
-import { CATEGORIES, NEETCODE_150, type CategoryName } from '../data/neetcode150';
+import { CATEGORIES, type CategoryName } from '../data/neetcode150';
+import { catalogProblems, type CatalogId } from './catalog';
 import { getProblemStatus } from './state';
 import type { AppState, Difficulty } from './types';
 
@@ -111,9 +112,10 @@ export interface DifficultyCount {
 /** Per category: worked/total problems for each difficulty (the counters on the tree nodes). */
 export function categoryDifficultyCounts(
   state: AppState,
+  catalog: CatalogId = 'neetcode150',
 ): Map<string, Record<Difficulty, DifficultyCount>> {
   const result = new Map<string, Record<Difficulty, DifficultyCount>>();
-  for (const problem of NEETCODE_150) {
+  for (const problem of catalogProblems(catalog)) {
     let counts = result.get(problem.category);
     if (!counts) {
       counts = {

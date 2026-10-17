@@ -33,7 +33,8 @@ export function projectDay(state: AppState, date: string, today: string): DayPro
     for (let offset = 0; offset < days; offset += 1) {
       const d = addDays(today, offset);
       const plan = planDay(projected, d);
-      projected = materializePlan(projected, plan);
+      // Bonus offers are optional and never done in a projection: persist the core items only.
+      projected = materializePlan(projected, { ...plan, bonuses: [] });
       for (const item of plan.items) {
         if (item.activity.status === 'done') continue;
         projected = applyOutcome(projected, item.activity.id, {

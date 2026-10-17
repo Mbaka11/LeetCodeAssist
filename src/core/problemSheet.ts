@@ -56,7 +56,7 @@ export function openActivityToday(state: AppState, slug: string, today: string):
   const plan = planDay(state, today);
   const candidates = [
     ...plan.items,
-    ...(plan.bonus ? [plan.bonus] : []),
+    ...plan.bonuses,
     ...plan.carriedOver,
   ]
     .map((item) => item.activity)
