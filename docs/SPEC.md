@@ -46,7 +46,10 @@ Benchmark problems are reserved and never appear in the learning queue.
   refills it; `materializePlan` persists at most the two open offers. Records from 0.5 (one planned pool activity
   per date) are read as offers and never rewritten or deleted. A completed bonus starts the normal review cycle
   (D+1/3/7/21) and counts as worked in the roadmap, but it **does not count toward pace** and not toward the
-  *x*/*N* program counter (*N* = the queue length), and it never consumes the program queue.
+  *x*/*N* program counter (*N* = the queue length), and it never consumes the program queue. Its four reviews are
+  core work and are fitted before new problems, so many finished bonus problems can crowd out program new
+  problems on later days (accepted trade-off, no limit). Skipping an offer re-dates it (and retired twins) to the
+  skip day, so the Calendar and Logs show a skip on the day it happened.
 - **Distinct problems worked** (`workedTotals`, `src/core/worked.ts`): a slug counts once when it has any `done`
   activity. Buckets are disjoint in the order program, benchmark, bonus pool, other:
   *Program x/50 · Benchmarks x/6 · Bonus x* (+ *Other* when non-zero), `total` is their sum. Reviews, blind and

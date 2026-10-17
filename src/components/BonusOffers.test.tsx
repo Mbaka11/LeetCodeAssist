@@ -66,6 +66,22 @@ describe('BonusOffers', () => {
     expect(count(html, 'bonus-impact bonus-impact-')).toBe(1);
   });
 
+  it('counts a started offer in the time impact shown for the other offer', () => {
+    const state = materializePlan(newState(), planDay(newState(), day(1)));
+    const [first, second] = planDay(state, day(1)).bonuses;
+    const base = planDay(state, day(1));
+    const roomy = base.plannedMinutes + Math.max(first!.minutes, second!.minutes);
+    expect(roomy).toBeLessThan(base.capMinutes);
+    // Before anything is started, either offer alone fits the target.
+    expect(count(render(base, roomy), 'bonus-impact-within-target')).toBe(2);
+    const started = startExtraPractice(state, first!.activity.slug, NOW).state;
+    const html = render(planDay(started, day(1)), roomy);
+    // The running offer adds its minutes, so the remaining planned offer now goes over the target.
+    expect(count(html, 'bonus-impact bonus-impact-')).toBe(1);
+    expect(html).not.toContain('bonus-impact-within-target');
+    expect(html).toMatch(/bonus-impact-over-(target|cap)/);
+  });
+
   it('lists finished bonus problems in one line and offers two new ones', () => {
     const first = simulateDay(newState(), day(1), { bonus: true });
     const finished = first.plan.bonuses.map((b) => b.activity.slug);

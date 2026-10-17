@@ -47,8 +47,18 @@ fields are optional, so data saved by earlier versions keeps working.
 - The program is unchanged: the same 50 problems in the same order, the same benchmarks, budgets and review
   intervals.
 
+### Fixed
+- A bonus problem skipped on a later day is now dated to the day it was skipped (Calendar and Logs) instead of
+  the day it was first offered. Retired older duplicates are re-dated the same way; nothing is deleted.
+- The time-impact line of a bonus offer now also counts a bonus problem that is already running.
+
 ### Notes
-- Layout was checked in a headless Chrome with mocked extension APIs, not in a live extension install.
+- Layout was checked in a headless Chrome with mocked extension APIs, not in a live extension install. The
+  extension was not run in Chrome with a real LeetCode session, and the LeetCode API behaviour stays
+  **not live-verified**.
+- Finished bonus problems add their own four reviews as core work, so many of them can crowd out new program
+  problems on later days (no daily limit by design).
+- Running the test suite needs Node 22.22.2+ or 24.15+ (jsdom 30); the README no longer says Node 20+.
 
 ## 0.5.0
 

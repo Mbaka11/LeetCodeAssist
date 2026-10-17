@@ -9,7 +9,8 @@ import { Card } from './Card';
 
 /**
  * The optional bonus offers of today (at most two), outside the core plan. A started offer keeps its timer
- * controls; a planned one says how much time it would add against the target and the cap. Finished bonus
+ * controls; a planned one says how much time it would add against the target and the cap, counting the core
+ * plan plus bonus problems already finished or started today. Finished bonus
  * problems are only listed in one line: they live in Logs and Calendar, not in today's checklist.
  */
 export function BonusOffers({
@@ -28,7 +29,10 @@ export function BonusOffers({
   const { bonuses, completedBonuses, bonusHold } = plan;
   if (bonuses.length === 0 && completedBonuses.length === 0 && !bonusHold) return null;
   const doneMinutes = completedBonuses.reduce((sum, item) => sum + item.minutes, 0);
-  const countedMinutes = plan.plannedMinutes + doneMinutes;
+  const startedMinutes = bonuses
+    .filter((item) => item.activity.status !== 'planned')
+    .reduce((sum, item) => sum + item.minutes, 0);
+  const countedMinutes = plan.plannedMinutes + doneMinutes + startedMinutes;
 
   return (
     <Card title={`Optional bonus problems (${bonuses.length} offered)`} className="bonus-offers">

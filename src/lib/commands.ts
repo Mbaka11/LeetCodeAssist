@@ -99,18 +99,21 @@ export function completeActivity(
 export function skipActivity(state: AppState, id: string, now: number): AppState {
   const activity = requireOpen(state, id);
   const today = localDateFromTimestamp(now);
+  const retireTwins = activity.type === 'new' && isBonusProblem(activity.slug);
+  // A skipped bonus is dated to the day it is skipped (not the day it was offered), so the Calendar and Logs do
+  // not rewrite an earlier day. Bonus problems are never debt, so their due date has no other meaning.
   const skippedOne = updateActivity(state, id, (a) => ({
     ...a,
     status: 'skipped',
     timer: pauseTimer(a.timer, now),
+    ...(retireTwins ? { dueDate: today } : {}),
   }));
-  const retireTwins = activity.type === 'new' && isBonusProblem(activity.slug);
   const skipped: AppState = retireTwins
     ? {
         ...skippedOne,
         activities: skippedOne.activities.map((a) =>
           a.type === 'new' && a.slug === activity.slug && a.status === 'planned'
-            ? { ...a, status: 'skipped' as const }
+            ? { ...a, status: 'skipped' as const, dueDate: today }
             : a,
         ),
       }

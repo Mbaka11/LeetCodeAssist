@@ -50,7 +50,9 @@ measure progress. Benchmark problems are reserved and never appear in the learni
   today's plan, or all its prerequisite categories were introduced), so Graphs or DP stay locked until
   Backtracking is worked; the card explains when fewer than two can be offered. Finishing one starts the
   normal review cycle (day +1/3/7/21) and counts as worked in the roadmap, but it does **not** count toward
-  your pace or the program counter, and it never uses up the program queue.
+  your pace or the program counter, and it never uses up the program queue. Its four reviews are real core
+  work, though: finishing many bonus problems fills later days' cap with reviews, which can leave less room
+  for new program problems. A skipped bonus is dated to the day it was skipped.
 - **Problems worked** (Today and Calendar): the number of distinct problems with at least one finished
   attempt, split into *Program x/50 · Benchmarks x/6 · Bonus x* (*Other* appears only when needed). Each
   problem counts once: reviews never add to it and a bonus never replaces a program problem. The program
@@ -120,7 +122,8 @@ you really need them.
 
 ## Install
 
-You need Node.js 20+ and npm.
+You need npm and Node.js 22.22.2+ or 24.15+ (the version the dev dependency jsdom 30 requires for the test
+suite). Checks and the build were run here on Node 24.19 only; older versions were not tried.
 
 ```bash
 npm install

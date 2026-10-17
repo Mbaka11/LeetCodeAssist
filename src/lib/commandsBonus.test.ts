@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { findActivity } from '../core/activities';
+import { calendarDays } from '../core/calendar';
+import { buildLogRows } from '../core/logs';
 import { planDay } from '../core/planner';
 import { START, day, newState } from '../core/testing';
 import { BONUS_POOL } from '../data/bonus';
@@ -90,6 +92,27 @@ describe('bonus offers through the commands', () => {
     // Nothing is dropped from the history, and no recall is planned for a skipped new problem.
     expect(skipped.activities.some((a) => a.id === first.id)).toBe(true);
     expect(skipped.activities.some((a) => a.type === 'recall' && a.slug === first.slug)).toBe(false);
+  });
+
+  it('dates an offer skipped on a later day to the skip day in the Calendar and Logs, not the offer day', () => {
+    let state = commands.materializeToday(newState(), at(START));
+    const offer = planDay(state, START).bonuses[0]!.activity;
+    expect(offer.dueDate).toBe(START);
+    const twin: Activity = { ...offer, id: `${offer.id}#legacy` };
+    state = { ...state, activities: [...state.activities, twin] };
+    const skipDay = day(2);
+    const skipped = commands.skipActivity(state, offer.id, at(skipDay));
+    expect(findActivity(skipped, offer.id)).toMatchObject({ status: 'skipped', dueDate: skipDay });
+    expect(findActivity(skipped, twin.id)).toMatchObject({ status: 'skipped', dueDate: skipDay });
+    const skippedEntries = (date: string) =>
+      calendarDays(skipped, skipDay)
+        .find((d) => d.date === date)!
+        .entries.filter((e) => e.bonus && e.state === 'skipped');
+    expect(skippedEntries(START)).toHaveLength(0);
+    expect(skippedEntries(skipDay).map((e) => e.id)).toContain(offer.id);
+    const rows = buildLogRows(skipped).filter((r) => r.slug === offer.slug);
+    expect(rows).toHaveLength(2);
+    expect(rows.every((r) => r.status === 'skipped' && r.date === skipDay)).toBe(true);
   });
 
   it('completing an offer replenishes the slot once the plan is persisted again, with reviews from that day', () => {
