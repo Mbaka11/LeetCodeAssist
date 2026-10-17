@@ -121,6 +121,16 @@ describe('app actions on a chrome.storage mock', () => {
     expect((await state()).settings.dailyCapMin).toBe(150);
   });
 
+  it('saves budget overrides and resets them to the defaults', async () => {
+    const { actions, state } = await setup();
+    await actions.updateSettings({ budgets: { blind: { Hard: 30 } } });
+    expect((await state()).settings.budgets).toEqual({ blind: { Hard: 30 } });
+    await expect(actions.updateSettings({ budgets: { blind: { Hard: 500 } } })).rejects.toThrow(/budgets/);
+    expect((await state()).settings.budgets).toEqual({ blind: { Hard: 30 } });
+    await actions.updateSettings({ budgets: undefined });
+    expect((await state()).settings).not.toHaveProperty('budgets');
+  });
+
   it('exports JSON that imports back into an empty store, and rejects invalid imports', async () => {
     const { actions, state } = await setup();
     await actions.toggleChecked('two-sum');

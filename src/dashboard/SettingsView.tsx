@@ -2,9 +2,12 @@ import { useRef, useState, type FormEvent } from 'react';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
+import { BUDGETED_TYPES, DEFAULT_BUDGETS, DIFFICULTIES, effectiveBudgets } from '../core/activities';
 import { localDateFromTimestamp } from '../core/dates';
-import type { AppState } from '../core/types';
+import { BUDGET_MAX_MINUTES, BUDGET_MIN_MINUTES } from '../core/state';
+import type { AppState, BudgetOverrides, BudgetedType, Difficulty } from '../core/types';
 import type { AppActions } from '../lib/actions';
+import { ACTIVITY_LABELS } from '../lib/instructions';
 
 interface Message {
   tone: 'good' | 'error';
@@ -75,6 +78,127 @@ function SettingsForm({
       <div className="row full">
         <Button type="submit" variant="primary">
           Save settings
+        </Button>
+        {message ? (
+          <span className={message.tone === 'good' ? 'tone-good' : 'error'}>{message.text}</span>
+        ) : null}
+      </div>
+    </form>
+  );
+}
+
+type BudgetInputs = Record<BudgetedType, Record<Difficulty, string>>;
+
+/** The cells that differ from the defaults, or undefined when none does. Throws on an invalid cell. */
+function overridesFromInputs(inputs: BudgetInputs): BudgetOverrides | undefined {
+  const overrides: BudgetOverrides = {};
+  for (const type of BUDGETED_TYPES) {
+    for (const difficulty of DIFFICULTIES) {
+      const minutes = Number(inputs[type][difficulty]);
+      if (!Number.isInteger(minutes) || minutes < BUDGET_MIN_MINUTES || minutes > BUDGET_MAX_MINUTES) {
+        throw new Error(
+          `${ACTIVITY_LABELS[type]} ${difficulty}: enter whole minutes from ${BUDGET_MIN_MINUTES} to ${BUDGET_MAX_MINUTES}.`,
+        );
+      }
+      if (minutes !== DEFAULT_BUDGETS[type][difficulty]) {
+        overrides[type] = { ...overrides[type], [difficulty]: minutes };
+      }
+    }
+  }
+  return Object.keys(overrides).length > 0 ? overrides : undefined;
+}
+
+function inputsFrom(overrides: BudgetOverrides | undefined): BudgetInputs {
+  const table = effectiveBudgets(overrides);
+  const inputs = {} as BudgetInputs;
+  for (const type of BUDGETED_TYPES) {
+    inputs[type] = {
+      Easy: String(table[type].Easy),
+      Medium: String(table[type].Medium),
+      Hard: String(table[type].Hard),
+    };
+  }
+  return inputs;
+}
+
+function BudgetsForm({
+  state,
+  actions,
+  message,
+  setMessage,
+}: {
+  state: AppState;
+  actions: AppActions;
+  message: Message | null;
+  setMessage: (message: Message | null) => void;
+}) {
+  const [inputs, setInputs] = useState<BudgetInputs>(() => inputsFrom(state.settings.budgets));
+
+  const save = (event: FormEvent): void => {
+    event.preventDefault();
+    let budgets: BudgetOverrides | undefined;
+    try {
+      budgets = overridesFromInputs(inputs);
+    } catch (e) {
+      setMessage({ tone: 'error', text: errorText(e) });
+      return;
+    }
+    actions.updateSettings({ budgets }).then(
+      () => setMessage({ tone: 'good', text: 'Budgets saved.' }),
+      (e: unknown) => setMessage({ tone: 'error', text: errorText(e) }),
+    );
+  };
+
+  const reset = (): void => {
+    setInputs(inputsFrom(undefined));
+    actions.updateSettings({ budgets: undefined }).then(
+      () => setMessage({ tone: 'good', text: 'Budgets reset to the defaults.' }),
+      (e: unknown) => setMessage({ tone: 'error', text: errorText(e) }),
+    );
+  };
+
+  return (
+    <form className="stack-tight" onSubmit={save}>
+      <table className="table budget-table">
+        <thead>
+          <tr>
+            <th>Activity</th>
+            {DIFFICULTIES.map((difficulty) => (
+              <th key={difficulty}>{difficulty}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {BUDGETED_TYPES.map((type) => (
+            <tr key={type}>
+              <th scope="row">{ACTIVITY_LABELS[type]}</th>
+              {DIFFICULTIES.map((difficulty) => (
+                <td key={difficulty}>
+                  <input
+                    type="number"
+                    min={BUDGET_MIN_MINUTES}
+                    max={BUDGET_MAX_MINUTES}
+                    step={1}
+                    required
+                    aria-label={`${ACTIVITY_LABELS[type]} ${difficulty} budget in minutes`}
+                    value={inputs[type][difficulty]}
+                    onChange={(e) => {
+                      const { value } = e.target;
+                      setInputs((prev) => ({ ...prev, [type]: { ...prev[type], [difficulty]: value } }));
+                    }}
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="row">
+        <Button type="submit" variant="primary">
+          Save budgets
+        </Button>
+        <Button onClick={reset}>
+          Reset to defaults
         </Button>
         {message ? (
           <span className={message.tone === 'good' ? 'tone-good' : 'error'}>{message.text}</span>
@@ -165,6 +289,7 @@ function DataSection({ actions }: { actions: AppActions }) {
 
 export function SettingsView({ state, actions }: { state: AppState; actions: AppActions }) {
   const [message, setMessage] = useState<Message | null>(null);
+  const [budgetMessage, setBudgetMessage] = useState<Message | null>(null);
   return (
     <div className="stack narrow-left">
       <Card title="Settings">
@@ -174,6 +299,19 @@ export function SettingsView({ state, actions }: { state: AppState; actions: App
           actions={actions}
           message={message}
           setMessage={setMessage}
+        />
+      </Card>
+      <Card title="Time budgets (minutes)">
+        <p className="muted">
+          How long each activity should take, by problem difficulty. The planner, the calendar, the
+          reminders and the cards all use these. Benchmarks stay at 30 min per problem.
+        </p>
+        <BudgetsForm
+          key={JSON.stringify(state.settings.budgets ?? null)}
+          state={state}
+          actions={actions}
+          message={budgetMessage}
+          setMessage={setBudgetMessage}
         />
       </Card>
       <Card title="Your data">

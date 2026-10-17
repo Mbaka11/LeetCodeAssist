@@ -7,11 +7,11 @@ import {
   PROGRAM_QUEUE,
   isConsolidationDay,
 } from '../data/program';
-import { estimatedMinutes, isReviewType } from './activities';
+import { estimatedMinutes, expectedNewMinutes, isReviewType } from './activities';
 import { compareDates, dateFromDayIndex, dayIndex } from './dates';
 import { planDay } from './planner';
 import { dailyTargetMinutes, dayProgress, isPlanDone } from './state';
-import type { Activity, ActivityType, AppState, Outcome } from './types';
+import type { Activity, ActivityType, AppState, BudgetOverrides, Outcome } from './types';
 
 /**
  * - `done`: completed on this day.
@@ -72,9 +72,6 @@ export interface CalendarDay {
   entries: CalendarEntry[];
 }
 
-/** Average of the Easy (25) and Medium (40) budgets, for new problems that are not chosen yet. */
-export const EXPECTED_NEW_MINUTES = Math.round((25 + 40) / 2);
-
 interface Draft {
   entry: CalendarEntry;
   /** Counts towards the day's planned total. */
@@ -87,13 +84,13 @@ function isCoreActivity(a: Activity, date: string): boolean {
   return a.dueDate === date && !a.extra && !a.postponed;
 }
 
-function entryOf(a: Activity, state: EntryState): CalendarEntry {
+function entryOf(a: Activity, state: EntryState, budgets: BudgetOverrides | undefined): CalendarEntry {
   return {
     id: a.id,
     type: a.type,
     slug: a.slug,
     state,
-    minutes: estimatedMinutes(a.type, a.slug),
+    minutes: estimatedMinutes(a.type, a.slug, budgets),
     ...(a.status === 'done' ? { loggedMinutes: (a.totalMs ?? 0) / 60_000 } : {}),
     ...(a.outcome ? { outcome: a.outcome } : {}),
     movable: isReviewType(a.type) && !a.extra && a.status === 'planned',
@@ -137,6 +134,7 @@ function bonusIds(state: AppState, date: string): Set<string> {
 
 /** Days up to and including today: the stored history, plus today's not yet persisted plan. */
 function draftsUpToToday(state: AppState, date: string, today: string): Draft[] {
+  const budgets = state.settings.budgets;
   const drafts = new Map<string, Draft>();
   const plan = date === today ? planDay(state, date) : null;
   const carriedIds = new Set(plan?.carriedOver.map((i) => i.activity.id));
@@ -150,7 +148,7 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
     if (entryState === null) continue;
     const isBonus = bonus.has(a.id);
     drafts.set(a.id, {
-      entry: entryOf(a, isBonus && date < today && a.status !== 'done' ? 'skipped' : entryState),
+      entry: entryOf(a, isBonus && date < today && a.status !== 'done' ? 'skipped' : entryState, budgets),
       planned: dueHere && !isBonus && !a.postponed,
       core: dueHere && !isBonus && isCoreActivity(a, date),
     });
@@ -163,7 +161,7 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
         existing.core = existing.planned && isCoreActivity(item.activity, date);
       } else {
         drafts.set(item.activity.id, {
-          entry: entryOf(item.activity, 'open'),
+          entry: entryOf(item.activity, 'open', budgets),
           planned: true,
           core: isCoreActivity(item.activity, date),
         });
@@ -171,7 +169,7 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
     }
     for (const item of plan.carriedOver) {
       const existing = drafts.get(item.activity.id);
-      if (!existing) drafts.set(item.activity.id, { entry: entryOf(item.activity, 'carried'), planned: false, core: false });
+      if (!existing) drafts.set(item.activity.id, { entry: entryOf(item.activity, 'carried', budgets), planned: false, core: false });
     }
   }
   return [...drafts.values()];
@@ -179,9 +177,10 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
 
 /** Future days: the reviews already scheduled plus the fixed program (benchmark pair, new problems). */
 function draftsAfterToday(state: AppState, date: string, index: number): Draft[] {
+  const budgets = state.settings.budgets;
   const entries: CalendarEntry[] = state.activities
     .filter((a) => a.dueDate === date && a.status === 'planned' && !a.extra)
-    .map((a) => entryOf(a, 'open'));
+    .map((a) => entryOf(a, 'open', budgets));
   const benchmark = BENCHMARKS.find((b) => b.day === index);
   if (benchmark) {
     for (const slug of [benchmark.easy, benchmark.medium]) {
@@ -191,7 +190,7 @@ function draftsAfterToday(state: AppState, date: string, index: number): Draft[]
         type: 'benchmark',
         slug,
         state: 'expected',
-        minutes: estimatedMinutes('benchmark', slug),
+        minutes: estimatedMinutes('benchmark', slug, budgets),
         movable: false,
         postponable: false,
       });
@@ -204,7 +203,7 @@ function draftsAfterToday(state: AppState, date: string, index: number): Draft[]
         id: `expected:new:${n}:${date}`,
         type: 'new',
         state: 'expected',
-        minutes: EXPECTED_NEW_MINUTES,
+        minutes: expectedNewMinutes(budgets),
         movable: false,
         postponable: false,
       });

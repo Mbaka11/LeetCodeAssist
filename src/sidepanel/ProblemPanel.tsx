@@ -314,6 +314,7 @@ export function ProblemPanel({ state, actions, slug, now, openDashboard, openPro
                 actions={actions}
                 variant={m.variant}
                 compact
+                budgets={state.settings.budgets}
                 openProblemSheet={(target) => openDashboard(problemHref(target))}
               />
             ))}

@@ -98,7 +98,17 @@ export interface Settings {
   language: 'python';
   /** Roadmap layout. Optional so data saved before it existed stays valid; absent means `tree`. */
   roadmapView?: RoadmapViewMode;
+  /**
+   * Time budget overrides in minutes per activity type and difficulty (partial: a missing entry uses the
+   * default, see `DEFAULT_BUDGETS`). Optional so data saved before it existed stays valid.
+   */
+  budgets?: BudgetOverrides;
 }
+
+/** Activity types whose budget depends on the problem difficulty (benchmarks keep a flat budget). */
+export type BudgetedType = Exclude<ActivityType, 'benchmark'>;
+
+export type BudgetOverrides = { [T in BudgetedType]?: Partial<Record<Difficulty, number>> };
 
 export type RoadmapViewMode = 'tree' | 'grid';
 

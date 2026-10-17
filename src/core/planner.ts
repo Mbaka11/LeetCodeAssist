@@ -134,6 +134,7 @@ export function planDay(
   const consolidation = isConsolidationDay(index);
   const benchmark = benchmarks.find((b) => b.day === index);
   const capMinutes = settings.dailyCapMin;
+  const budgets = settings.budgets;
   const targetMinutes = consolidation ? CONSOLIDATION_TARGET_MIN : settings.dailyTargetMin;
 
   // Pace counts program-queue problems only: a finished bonus-pool problem is extra work.
@@ -167,14 +168,14 @@ export function planDay(
     created.push(activity);
     return {
       activity,
-      minutes: estimatedMinutes(activity.type, activity.slug),
+      minutes: estimatedMinutes(activity.type, activity.slug, budgets),
       overdue: false,
       persisted: false,
     };
   };
   const toItem = (activity: Activity): PlanItem => ({
     activity,
-    minutes: estimatedMinutes(activity.type, activity.slug),
+    minutes: estimatedMinutes(activity.type, activity.slug, budgets),
     overdue: activity.dueDate < date,
     persisted: persistedIds.has(activity.id),
   });
@@ -321,7 +322,7 @@ export function planDay(
           a.order - b.order,
       );
     for (const candidate of candidates) {
-      const minutes = estimatedMinutes('blind', candidate.slug);
+      const minutes = estimatedMinutes('blind', candidate.slug, budgets);
       if (used >= targetMinutes || used + minutes > capMinutes) break;
       const item = makeVirtual({
         type: 'blind',
@@ -351,7 +352,7 @@ export function planDay(
     let next = 0;
     while (newItems.length < NEW_PROBLEMS_PER_DAY && next < upcoming.length) {
       const slug = upcoming[next]!;
-      if (used + estimatedMinutes('new', slug) > capMinutes) break;
+      if (used + estimatedMinutes('new', slug, budgets) > capMinutes) break;
       const item = makeVirtual({ type: 'new', slug, dueDate: date, createdAt: date });
       newItems.push(item);
       used += item.minutes;
@@ -365,7 +366,7 @@ export function planDay(
   // consolidation days and after the queue is exhausted, and only when it fits under the cap.
   if (bonus === null && (consolidation || newItems.length >= NEW_PROBLEMS_PER_DAY || queueExhausted)) {
     const slug = bonusPool.find((s) => !consumed.has(s) && !skippedToday.has(s));
-    if (slug !== undefined && used + estimatedMinutes('new', slug) <= capMinutes) {
+    if (slug !== undefined && used + estimatedMinutes('new', slug, budgets) <= capMinutes) {
       bonus = makeVirtual({ type: 'new', slug, dueDate: date, createdAt: date });
     }
   }

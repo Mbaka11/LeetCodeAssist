@@ -1,11 +1,13 @@
 import { CATEGORY_NAMES, NEETCODE_150 } from '../data/neetcode150';
 import { isConsolidationDay } from '../data/program';
+import { BUDGETED_TYPES, DIFFICULTIES } from './activities';
 import { addDays, dayIndex, isValidDateString } from './dates';
 import type {
   Activity,
   ActivityStatus,
   ActivityType,
   AppState,
+  BudgetOverrides,
   Difficulty,
   Note,
   Outcome,
@@ -91,6 +93,9 @@ const PROBLEM_STATUSES: readonly ProblemStatus[] = [
   'mastered',
 ];
 const ROADMAP_VIEWS: readonly RoadmapViewMode[] = ['tree', 'grid'];
+/** Allowed range of a budget override in minutes. */
+export const BUDGET_MIN_MINUTES = 1;
+export const BUDGET_MAX_MINUTES = 180;
 const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 type Json = Record<string, unknown>;
@@ -134,6 +139,27 @@ function asOneOf<T extends string>(value: unknown, allowed: readonly T[], path: 
   return value as T;
 }
 
+function validateBudgets(value: unknown): BudgetOverrides | undefined {
+  const o = asObject(value, 'settings.budgets');
+  const budgets: BudgetOverrides = {};
+  for (const [type, byDifficulty] of Object.entries(o)) {
+    const typePath = `settings.budgets.${type}`;
+    const budgetedType = asOneOf(type, BUDGETED_TYPES, typePath);
+    const row: Partial<Record<Difficulty, number>> = {};
+    for (const [difficulty, minutes] of Object.entries(asObject(byDifficulty, typePath))) {
+      const path = `${typePath}.${difficulty}`;
+      const level = asOneOf(difficulty, DIFFICULTIES, path);
+      const n = asNumber(minutes, path);
+      if (!Number.isInteger(n) || n < BUDGET_MIN_MINUTES || n > BUDGET_MAX_MINUTES) {
+        fail(path, `expected an integer from ${BUDGET_MIN_MINUTES} to ${BUDGET_MAX_MINUTES}`);
+      }
+      row[level] = n;
+    }
+    if (Object.keys(row).length > 0) budgets[budgetedType] = row;
+  }
+  return Object.keys(budgets).length > 0 ? budgets : undefined;
+}
+
 function validateSettings(value: unknown): Settings {
   const o = asObject(value, 'settings');
   const settings: Settings = {
@@ -146,6 +172,10 @@ function validateSettings(value: unknown): Settings {
   };
   if (o.roadmapView !== undefined) {
     settings.roadmapView = asOneOf(o.roadmapView, ROADMAP_VIEWS, 'settings.roadmapView');
+  }
+  if (o.budgets !== undefined) {
+    const budgets = validateBudgets(o.budgets);
+    if (budgets) settings.budgets = budgets;
   }
   if (settings.dailyTargetMin <= 0) fail('settings.dailyTargetMin', 'must be positive');
   if (settings.dailyCapMin < settings.dailyTargetMin) {

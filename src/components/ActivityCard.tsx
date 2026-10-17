@@ -2,7 +2,7 @@ import { useState, type MouseEvent } from 'react';
 import { estimatedMinutes, isReviewType } from '../core/activities';
 import { addDays, localDateFromTimestamp } from '../core/dates';
 import { elapsedMs, formatElapsed } from '../core/timer';
-import type { Activity } from '../core/types';
+import type { Activity, BudgetOverrides } from '../core/types';
 import { isBonusProblem } from '../data/bonus';
 import { getProblem, problemUrl } from '../data/neetcode150';
 import type { AppActions } from '../lib/actions';
@@ -26,6 +26,7 @@ export function ActivityCard({
   variant = 'planned',
   compact = false,
   openProblemSheet,
+  budgets,
 }: {
   activity: Activity;
   now: number;
@@ -35,6 +36,8 @@ export function ActivityCard({
   compact?: boolean;
   /** Replaces the default in-page link to the problem sheet (the side panel opens the dashboard). */
   openProblemSheet?: (slug: string) => void;
+  /** `settings.budgets`, so the shown estimate follows the user's overrides. */
+  budgets?: BudgetOverrides | undefined;
 }) {
   const [finishing, setFinishing] = useState(false);
   const [moving, setMoving] = useState(false);
@@ -91,7 +94,7 @@ export function ActivityCard({
         ) : null}
         {problem && !compact ? <span className="muted">{problem.category}</span> : null}
         <span className="spacer" />
-        <span className="muted">~{formatMinutes(estimatedMinutes(activity.type, activity.slug))}</span>
+        <span className="muted">~{formatMinutes(estimatedMinutes(activity.type, activity.slug, budgets))}</span>
         {compact ? null : (
           <a className="link-out" href={url} target="_blank" rel="noreferrer">
             LeetCode ↗

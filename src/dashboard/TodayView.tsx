@@ -149,7 +149,13 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
           <div className="stack-tight">
             {nextItem && !runningItem ? <p className="muted">Next: {titleOf(nextItem)}</p> : null}
             {plan.items.map((item) => (
-              <ActivityCard key={item.activity.id} activity={item.activity} now={now} actions={actions} />
+              <ActivityCard
+                key={item.activity.id}
+                activity={item.activity}
+                now={now}
+                actions={actions}
+                budgets={state.settings.budgets}
+              />
             ))}
             {remaining === 0 ? <p className="tone-good">All planned activities are done.</p> : null}
           </div>
@@ -162,7 +168,13 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
             An extra problem from the bonus pool. It fits under the cap, never becomes debt and does not
             count toward your pace: skip it freely.
           </p>
-          <ActivityCard activity={plan.bonus.activity} now={now} actions={actions} variant="bonus" />
+          <ActivityCard
+            activity={plan.bonus.activity}
+            now={now}
+            actions={actions}
+            variant="bonus"
+            budgets={state.settings.budgets}
+          />
         </Card>
       ) : null}
 
@@ -180,6 +192,7 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
                 now={now}
                 actions={actions}
                 variant="carried"
+                budgets={state.settings.budgets}
               />
             ))}
           </div>

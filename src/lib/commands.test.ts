@@ -196,6 +196,17 @@ describe('notes, checks and settings', () => {
     expect(() => commands.updateSettings(state, { startDate: '2025-13-40' })).toThrow(/startDate/);
     expect(() => commands.updateSettings(state, { morningNotify: '8:30' })).toThrow(/morningNotify/);
   });
+
+  it('sets, validates and clears budget overrides', () => {
+    const state = newState();
+    const custom = commands.updateSettings(state, { budgets: { recall: { Medium: 12 } } });
+    expect(custom.settings.budgets).toEqual({ recall: { Medium: 12 } });
+    expect(() => commands.updateSettings(state, { budgets: { recall: { Medium: 0 } } })).toThrow(/budgets/);
+    expect(() => commands.updateSettings(state, { budgets: { recall: { Medium: 200 } } })).toThrow(/budgets/);
+    const cleared = commands.updateSettings(custom, { budgets: undefined });
+    expect(cleared.settings).not.toHaveProperty('budgets');
+    expect(cleared.settings).toEqual(state.settings);
+  });
 });
 
 describe('startExtraPractice', () => {

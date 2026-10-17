@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BONUS_POOL } from '../data/bonus';
+import { getProblem } from '../data/neetcode150';
 import { BENCHMARKS, PROGRAM_QUEUE } from '../data/program';
 import { createActivity, estimatedMinutes } from './activities';
 import { programProgress } from './calendar';
@@ -27,6 +28,9 @@ function addPlanned(
   const activity = createActivity(state.activities, { type, slug, dueDate, createdAt });
   return { ...state, activities: [...state.activities, activity] };
 }
+
+/** Program problems of Medium difficulty (30-minute resolves), in queue order. */
+const mediumSlugs = PROGRAM_QUEUE.filter((slug) => getProblem(slug)?.difficulty === 'Medium');
 
 function itemKeys(plan: ReturnType<typeof planDay>): string[] {
   return plan.items.map((i) => `${i.activity.type}:${i.activity.slug}`);
@@ -196,27 +200,34 @@ describe('planDay: reviews', () => {
   });
 
   it('estimates minutes per activity type and problem difficulty', () => {
-    expect(estimatedMinutes('recall', 'two-sum')).toBe(5);
-    expect(estimatedMinutes('rebuild', 'two-sum')).toBe(10);
-    expect(estimatedMinutes('resolve', 'two-sum')).toBe(20);
-    expect(estimatedMinutes('blind', 'two-sum')).toBe(15);
-    expect(estimatedMinutes('retry', 'two-sum')).toBe(15);
-    expect(estimatedMinutes('benchmark', 'two-sum')).toBe(30);
-    expect(estimatedMinutes('new', 'two-sum')).toBe(25); // Easy
-    expect(estimatedMinutes('new', '3sum')).toBe(40); // Medium
-    expect(estimatedMinutes('new', 'unknown-problem')).toBe(40);
+    // two-sum is Easy, 3sum Medium, trapping-rain-water Hard.
+    const slugs = ['two-sum', '3sum', 'trapping-rain-water'];
+    const table: Record<ActivityType, [number, number, number]> = {
+      recall: [5, 15, 20],
+      rebuild: [10, 20, 25],
+      retry: [10, 20, 25],
+      resolve: [15, 30, 40],
+      blind: [15, 25, 35],
+      new: [25, 40, 50],
+      benchmark: [30, 30, 30],
+    };
+    for (const [type, minutes] of Object.entries(table) as [ActivityType, number[]][]) {
+      expect(slugs.map((slug) => estimatedMinutes(type, slug))).toEqual(minutes);
+    }
+    expect(estimatedMinutes('new', 'unknown-problem')).toBe(40); // counts as Medium
+    expect(estimatedMinutes('recall', 'unknown-problem')).toBe(15);
   });
 
   it('plans fewer new problems when reviews fill the budget', () => {
     let state = newState();
-    // 7 overdue resolves = 140 min; one Easy (25) fits under 180, a second one (190) does not.
-    for (const slug of PROGRAM_QUEUE.slice(20, 27)) state = addPlanned(state, 'resolve', slug, day(2));
+    // 5 overdue Medium resolves = 150 min; one Easy (25) fits under 180, a second one (175 + 25) does not.
+    for (const slug of mediumSlugs.slice(0, 5)) state = addPlanned(state, 'resolve', slug, day(2));
     const plan = planDay(state, day(3));
-    expect(plan.items.filter((i) => i.activity.type === 'resolve')).toHaveLength(7);
+    expect(plan.items.filter((i) => i.activity.type === 'resolve')).toHaveLength(5);
     expect(plan.items.filter((i) => i.activity.type === 'new')).toHaveLength(1);
     expect(plan.bonus).toBeNull();
     // Raise the review load until no new problem fits.
-    for (const slug of PROGRAM_QUEUE.slice(27, 30)) state = addPlanned(state, 'resolve', slug, day(2));
+    for (const slug of mediumSlugs.slice(5, 7)) state = addPlanned(state, 'resolve', slug, day(2));
     const crowded = planDay(state, day(3));
     expect(crowded.items.filter((i) => i.activity.type === 'new')).toHaveLength(0);
     expect(crowded.bonus).toBeNull();
@@ -227,7 +238,7 @@ describe('planDay: reviews', () => {
 describe('planDay: missed days and the cap', () => {
   it('never exceeds the cap and never drops reviews when many are overdue', () => {
     let state = newState();
-    const slugs = PROGRAM_QUEUE.slice(0, 24);
+    const slugs = mediumSlugs.slice(0, 18);
     for (const slug of slugs) state = addPlanned(state, 'resolve', slug, day(2));
     const totalDue = slugs.length;
     let remaining = totalDue;
@@ -249,7 +260,7 @@ describe('planDay: missed days and the cap', () => {
       safety += 1;
       expect(safety).toBeLessThan(10);
     }
-    expect(date).toBe(5 + 3); // 24 x 20 min at <= 180 min/day => 9 per day => 3 days
+    expect(date).toBe(5 + 3); // 18 x 30 min at <= 180 min/day => 6 per day => 3 days
   });
 
   it('carries reviews forward after missing 3 days without dropping any', () => {
@@ -276,12 +287,12 @@ describe('planDay: missed days and the cap', () => {
 
   it('respects a custom cap from settings', () => {
     let state = newState();
-    for (const slug of PROGRAM_QUEUE.slice(0, 10)) state = addPlanned(state, 'resolve', slug, day(1));
+    for (const slug of mediumSlugs.slice(0, 10)) state = addPlanned(state, 'resolve', slug, day(1));
     const plan = planDay(state, day(2), { ...state.settings, dailyCapMin: 100, dailyTargetMin: 90 });
     expect(plan.capMinutes).toBe(100);
     expect(plan.plannedMinutes).toBeLessThanOrEqual(100);
-    expect(plan.items).toHaveLength(5);
-    expect(plan.carriedOver).toHaveLength(5);
+    expect(plan.items).toHaveLength(3); // 3 x 30 min
+    expect(plan.carriedOver).toHaveLength(7);
   });
 
   it('always shows at least one review, even if it alone exceeds the cap', () => {
@@ -616,22 +627,39 @@ describe('planDay: the bonus pool', () => {
   });
 
   it('is still offered after day 30, once the queue is exhausted, until the pool runs out', () => {
+    const learnedCount = (s: AppState): number =>
+      s.activities.filter(
+        (a) => a.type === 'new' && a.status === 'done' && PROGRAM_QUEUE.includes(a.slug),
+      ).length;
     let state = newState();
-    for (let d = 1; d <= 34; d += 1) state = simulateDay(state, day(d)).state;
-    const learned = state.activities.filter(
-      (a) => a.type === 'new' && a.status === 'done' && PROGRAM_QUEUE.includes(a.slug),
-    );
-    expect(learned).toHaveLength(PROGRAM_QUEUE.length);
-    const plan = planDay(state, day(35));
+    let d = 1;
+    while (learnedCount(state) < PROGRAM_QUEUE.length) {
+      state = simulateDay(state, day(d)).state;
+      d += 1;
+      expect(d).toBeLessThan(60);
+    }
+    // Heavy review days may leave no room for the bonus: wait for the first day that has it.
+    while (planDay(state, day(d)).bonus === null && d < 80) {
+      state = simulateDay(state, day(d)).state;
+      d += 1;
+    }
+    const plan = planDay(state, day(d));
     expect(plan.items.some((i) => i.activity.type === 'new')).toBe(false);
     expect(plan.bonus?.activity.slug).toBe(BONUS_POOL[0]);
     expect(plan.pace.actual).toBe(PROGRAM_QUEUE.length);
 
-    // Working every bonus empties the pool without touching the planner.
-    for (let d = 35; d < 35 + BONUS_POOL.length; d += 1) {
+    // Working every bonus (when it fits under the cap) empties the pool without touching the planner.
+    const poolDone = (s: AppState): number =>
+      new Set(
+        s.activities
+          .filter((a) => a.type === 'new' && a.status === 'done' && BONUS_POOL.includes(a.slug))
+          .map((a) => a.slug),
+      ).size;
+    for (let last = d + 80; d < last && poolDone(state) < BONUS_POOL.length; d += 1) {
       state = simulateDay(state, day(d), { bonus: true }).state;
     }
-    expect(planDay(state, day(35 + BONUS_POOL.length)).bonus).toBeNull();
+    expect(poolDone(state)).toBe(BONUS_POOL.length);
+    expect(planDay(state, day(d)).bonus).toBeNull();
   });
 
   it('works with a custom pool', () => {
