@@ -1,4 +1,4 @@
-# LeetCode Assist — Product & Technical Spec (v1, extension 0.5)
+# LeetCode Assist — Product & Technical Spec (v1, extension 0.6)
 
 A Chrome extension (Manifest V3) that runs a **30-day LeetCode bootcamp** built on the
 **NeetCode 150** roadmap. You open it and it tells you exactly what to do today:
@@ -22,17 +22,37 @@ Benchmark problems are reserved and never appear in the learning queue.
   failed items, and "blind" mixed practice).
 - Normal day: 2 new problems from the queue, and a **third** one when the next queue problem is Easy and the
   day's planned minutes with it stay ≤ cap + **30 min** (the *soft overflow*, `SOFT_OVERFLOW_MIN` in
-  `src/core/planner.ts`); reviews, the first two new problems and the bonus still respect the plain cap, so a
-  day can reach at most cap + 30. An optional **bonus** is offered after them (also on consolidation days and
-  after the queue is exhausted) only if planned time plus its estimate stays ≤ cap. A bonus never becomes debt.
-- The bonus comes from the **bonus pool** (`BONUS_POOL`, `src/data/bonus.ts`): about 28 extra NeetCode 150
+  `src/core/planner.ts`); reviews and the first two new problems still respect the plain cap, so the core
+  plan can reach at most cap + 30.
+- **Optional bonus offers.** Besides the core plan (also on consolidation days and after the queue is
+  exhausted) the planner keeps up to **two** optional bonus problems on offer (`BONUS_SLOTS`, `src/core/bonus.ts`).
+  They are **outside the core budget**: not in `plannedMinutes`, `remainingMinutes`, carried-over work, pace, the
+  toolbar badge, reminders, the plan-done ratio or projections, and they never become debt. They are shown even
+  when the core plan already fills the cap; the UI states the extra estimated time and warns explicitly when
+  starting one would pass the daily target or the cap (`bonusTimeImpact`, `src/lib/bonusTime.ts`).
+- The bonuses come from the **bonus pool** (`BONUS_POOL`, `src/data/bonus.ts`): **46** extra NeetCode 150
   problems that are not in the program queue or the benchmarks, ordered by roadmap category and
   difficulty, all Medium except one Hard (every free Easy problem is in the program). The Mediums that did not
-  fit the queue come first in their category, so they are the first bonuses offered. It is the first pool problem that is not done, started or already
-  planned today; a skipped one returns to the pool (it is not offered again the same day, first in line
-  tomorrow). A completed bonus starts the normal review cycle (D+1/3/7/21) and counts as worked in the
-  roadmap, but it **does not count toward pace** and not toward the *x*/*N* program counter (*N* = the queue length), and it never
-  consumes the program queue.
+  fit the queue come first in their category.
+- **Readiness rule.** A pool problem is a candidate only when its category is *ready*: *introduced* (some
+  completed activity of any type, or a core item of today's plan, is in that category) or *prerequisite-ready*
+  (every prerequisite category of the roadmap graph is introduced). Candidates keep pool order; a problem with a
+  skipped `new` activity moves behind every never-skipped candidate (a postponement, not a deletion); a problem
+  with a completed activity is never offered again. When fewer than two can be offered, `bonusHold` explains why
+  (locked category and the next prerequisite to start, or pool exhausted).
+- **Persisted, renewable offers.** Open offers are stored as ordinary `new` activities of pool slugs (planned or
+  in progress) and are *sticky*: they survive reloads and days, a started one keeps its timer and hints, and they
+  are never re-ranked. Completing or skipping one frees its slot at once (no per-day limit) and the planner
+  refills it; `materializePlan` persists at most the two open offers. Records from 0.5 (one planned pool activity
+  per date) are read as offers and never rewritten or deleted. A completed bonus starts the normal review cycle
+  (D+1/3/7/21) and counts as worked in the roadmap, but it **does not count toward pace** and not toward the
+  *x*/*N* program counter (*N* = the queue length), and it never consumes the program queue.
+- **Distinct problems worked** (`workedTotals`, `src/core/worked.ts`): a slug counts once when it has any `done`
+  activity. Buckets are disjoint in the order program, benchmark, bonus pool, other:
+  *Program x/50 · Benchmarks x/6 · Bonus x* (+ *Other* when non-zero), `total` is their sum. Reviews, blind and
+  re-solve attempts and extra practice never count a slug again; planned, skipped, in-progress and manually
+  ticked problems do not count. It is derived from history only (no stored counter), and the program counter
+  stays separate.
 
 ## 3. Activity types & review cycle
 
@@ -112,8 +132,8 @@ Problem status: `untouched` → `learning` (new done) → `consolidating` (a rev
   2. Benchmark if it's day 1/15/30.
   3. Fill remaining budget with the next queue items (2 normally, 0 on consolidation days,
      fewer if reviews fill the budget); a third one when it is Easy and the day stays ≤ cap + 30 (soft
-     overflow, §2). A problem postponed today is not offered again today. Then the optional bonus from the
-     bonus pool if it fits under the cap.
+     overflow, §2). A problem postponed today is not offered again today. Then up to two optional bonus
+     offers (`DayPlan.bonuses`, §2), outside the budget, with the finished ones in `completedBonuses`.
   4. **Pace indicator**: `actualNewDone - expectedNewDone(dayIndex, queueLength)` ("+2 ahead" /
      "−1 behind"); `expectedNewDone` is 2 per normal day capped by the real queue length, so it reaches the
      whole queue by day 30 (the queue stays within 2 × the 26 normal days). Only program-queue problems
@@ -147,6 +167,7 @@ interface Note { slug: string; trigger: string /*"Click"*/; principle: string; p
 interface Settings { startDate: string; dailyTargetMin: number; dailyCapMin: number;
   morningNotify: string /*"08:30"*/; eveningNotify: string /*"20:00"*/; language: 'python';
   roadmapView?: 'tree'|'grid';    // absent = 'tree'
+  roadmapCatalog?: 'neetcode150'|'blind75';  // absent = 'neetcode150'
   budgets?: BudgetOverrides }     // partial minutes per type and difficulty; absent = defaults
 type BudgetOverrides = { [T in Exclude<ActivityType,'benchmark'>]?: Partial<Record<Difficulty, number>> }
 interface AppState { version: 1; settings: Settings; activities: Activity[];
@@ -154,7 +175,7 @@ interface AppState { version: 1; settings: Settings; activities: Activity[];
   queue?: string[] }               // saved queue order after postponing; absent = PROGRAM_QUEUE
 ```
 
-`hintsUsed`, `postponed`, `roadmapView`, `budgets` and `queue` are optional and additive: data saved by 0.1 stays
+`hintsUsed`, `postponed`, `roadmapView`, `roadmapCatalog`, `budgets` and `queue` are optional and additive: data saved by 0.1 stays
 valid, so `version` remains `1`.
 
 The timer is derived from timestamps (`accumulatedMs + (now - startedAt)`), never from tick counting.
@@ -168,10 +189,23 @@ key, versioned), JSON export/import from Settings.
 1. **Dashboard** (full tab, opened from the toolbar icon): views
    - **Today**: planned vs logged time, ordered activity list, "Start next activity",
      per-activity instruction, timer (start/pause/resume, "approach found" button),
-     outcome form, pace indicator, streak.
-   - **Calendar**: an overall progress header (program problems learned *x*/*N* (*N* = queue length) and days elapsed
-     *d*/30), start date picker, days 1–30 (+ overflow), planned/done/carried counts and minutes per
-     day with a small minutes bar per cell, streak (≥ 1 activity done and ≥ 30 min logged) separate
+     outcome form, pace indicator, streak, and the **problems worked** total (`WorkedTotal`: distinct
+     problems with a finished attempt, *Program x/50 · Benchmarks x/6 · Bonus x*, *Other* only when non-zero;
+     a short note says reviews never add to it and a bonus never replaces a program problem). Below the core
+     list an **Optional bonus problems** card shows the up-to-two offers (`BonusOffers`): each is labelled
+     *Optional*, says it is not part of the core plan time and adds later reviews, shows the estimated extra
+     time and warns when starting it would pass the target or the cap, and keeps timer controls while started
+     (the header names a running bonus). Finished bonus problems are only mentioned in one line (they live in
+     Logs and the Calendar); `bonusHold` explains fewer than two offers. Today persists unsaved offers once
+     (`needsMaterializing` looks at every offer).
+   - **Calendar**: a compact **summary row** with the overview card (streak, *Plan done*, *Time logged*, program
+     problems learned *x*/*N* (*N* = queue length), days elapsed *d*/30, the problems-worked total) and a compact
+     **LeetCode streak** card side by side from 1000 px (stacked below; cards use `min-width: 0`, the heat grid and
+     the day table scroll inside their card, so the page never scrolls sideways). The layout rules are scoped to
+     `.cal-summary` and `.page-calendar` and do not change global card or stat sizes. Explanations (*How these
+     are counted*) and the start date editor (*Change start date*) sit behind `<details>` controls. The
+     full-width day grid follows directly (days 1–30 (+ overflow), planned/done/carried counts and minutes per
+     day with a small minutes bar per cell); the day detail below it defaults to today. The streak (≥ 1 activity done and ≥ 30 min logged) is separate
      from **Plan done** (a past or current day whose *core* activities are ≥ 80% done: activities
      due that day that are not optional practice, the bonus or postponed; skipped ones count as not
      done; a day without core activities is neither done nor missed; the stats tile reads "*n* of *m*
@@ -181,8 +215,17 @@ key, versioned), JSON export/import from Settings.
      popover is a **projection** labelled *projected*: the pure planner is run day by day from today,
      assuming every planned activity is done solo on budget and nothing else changes
      (`projectDay` in `src/core/projection.ts`). The day detail has `Move…` for planned reviews and
-     `Postpone` for today's new problems.
-   - **Roadmap**: a **Tree | Grid** toggle (stored in `settings.roadmapView`, default Tree). *Tree*
+     `Postpone` for today's new problems. A finished bonus appears on its completion day with a *Bonus*
+     badge; an open offer is listed on today only, labelled *Optional*, and unopened offers never become missed
+     days.
+   - **Roadmap**: a **NeetCode 150 | Blind 75** catalog selector (stored in `settings.roadmapCatalog`, default
+     NeetCode 150) and a **Tree | Grid** toggle (`settings.roadmapView`, default Tree), independent of each other.
+     The catalog filters the problem lists, the counters and the tree/grid stats (`problemStats(state, catalog)`,
+     `categoryDifficultyCounts(state, catalog)`); both catalogs read the same `problemStatus`, `checked` and
+     activities, so nothing is duplicated or reset. Both counters (*NeetCode 150 x/150 · Blind 75 y/75*) are
+     always visible, with a note that Blind 75 is a subset (not 150 + 75). Every category keeps its tree node;
+     a category without problems in the catalog would be labelled and show no problem panel (all 18 currently have
+     at least one Blind 75 problem). Premium problems carry a *Premium* badge and are never scheduled. *Tree*
      draws the NeetCode prerequisite graph left to right (one column per tier, SVG arrows, scrollable);
      each node shows worked/total, solo in review, consolidating and Easy/Medium/Hard counters, and
      selecting a node lists its problems below (checkbox, status pill, program/benchmark/bonus badges,
@@ -205,10 +248,11 @@ key, versioned), JSON export/import from Settings.
    `setOptions({ path, enabled: true })` once (no per-tab enabling), so the panel stays open while
    the user switches or opens tabs and follows the active tab's URL.
    - On a LeetCode problem page (`/problems/<slug>/`): title, difficulty, category, program position
-     (*n*/*N* with *N* the queue length, or *Bonus problem*), status, next review, today's activity with its instruction, timer and outcome form (or
-     an offer to start extra practice), **hints** (three progressive *Reveal hint 1/2/3* buttons),
+     (*n*/*N* with *N* the queue length, or *Bonus problem*), status, next review, today's activity with its instruction, timer and outcome form, for either bonus offer too (or
+     an offer to start extra practice; for a pool problem that is not on offer it says the practice is optional and outside the core plan time), **hints** (three progressive *Reveal hint 1/2/3* buttons),
      notes (hidden during reviews until *Reveal*) and the attempt history including hints used.
-   - On any other page: an **Open a LeetCode problem** state with today's checklist; each item has an
+   - On any other page: an **Open a LeetCode problem** state with today's checklist (core items, the up-to-two
+     optional bonus offers marked *Optional bonus*, carried-over reviews); each item has an
      **Open** button that navigates the active tab (when it is a LeetCode or empty tab) or opens a new
      tab.
    - Opening: the dashboard's *Open side panel* button, the shortcut **Alt+Shift+L**, and clicking a
@@ -263,6 +307,22 @@ shown on the card (`timerTone` in `src/lib/timerTone.ts`): green under 75 % (*on
 the budget (*near limit*), red above it (*over budget*), neutral while paused. Colours meet 4.5:1 contrast in the
 light and dark themes and every state also has an icon and text. For `new` activities two subtle cues show the
 help ladder at 15 min (*consider a hint*) and 35 min (*read the solution, then re-code it*).
+
+## 6b. Catalogs: Blind 75 and Premium problems
+
+`CatalogId = 'neetcode150' | 'blind75'` (`src/core/catalog.ts`). The **Blind 75** list (`BLIND_75`,
+`src/data/blind75.ts`) stores slugs only: the 75 problems flagged `blind75` in NeetCode's public problem
+metadata (source URL and revision in the file header). It is NeetCode's version of the list (for example it has
+*Combination Sum*, not *Combination Sum IV*, and no *Min Stack*), not Grind 75. Every Blind 75 problem is also
+in the NeetCode 150, which supplies title, difficulty and category, so Blind 75 is a **subset**: counts are
+never added (150 + 75), and both catalogs use the same stored state.
+
+**Premium** problems (`PREMIUM_PROBLEMS`, `src/data/premium.ts`: six in the Blind 75 plus *Walls and Gates*)
+stay in the catalogs and only get a *Premium* label. The planner never schedules them: the program queue,
+benchmarks and bonus pool contain none (the Premium-only Easy *Meeting Rooms* is left out of the program).
+
+The provenance is not live-verified by this extension (it ships a static copy); the completeness of the list
+rests on that one source.
 
 ## 7. Out of scope for v1
 

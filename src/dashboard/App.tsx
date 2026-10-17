@@ -13,6 +13,12 @@ import { SettingsView } from './SettingsView';
 import { SetupView } from './SetupView';
 import { TodayView } from './TodayView';
 
+/** Logs and the Calendar need more width than the default page column. */
+const PAGE_CLASSES: Partial<Record<Route['view'], string>> = {
+  logs: 'page page-wide',
+  calendar: 'page page-calendar',
+};
+
 function useHashRoute(): Route {
   const [route, setRoute] = useState(() => parseRoute(window.location.hash));
   useEffect(() => {
@@ -53,7 +59,7 @@ export function App() {
   return (
     <>
       <NavBar route={route} actions={<OpenSidePanelButton />} />
-      <main className={route.view === 'logs' ? 'page page-wide' : 'page'}>
+      <main className={PAGE_CLASSES[route.view] ?? 'page'}>
         {route.view === 'today' ? <TodayView state={state} actions={actions} /> : null}
         {route.view === 'calendar' ? <CalendarView state={state} actions={actions} /> : null}
         {route.view === 'roadmap' ? <RoadmapView state={state} actions={actions} /> : null}

@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityCard } from '../components/ActivityCard';
 import { Badge } from '../components/Badge';
+import { BonusOffers } from '../components/BonusOffers';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { ProgressBar } from '../components/ProgressBar';
 import { Stat } from '../components/Stat';
+import { WorkedTotal } from '../components/WorkedTotal';
 import { diffDays, localDateFromTimestamp } from '../core/dates';
 import { planDay, type PlanItem } from '../core/planner';
 import { needsBenchmarkBackfill } from '../core/reviews';
 import { computeStreak, dailyTargetMinutes } from '../core/state';
 import { elapsedMs } from '../core/timer';
 import type { AppState } from '../core/types';
+import { workedTotals } from '../core/worked';
 import { getProblem } from '../data/neetcode150';
 import { PROGRAM_LENGTH_DAYS } from '../data/program';
 import type { AppActions } from '../lib/actions';
@@ -33,6 +36,7 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
   const now = useNow(anyRunning ? 1000 : 30_000);
   const today = localDateFromTimestamp(now);
   const plan = useMemo(() => planDay(state, today), [state, today]);
+  const worked = useMemo(() => workedTotals(state), [state]);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const report = (task: Promise<void>): void => {
@@ -42,7 +46,7 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
 
   const needsMaterializing =
     plan.items.some((i) => !i.persisted) ||
-    (plan.bonus !== null && !plan.bonus.persisted) ||
+    plan.bonuses.some((offer) => !offer.persisted) ||
     needsBenchmarkBackfill(state);
   useEffect(() => {
     if (needsMaterializing) actions.materializeToday().catch(console.error);
@@ -77,7 +81,8 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
   const loggedMin = (doneMs + runningMs) / 60_000;
   const streak = computeStreak(state, today);
 
-  const runningItem = plan.items.find((i) => i.activity.timer.running);
+  // A running optional bonus also counts: its timer must stay visible even though it is not a core item.
+  const runningItem = [...plan.items, ...plan.bonuses].find((i) => i.activity.timer.running);
   const nextItem =
     plan.items.find((i) => i.activity.status === 'in_progress') ??
     plan.items.find((i) => i.activity.status === 'planned');
@@ -128,13 +133,17 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
           />
         </div>
         <ProgressBar value={loggedMin} max={target} done={loggedMin >= target} />
+        <WorkedTotal totals={worked} />
       </Card>
 
       <Card
         title={`Today's activities (${plan.items.length - remaining}/${plan.items.length} done)`}
         actions={
           runningItem ? (
-            <span className="muted">Timer running: {titleOf(runningItem)}</span>
+            <span className="muted">
+              Timer running: {plan.bonuses.includes(runningItem) ? 'Optional bonus · ' : ''}
+              {titleOf(runningItem)}
+            </span>
           ) : nextItem ? (
             <Button variant="primary" onClick={() => startNext(nextItem)}>
               Start next activity
@@ -162,21 +171,13 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
         )}
       </Card>
 
-      {plan.bonus ? (
-        <Card title="Bonus (optional)">
-          <p className="muted">
-            An extra problem from the bonus pool. It fits under the cap, never becomes debt and does not
-            count toward your pace: skip it freely.
-          </p>
-          <ActivityCard
-            activity={plan.bonus.activity}
-            now={now}
-            actions={actions}
-            variant="bonus"
-            budgets={state.settings.budgets}
-          />
-        </Card>
-      ) : null}
+      <BonusOffers
+        plan={plan}
+        targetMinutes={target}
+        now={now}
+        actions={actions}
+        budgets={state.settings.budgets}
+      />
 
       {plan.carriedOver.length > 0 ? (
         <Card title={`Carried over (${plan.carriedOver.length})`}>

@@ -8,6 +8,7 @@ import { formatMinutes } from '../lib/format';
 import { defaultState } from '../core/state';
 import type { AppActions } from '../lib/actions';
 import { calendarDays } from '../core/calendar';
+import { materializePlan, planDay } from '../core/planner';
 import { projectDay } from '../core/projection';
 import { CalendarView, DayPopoverContent, entryRows, popoverAlignsToEnd } from './CalendarView';
 
@@ -25,7 +26,7 @@ describe('CalendarView (render smoke test)', () => {
     expect(html).toContain('Streak');
     expect(html).toContain('Plan done');
     expect(html).toContain('0 of 1 days');
-    expect(html).toContain("finished 80%+ of the day&#x27;s plan");
+    expect(html).toContain('finished 80%+ of the day&#x27;s core plan');
     expect(html).toContain('Time logged');
     expect(html).toContain('last 7 days · 0 min total');
     expect(html).not.toContain('Daily goal met');
@@ -61,6 +62,58 @@ describe('CalendarView (render smoke test)', () => {
     expect(html).toContain('cal-day cal-past plan-done');
     expect(html).toContain('Time logged');
     expect(html).toContain('carried');
+  });
+});
+
+describe('CalendarView compact summary (render smoke test)', () => {
+  it('puts the overview and the streak card in one summary row before the day grid', () => {
+    const html = renderToStaticMarkup(<CalendarView state={defaultState(today)} actions={actions} />);
+    const summary = html.indexOf('class="cal-summary"');
+    const overview = html.indexOf('class="card cal-overview"');
+    const streak = html.indexOf('class="card cal-streak"');
+    const grid = html.indexOf('class="calendar-grid"');
+    expect(summary).toBeGreaterThanOrEqual(0);
+    expect(overview).toBeGreaterThan(summary);
+    expect(streak).toBeGreaterThan(overview);
+    expect(grid).toBeGreaterThan(streak);
+    expect(html.match(/class="card cal-/g)).toHaveLength(2);
+    // The old stacked banner cards are gone: the day detail is the only card after the grid.
+    expect(html.slice(grid).match(/<section class="card/g)).toHaveLength(1);
+  });
+
+  it('collapses the explanations and the start date editor behind details controls', () => {
+    const html = renderToStaticMarkup(<CalendarView state={defaultState(today)} actions={actions} />);
+    expect(html).toContain('<summary>How these are counted</summary>');
+    expect(html).toContain('<summary>Change start date</summary>');
+    expect(html.match(/<details class="cal-details"/g)).toHaveLength(2);
+    expect(html).not.toContain('<details class="cal-details" open');
+    expect(html).toContain('Save start date');
+  });
+
+  it('shows the distinct worked total with its breakdown next to the separate program counter', () => {
+    const start = addDays(today, -1);
+    const state = simulateDay(defaultState(start), start, { bonus: true }).state;
+    const html = renderToStaticMarkup(<CalendarView state={state} actions={actions} />);
+    expect(html).toContain('class="worked-total"');
+    expect(html).toContain('Program 2/50 · Benchmarks 2/6 · Bonus 2');
+    expect(html).toContain('>6</span><span class="worked-total-label">problems worked');
+    expect(html).toContain('Reviews never add to it');
+    // The program counter is separate and unchanged by the bonus problems.
+    expect(html).toContain(`2/${PROGRAM_QUEUE.length}`);
+    expect(html).toContain('Problems learned');
+  });
+
+  it('shows a finished bonus with its badge in the day detail', () => {
+    const state = simulateDay(defaultState(today), today, { bonus: true }).state;
+    const html = renderToStaticMarkup(<CalendarView state={state} actions={actions} />);
+    expect(html).toContain('<span class="badge badge-warn">Bonus</span>');
+  });
+
+  it('labels an open bonus offer as optional, not as a to-do', () => {
+    const state = materializePlan(defaultState(today), planDay(defaultState(today), today));
+    const html = renderToStaticMarkup(<CalendarView state={state} actions={actions} />);
+    expect(html).toContain('badge-warn">Bonus</span>');
+    expect(html).toContain('>Optional</span>');
   });
 });
 

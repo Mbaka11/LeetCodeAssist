@@ -98,6 +98,8 @@ export interface Settings {
   language: 'python';
   /** Roadmap layout. Optional so data saved before it existed stays valid; absent means `tree`. */
   roadmapView?: RoadmapViewMode;
+  /** Problem catalog the roadmap is filtered by. Optional so older saved data stays valid; absent means `neetcode150`. */
+  roadmapCatalog?: RoadmapCatalog;
   /**
    * Time budget overrides in minutes per activity type and difficulty (partial: a missing entry uses the
    * default, see `DEFAULT_BUDGETS`). Optional so data saved before it existed stays valid.
@@ -111,6 +113,9 @@ export type BudgetedType = Exclude<ActivityType, 'benchmark'>;
 export type BudgetOverrides = { [T in BudgetedType]?: Partial<Record<Difficulty, number>> };
 
 export type RoadmapViewMode = 'tree' | 'grid';
+
+/** Catalogs the roadmap can show (see `CatalogId` in catalog.ts); Blind 75 is a subset of the NeetCode 150. */
+export type RoadmapCatalog = 'neetcode150' | 'blind75';
 
 export interface AppState {
   version: 1;

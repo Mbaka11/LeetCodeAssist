@@ -81,6 +81,7 @@ export function ActivityCard({
       <div className="activity-head">
         <Badge tone={activity.type}>{ACTIVITY_LABELS[activity.type]}</Badge>
         {bonus ? <Badge tone="warn">Bonus</Badge> : null}
+        {bonus && open ? <Badge>Optional</Badge> : null}
         {variant === 'carried' ? (
           <Badge tone="bad">{`Due ${formatDate(activity.dueDate)}`}</Badge>
         ) : null}
@@ -170,7 +171,11 @@ export function ActivityCard({
               Move…
             </Button>
           ) : (
-            <Button variant="ghost" onClick={() => run(actions.skip(activity.id))}>
+            <Button
+              variant="ghost"
+              {...(bonus ? { title: 'Skips this optional problem; another one is offered. It can come back later.' } : {})}
+              onClick={() => run(actions.skip(activity.id))}
+            >
               {isReviewType(activity.type) && !activity.extra ? 'Stop, redo tomorrow' : 'Skip'}
             </Button>
           )}

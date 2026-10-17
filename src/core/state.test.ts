@@ -294,6 +294,15 @@ describe('hintsUsed, postponed, roadmapView and queue (additive fields)', () => 
     expect(restored.activities.every((a) => !('hintsUsed' in a) && !('postponed' in a))).toBe(true);
   });
 
+  it('round-trips roadmapCatalog and rejects unknown catalogs', () => {
+    const state: AppState = { ...base, settings: { ...base.settings, roadmapCatalog: 'blind75' } };
+    expect(deserializeState(serializeState(state))).toEqual(state);
+    expect(validateState(JSON.parse(serializeState(base))).settings.roadmapCatalog).toBeUndefined();
+    expect(() => validateState({ ...base, settings: { ...base.settings, roadmapCatalog: 'leetcode75' } })).toThrow(
+      /roadmapCatalog/,
+    );
+  });
+
   it('rejects invalid values with a path', () => {
     expect(() => validateState(withActivity({ hintsUsed: 4 }))).toThrow(/hintsUsed/);
     expect(() => validateState(withActivity({ hintsUsed: 1.5 }))).toThrow(/hintsUsed/);

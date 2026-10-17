@@ -90,8 +90,6 @@ export interface DayPlan {
    * user chooses deliberately; it is still outside the core budget.
    */
   bonusRoomMinutes: number;
-  /** TEMPORARY alias of `bonuses[0]`, kept until every UI caller uses `bonuses` (removed in the UI stage). */
-  bonus: PlanItem | null;
   /** Due reviews that did not fit under the cap today; they stay planned and are re-planned tomorrow. */
   carriedOver: PlanItem[];
   /** Weaker reviews hidden because a stronger review of the same problem is due (merge rule). */
@@ -227,7 +225,6 @@ export function planDay(
     completedBonuses: [],
     bonusHold: null,
     bonusRoomMinutes: 0,
-    bonus: null,
     carriedOver: [],
     mergedAway: [],
     targetMinutes,
@@ -438,7 +435,6 @@ export function planDay(
     completedBonuses,
     bonusHold: selection.hold,
     bonusRoomMinutes: Math.max(0, capMinutes - plannedMinutes),
-    bonus: bonuses[0] ?? null,
     carriedOver,
     mergedAway,
     plannedMinutes,

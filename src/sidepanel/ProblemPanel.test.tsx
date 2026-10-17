@@ -2,10 +2,12 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { createActivity } from '../core/activities';
 import { localDateFromTimestamp } from '../core/dates';
-import { planDay } from '../core/planner';
+import { materializePlan, planDay } from '../core/planner';
 import { defaultState } from '../core/state';
 import type { AppState } from '../core/types';
+import { BONUS_POOL } from '../data/bonus';
 import { PROGRAM_QUEUE } from '../data/program';
+import { startExtraPractice } from '../lib/commands';
 import type { AppActions } from '../lib/actions';
 import { ProblemPanel } from './ProblemPanel';
 
@@ -61,7 +63,42 @@ describe('ProblemPanel (render smoke test)', () => {
     // One Open button per planned item.
     const plan = planDay(base, today);
     const opens = idle.match(/aria-label="Open [^"]* on LeetCode"/g) ?? [];
-    expect(opens).toHaveLength(plan.items.length + (plan.bonus ? 1 : 0) + plan.carriedOver.length);
+    expect(opens).toHaveLength(plan.items.length + plan.bonuses.length + plan.carriedOver.length);
+  });
+
+  it('lists both optional bonus offers in the checklist and matches either one by slug', () => {
+    const plan = planDay(base, today);
+    expect(plan.bonuses).toHaveLength(2);
+    const idle = render(base, null);
+    expect(idle.split('Optional bonus</span>').length - 1).toBe(2);
+    expect(idle).toContain('Optional: ');
+    for (const offer of plan.bonuses) {
+      const html = render(base, offer.activity.slug);
+      expect(html).toContain('badge-warn">Bonus</span>');
+      expect(html).toContain('>Optional</span>');
+      expect(html).toContain('>Start</button>');
+      expect(html).not.toContain('Start as extra practice');
+    }
+  });
+
+  it('keeps a started bonus offer in the checklist and its timer controls on the problem page', () => {
+    const materialized = materializePlan(base, planDay(base, today));
+    const second = planDay(materialized, today).bonuses[1]!;
+    const started = startExtraPractice(materialized, second.activity.slug, now).state;
+    const idle = render(started, null);
+    expect(idle).toContain('In progress: ');
+    const html = render(started, second.activity.slug);
+    expect(html).toContain('>Pause</button>');
+    expect(html).toContain('>Finish</button>');
+  });
+
+  it('describes a pool problem that is not offered as optional extra practice', () => {
+    const offered = new Set(planDay(base, today).bonuses.map((b) => b.activity.slug));
+    const other = BONUS_POOL.find((slug) => !offered.has(slug))!;
+    const html = render(base, other);
+    expect(html).toContain('Start as extra practice');
+    expect(html).toContain('bonus-pool problem');
+    expect(html).toContain('not part of the core plan time');
   });
 
   it('marks finished items in the checklist as done', () => {

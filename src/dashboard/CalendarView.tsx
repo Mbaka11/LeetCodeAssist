@@ -5,6 +5,7 @@ import { Card } from '../components/Card';
 import { MoveForm } from '../components/MoveForm';
 import { ProgressBar } from '../components/ProgressBar';
 import { Stat } from '../components/Stat';
+import { WorkedTotal } from '../components/WorkedTotal';
 import {
   calendarDays,
   programProgress,
@@ -16,6 +17,7 @@ import { addDays, localDateFromTimestamp } from '../core/dates';
 import { projectDay } from '../core/projection';
 import { computeStreak, loggedTotals } from '../core/state';
 import type { ActivityType, AppState } from '../core/types';
+import { workedTotals } from '../core/worked';
 import { getProblem } from '../data/neetcode150';
 import type { AppActions } from '../lib/actions';
 import { MAX_MOVE_DAYS } from '../lib/commands';
@@ -77,7 +79,7 @@ function StartDateForm({
         <input type="date" required value={value} onChange={(e) => setValue(e.target.value)} />
       </label>
       <Button type="submit" disabled={value === state.settings.startDate}>
-        Change start date
+        Save start date
       </Button>
       {message ? <span className={message.ok ? 'tone-good' : 'error'}>{message.text}</span> : null}
     </form>
@@ -160,6 +162,11 @@ function titleOfSlug(slug: string | undefined): string {
   return slug ? (getProblem(slug)?.title ?? slug) : 'Next problem from the queue';
 }
 
+/** An open bonus offer is optional, not a to-do. */
+function entryLabel(entry: CalendarEntry): string {
+  return entry.bonus && entry.state === 'open' ? 'Optional' : ENTRY_LABELS[entry.state];
+}
+
 /** The activities of a day for the popover: real entries for past and current days. */
 export function entryRows(day: CalendarDay): PopoverRow[] {
   return day.entries.map((entry) => ({
@@ -167,7 +174,7 @@ export function entryRows(day: CalendarDay): PopoverRow[] {
     type: entry.type,
     title: titleOfSlug(entry.slug),
     minutes: entry.minutes,
-    status: ENTRY_LABELS[entry.state],
+    status: entryLabel(entry),
     ...(entry.loggedMinutes !== undefined ? { loggedMinutes: entry.loggedMinutes } : {}),
     ...(entry.bonus ? { bonus: true } : {}),
   }));
@@ -352,7 +359,7 @@ function ProgramProgressCard({ state, today }: { state: AppState; today: string 
         <Stat
           label="Problems learned"
           value={`${progress.learned}/${progress.totalProblems}`}
-          hint="program problems with a finished first attempt"
+          hint="program problems first finished"
         />
         <ProgressBar
           value={progress.learned}
@@ -364,7 +371,7 @@ function ProgramProgressCard({ state, today }: { state: AppState; today: string 
         <Stat
           label="Days elapsed"
           value={`${progress.daysElapsed}/${progress.totalDays}`}
-          hint={progress.daysElapsed === 0 ? 'the program has not started yet' : 'including today'}
+          hint={progress.daysElapsed === 0 ? 'not started yet' : 'including today'}
         />
         <ProgressBar
           value={progress.daysElapsed}
@@ -404,7 +411,7 @@ function EntryRow({
         {entry.bonus ? <Badge tone="warn">Bonus</Badge> : null}
       </td>
       <td>
-        <Badge tone={ENTRY_TONES[entry.state]}>{ENTRY_LABELS[entry.state]}</Badge>
+        <Badge tone={ENTRY_TONES[entry.state]}>{entryLabel(entry)}</Badge>
       </td>
       <td>
         {entry.loggedMinutes !== undefined
@@ -464,35 +471,37 @@ function DayDetail({
           {day.isConsolidation ? 'Consolidation day: no new problems, only reviews.' : 'Nothing on this day.'}
         </p>
       ) : (
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Problem</th>
-              <th>Status</th>
-              <th>Time</th>
-              <th>Outcome</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {day.entries.map((entry) => (
-              <EntryRow
-                key={entry.id}
-                entry={entry}
-                canPostpone={day.kind === 'today'}
-                moving={entry.id === movingId}
-                onToggleMove={() => setMovingId(entry.id === movingId ? null : entry.id)}
-                onPostpone={() => {
-                  setError(null);
-                  actions
-                    .postpone(entry.id)
-                    .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
-                }}
-              />
-            ))}
-          </tbody>
-        </table>
+        <div className="table-scroll">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Problem</th>
+                <th>Status</th>
+                <th>Time</th>
+                <th>Outcome</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {day.entries.map((entry) => (
+                <EntryRow
+                  key={entry.id}
+                  entry={entry}
+                  canPostpone={day.kind === 'today'}
+                  moving={entry.id === movingId}
+                  onToggleMove={() => setMovingId(entry.id === movingId ? null : entry.id)}
+                  onPostpone={() => {
+                    setError(null);
+                    actions
+                      .postpone(entry.id)
+                      .catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+                  }}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       {moving ? (
         <MoveForm
@@ -512,9 +521,12 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
   const now = useNow(60_000);
   const today = localDateFromTimestamp(now);
   const days = useMemo(() => calendarDays(state, today), [state, today]);
+  const worked = useMemo(() => workedTotals(state), [state]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [startDateMessage, setStartDateMessage] = useState<StartDateMessage | null>(null);
+  const [startDateOpen, setStartDateOpen] = useState(false);
 
+  // Today is the default detail; picking another day is a single click on its cell.
   const selected =
     days.find((d) => d.date === selectedDate) ?? days.find((d) => d.kind === 'today') ?? days[0]!;
   const streak = computeStreak(state, today);
@@ -524,37 +536,56 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
   const logged = loggedTotals(state, today);
 
   return (
-    <div className="stack">
-      <Card title="Calendar">
-        <div className="stats">
-          <Stat
-            label="Streak"
-            value={`${streak.current} ${streak.current === 1 ? 'day' : 'days'}`}
-            hint={`longest ${streak.longest} · a day needs 1+ activity and 30+ min logged`}
-          />
-          <Stat
-            label="Plan done"
-            value={`${planDoneDays} of ${countedDays.length} days`}
-            hint="finished 80%+ of the day's plan"
-            {...(planDoneDays > 0 ? { tone: 'good' as const } : {})}
-          />
-          <Stat
-            label="Time logged"
-            value={formatMs(logged.last7DaysMs)}
-            hint={`last 7 days · ${formatMs(logged.allTimeMs)} total`}
-          />
-        </div>
-        <ProgramProgressCard state={state} today={today} />
-        <StartDateForm
-          key={state.settings.startDate}
-          state={state}
-          actions={actions}
-          message={startDateMessage}
-          setMessage={setStartDateMessage}
-        />
-      </Card>
+    <div className="stack cal-page">
+      <div className="cal-summary">
+        <Card title="Calendar" className="cal-overview">
+          <div className="stats">
+            <Stat
+              label="Streak"
+              value={`${streak.current} ${streak.current === 1 ? 'day' : 'days'}`}
+              hint={`longest ${streak.longest}`}
+            />
+            <Stat
+              label="Plan done"
+              value={`${planDoneDays} of ${countedDays.length} days`}
+              {...(planDoneDays > 0 ? { tone: 'good' as const } : {})}
+            />
+            <Stat
+              label="Time logged"
+              value={formatMs(logged.last7DaysMs)}
+              hint={`last 7 days · ${formatMs(logged.allTimeMs)} total`}
+            />
+          </div>
+          <ProgramProgressCard state={state} today={today} />
+          <WorkedTotal totals={worked} />
+          <div className="cal-fine">
+            <details className="cal-details">
+              <summary>How these are counted</summary>
+              <ul className="cal-explain">
+                <li>Streak: a day needs 1+ activity done and 30+ min logged.</li>
+                <li>Plan done: finished 80%+ of the day&apos;s core plan (bonus problems do not count).</li>
+                <li>Problems learned: program problems with a finished first attempt, out of the queue length.</li>
+              </ul>
+            </details>
+            <details
+              className="cal-details"
+              open={startDateOpen}
+              onToggle={(event) => setStartDateOpen(event.currentTarget.open)}
+            >
+              <summary>Change start date</summary>
+              <StartDateForm
+                key={state.settings.startDate}
+                state={state}
+                actions={actions}
+                message={startDateMessage}
+                setMessage={setStartDateMessage}
+              />
+            </details>
+          </div>
+        </Card>
 
-      <LeetCodeStreakCard now={now} />
+        <LeetCodeStreakCard now={now} compact />
+      </div>
 
       <div className="calendar-grid">
         {days.map((day) => (

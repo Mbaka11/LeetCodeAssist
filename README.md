@@ -38,12 +38,23 @@ measure progress. Benchmark problems are reserved and never appear in the learni
 - **Consolidation days 7, 14, 21 and 28**: no new problems, target **90 min** (reviews, failed
   items and "blind" mixed practice).
 - A normal day has **2 new problems**, plus a third when the next one is an Easy and the day stays within
-  the cap + 30 min (soft overflow). After them (also on consolidation days and after day 30) an
-  optional **bonus** is offered if the plan stays under the cap. It never becomes debt.
-- The bonus comes from a separate **bonus pool** of 28 extra NeetCode 150 problems outside the
-  50-problem program (Tries, Math & Geometry, 2-D DP, Bit Manipulation, plus the Mediums that did not fit the 30 days), in a fixed order with
-  hints. Finishing one starts the normal review cycle and counts as worked in the roadmap, but it does
-  **not** count toward your pace or the program counter, and it never uses up the program queue.
+  the cap + 30 min (soft overflow). Besides them (also on consolidation days and after day 30) **two
+  optional bonus problems** are always on offer. They are outside the core plan time, pace, reminders and
+  the toolbar badge, never become debt, and stay on offer even when the core plan already fills the cap:
+  each card shows how much time it adds and warns when that passes your target or the cap.
+- The bonuses come from a separate **bonus pool** of 46 extra NeetCode 150 problems outside the
+  50-problem program (Tries, Math & Geometry, 2-D DP, Bit Manipulation, Linked List, Sliding Window and the
+  Mediums that did not fit the 30 days), in a fixed order with hints. The two offers are stored, so they
+  survive reloads and days, and a started one keeps its timer. Finishing or skipping one refills the slot
+  at once. A problem is only offered when its category is ready (something of it was already worked or is in
+  today's plan, or all its prerequisite categories were introduced), so Graphs or DP stay locked until
+  Backtracking is worked; the card explains when fewer than two can be offered. Finishing one starts the
+  normal review cycle (day +1/3/7/21) and counts as worked in the roadmap, but it does **not** count toward
+  your pace or the program counter, and it never uses up the program queue.
+- **Problems worked** (Today and Calendar): the number of distinct problems with at least one finished
+  attempt, split into *Program x/50 · Benchmarks x/6 · Bonus x* (*Other* appears only when needed). Each
+  problem counts once: reviews never add to it and a bonus never replaces a program problem. The program
+  counter *x/50* is separate.
 - New problems come from an ordered queue (50 problems in NeetCode roadmap order, **every free Easy
   problem**, no Hard), not
   from fixed dates, so a missed day never produces an impossible day. Reviews are never dropped:
@@ -89,11 +100,12 @@ you really need them.
 ## Using it
 
 - **Toolbar icon** opens (or focuses) the dashboard.
-- **Dashboard** views: *Today* (plan, timers, outcome form, pace and streak), *Calendar* (program
-  progress, streak, *Plan done* days (80%+ of a day's plan finished) and time logged, days 1–30 plus
-  later review days with a minutes bar, a hover/focus popover per day with a
-  *projected* plan for future days, `Move…`), *Roadmap* (the 150 problems as a prerequisite **tree** or
-  a **grid**, with progress counters and checkboxes), *Problem sheet* (notes, hints, attempt history,
+- **Dashboard** views: *Today* (plan, timers, outcome form, pace, streak, the problems-worked total and the
+  two optional bonus offers), *Calendar* (a compact summary row with the overview (streak, *Plan done* days
+  (80%+ of a day's plan finished), time logged, program progress, problems worked) next to the LeetCode
+  streak card, then days 1–30 plus later review days with a minutes bar, a hover/focus popover per day with
+  a *projected* plan for future days, `Move…`), *Roadmap* (a **NeetCode 150 | Blind 75** selector and a
+  prerequisite **tree** or **grid**, with progress counters for both catalogs and checkboxes), *Problem sheet* (notes, hints, attempt history,
   next review), *Logs* (a filterable table of every completed or skipped activity with time against
   budget, a summary row and CSV export) and *Settings*.
 - **Side panel**: one global panel per window that stays open across tabs. On a leetcode.com problem
@@ -142,7 +154,10 @@ npm test           # Vitest unit tests
 
 The planner, review cycle, calendar and reminders are pure TypeScript without browser APIs and
 are covered by unit tests; storage and the background worker are tested against an in-memory
-`chrome.storage` and fake alarms; the views have server-render smoke tests.
+`chrome.storage` and fake alarms; the views have server-render smoke tests plus a few jsdom tests
+(`*.dom.test.tsx`, Testing Library) that click through Today, the Calendar summary and the Roadmap
+catalog selector. jsdom has no layout engine, so these tests check structure and behaviour, not how the
+page looks; a stylesheet test only guards the layout rules (see the CHANGELOG for how layout was checked).
 
 ### Layout
 
@@ -157,6 +172,17 @@ are covered by unit tests; storage and the background worker are tested against 
 - `src/entrypoints/` – WXT entrypoints (dashboard, side panel, background worker).
 - `scripts/` – icon generator.
 
+## Catalogs and Blind 75
+
+The Roadmap can be filtered by **NeetCode 150** or **Blind 75**. The Blind 75 is a subset: its 75 problems
+are also among the 150, so switching only changes what the page shows. It adds nothing (not 150 + 75),
+resets nothing and does not change your plan, and both catalogs share the same statuses and checkboxes.
+Both counters are always shown, for example *NeetCode 150 12/150 · Blind 75 7/75*. The list is the
+`blind75` flag of NeetCode's public problem metadata (source URL and revision in `src/data/blind75.ts`),
+which is NeetCode's version of the list. Problems that need LeetCode Premium (6 in the Blind 75, 7 in the
+NeetCode 150) are labelled **Premium** and are never scheduled; solving them needs a Premium account.
+The choice is stored in the optional `settings.roadmapCatalog`.
+
 ## LeetCode features and privacy
 
 - **Accepted detection (optional, on by default):** when you submit on leetcode.com the side panel can
@@ -164,7 +190,7 @@ are covered by unit tests; storage and the background worker are tested against 
   off or clear the detected events in **Settings → LeetCode detection**. The observer reads only the
   verdict, language, problem and time of your own submissions: never your code, cookies or headers.
 - **LeetCode streak:** add your LeetCode username in **Settings** to see your submission streak and a
-  16-week heat grid on the Calendar page. It makes one anonymous request to leetcode.com per refresh
+  compact 16-week heat grid (with Refresh, your username and the data age) next to the Calendar overview. It makes one anonymous request to leetcode.com per refresh
   (at most hourly) and only reads your public profile calendar.
 - **Coloured timers:** green, amber ("near limit") and red ("over budget") against the budget on the
   card, plus help-ladder cues at 15 and 35 minutes on new problems.

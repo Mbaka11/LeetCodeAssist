@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { catalogProblems } from '../core/catalog';
 import { roadmapTiers } from '../core/roadmap';
 import { defaultState } from '../core/state';
 import type { AppState, RoadmapViewMode } from '../core/types';
@@ -112,5 +113,97 @@ describe('RoadmapView worked problems', () => {
     const html = renderToStaticMarkup(<RoadmapView state={state} actions={actions} />);
     expect(html.match(/type="checkbox"[^>]*checked=""/g)?.length ?? 0).toBe(1);
     expect(html).toContain('Completed in your plan');
+  });
+});
+
+function withCatalog(state: AppState, roadmapCatalog: 'neetcode150' | 'blind75'): AppState {
+  return { ...state, settings: { ...state.settings, roadmapCatalog } };
+}
+
+describe('RoadmapView catalog selector (render smoke test)', () => {
+  const base = defaultState('2025-01-06');
+
+  it('shows the catalog selector separate from the layout toggle, NeetCode 150 by default', () => {
+    const html = renderToStaticMarkup(<RoadmapView state={base} actions={actions} />);
+    expect(html).toContain('role="group" aria-label="Problem catalog"');
+    expect(html).toContain('role="group" aria-label="Roadmap layout"');
+    expect(html).toMatch(/aria-pressed="true"[^>]*>NeetCode 150</);
+    expect(html).toMatch(/aria-pressed="false"[^>]*>Blind 75</);
+    expect(html).toContain('NeetCode 150 roadmap');
+    // Tree layout is unchanged by the catalog.
+    expect(html).toMatch(/aria-pressed="true"[^>]*>Tree</);
+  });
+
+  it('keeps the layout toggle when Blind 75 is selected', () => {
+    for (const view of ['tree', 'grid'] as const) {
+      const state = withView(withCatalog(base, 'blind75'), view);
+      const html = renderToStaticMarkup(<RoadmapView state={state} actions={actions} />);
+      expect(html).toMatch(/aria-pressed="true"[^>]*>Blind 75</);
+      expect(html).toMatch(/aria-pressed="false"[^>]*>NeetCode 150</);
+      expect(html).toMatch(new RegExp(`aria-pressed="true"[^>]*>${view === 'tree' ? 'Tree' : 'Grid'}<`));
+      expect(html).toContain('Blind 75 roadmap');
+    }
+  });
+
+  it('shows both compact catalog counters and explains that Blind 75 is a subset', () => {
+    const state: AppState = {
+      ...base,
+      checked: { 'two-sum': true },
+      problemStatus: { 'valid-anagram': 'learning', 'min-stack': 'learning' },
+    };
+    for (const catalog of ['neetcode150', 'blind75'] as const) {
+      const html = renderToStaticMarkup(<RoadmapView state={withCatalog(state, catalog)} actions={actions} />);
+      expect(html).toContain('aria-label="Progress in both catalogs"');
+      expect(html).toContain('NeetCode 150 <strong>3/150</strong>');
+      // min-stack is in the NeetCode 150 but not in the Blind 75.
+      expect(html).toContain('Blind 75 <strong>2/75</strong>');
+      expect(html).toContain('Blind 75 is a subset of the NeetCode 150');
+      expect(html).toContain('never adds 150 + 75');
+    }
+  });
+
+  it('filters the tree stats and the problem list to the chosen catalog', () => {
+    const html = renderToStaticMarkup(<RoadmapView state={withCatalog(base, 'blind75')} actions={actions} />);
+    expect(html.match(/<button type="button" class="tree-node[ "]/g)).toHaveLength(CATEGORIES.length);
+    const inArrays = catalogProblems('blind75').filter((p) => p.category === 'Arrays & Hashing');
+    expect(inArrays.length).toBeGreaterThan(0);
+    expect(inArrays.length).toBeLessThan(9);
+    // The selected category panel lists exactly the Blind 75 problems of Arrays & Hashing.
+    expect(html.match(/type="checkbox"/g)).toHaveLength(inArrays.length);
+    for (const problem of inArrays) expect(html).toContain(`href="#/problem/${problem.slug}"`);
+    expect(html).not.toContain('href="#/problem/min-stack"');
+    // The overall counter and the node counters use the catalog totals.
+    expect(html).toContain('<div class="stat-value">0/75</div>');
+    const difficultyTotals = ['Easy', 'Medium', 'Hard'].reduce(
+      (sum, d) => sum + catalogProblems('blind75').filter((p) => p.difficulty === d).length,
+      0,
+    );
+    expect(difficultyTotals).toBe(75);
+  });
+
+  it('lists only Blind 75 problems in the grid and keeps 75 checkboxes in total', () => {
+    const html = renderToStaticMarkup(<RoadmapView state={withView(withCatalog(base, 'blind75'), 'grid')} actions={actions} />);
+    expect(html.match(/type="checkbox"/g)).toHaveLength(75);
+    expect(html).not.toContain('href="#/problem/min-stack"');
+    expect(html).toContain('href="#/problem/two-sum"');
+    expect(html).toContain('0/75');
+  });
+
+  it('labels Premium problems and says they are never scheduled', () => {
+    const html = renderToStaticMarkup(<RoadmapView state={withView(withCatalog(base, 'blind75'), 'grid')} actions={actions} />);
+    expect(html).toContain('>Premium</span>');
+    expect(html).toContain('labelled and never scheduled');
+    expect(html.match(/>Premium<\/span>/g)).toHaveLength(6);
+    const all = renderToStaticMarkup(<RoadmapView state={withView(base, 'grid')} actions={actions} />);
+    expect(all.match(/>Premium<\/span>/g)).toHaveLength(7);
+  });
+
+  it('shares the same checks and statuses across catalogs', () => {
+    const state: AppState = { ...base, checked: { 'two-sum': true }, problemStatus: { 'valid-anagram': 'mastered' } };
+    for (const catalog of ['neetcode150', 'blind75'] as const) {
+      const html = renderToStaticMarkup(<RoadmapView state={withView(withCatalog(state, catalog), 'grid')} actions={actions} />);
+      expect(html.match(/checked=""/g)).toHaveLength(2);
+      expect(html).toContain('Mastered');
+    }
   });
 });

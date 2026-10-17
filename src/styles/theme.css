@@ -1150,3 +1150,267 @@ textarea.mono {
   gap: 4px;
   font-size: 0.8rem;
 }
+
+/* Distinct problems worked (Today and Calendar) */
+.worked-total {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 8px 12px;
+  background: var(--surface-2);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+}
+
+.worked-total-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.worked-total-value {
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.worked-total-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.worked-total-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.worked-total-breakdown {
+  font-weight: 600;
+}
+
+.worked-total-note {
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+/* Today: optional bonus offers */
+.bonus-offer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-left: 3px dashed var(--warn);
+  padding-left: 10px;
+}
+
+.bonus-impact {
+  margin: 0;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.bonus-impact-over-target {
+  color: var(--timer-warn-fg);
+  background: var(--timer-warn-bg);
+}
+
+.bonus-impact-over-cap {
+  color: var(--timer-bad-fg);
+  background: var(--timer-bad-bg);
+  font-weight: 600;
+}
+
+.bonus-hold,
+.bonus-done {
+  font-size: 0.88rem;
+}
+
+/* Calendar summary: compact overview and LeetCode streak side by side from 1000px, scoped to the Calendar page */
+.page.page-calendar {
+  max-width: 1120px;
+}
+
+.cal-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+@media (min-width: 1000px) {
+  .cal-summary {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+}
+
+.cal-summary > .card {
+  padding: 10px 14px;
+  min-width: 0;
+}
+
+.cal-summary > .card > * + * {
+  margin-top: 8px;
+}
+
+.cal-summary .card-header h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.cal-summary .stats {
+  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+  gap: 10px;
+}
+
+.cal-summary .stat-label {
+  font-size: 0.72rem;
+}
+
+.cal-summary .stat-value {
+  font-size: 1.1rem;
+}
+
+.cal-summary .stat-hint {
+  font-size: 0.75rem;
+}
+
+.cal-summary .program-progress {
+  margin-bottom: 0;
+}
+
+.cal-summary .program-progress .stack-tight {
+  gap: 4px;
+}
+
+.cal-summary .worked-total {
+  padding: 6px 10px;
+}
+
+.cal-fine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px 18px;
+  font-size: 0.85rem;
+}
+
+.cal-details summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.cal-details summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cal-details[open] {
+  flex-basis: 100%;
+}
+
+.cal-explain {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.cal-details .row {
+  margin-top: 6px;
+}
+
+/* Compact LeetCode streak card */
+.streak-compact {
+  gap: 6px;
+}
+
+.streak-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.streak-numbers {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.streak-numbers .stat {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.streak-numbers .stat-label {
+  min-width: 5.5em;
+}
+
+.heat-grid-compact {
+  gap: 2px;
+  min-width: 0;
+}
+
+.heat-grid-compact .heat-week {
+  gap: 2px;
+}
+
+.heat-grid-compact .heat-cell {
+  width: 11px;
+  height: 11px;
+}
+
+.streak-compact .heat-legend {
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+}
+
+.streak-footer {
+  gap: 6px 12px;
+  font-size: 0.85rem;
+}
+
+/* Roadmap: catalog selector and counters */
+.roadmap-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 12px;
+}
+
+.catalog-counters {
+  font-size: 1rem;
+}
+
+.catalog-counter {
+  color: var(--muted);
+}
+
+.catalog-counter-active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.tree-node.empty {
+  opacity: 0.75;
+  border-style: dashed;
+}
+
+/* Narrow screens: let the top bar wrap instead of pushing the page wider than the viewport */
+@media (max-width: 640px) {
+  .navbar {
+    height: auto;
+    min-height: 52px;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding: 6px 12px;
+  }
+
+  .navbar nav {
+    flex-wrap: wrap;
+  }
+}

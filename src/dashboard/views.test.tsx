@@ -29,6 +29,26 @@ describe('dashboard views (render smoke tests)', () => {
     expect(html).toContain('Contains Duplicate');
   });
 
+  it('Today shows the distinct worked total and two optional bonus offers outside the core list', () => {
+    const html = renderToStaticMarkup(<TodayView state={defaultState(today)} actions={actions} />);
+    expect(html).toContain('class="worked-total"');
+    expect(html).toContain('Program 0/50 · Benchmarks 0/6 · Bonus 0');
+    expect(html).toContain('Reviews never add to it');
+    expect(html).toContain('Optional bonus problems (2 offered)');
+    expect(html.match(/class="bonus-offer"/g)).toHaveLength(2);
+    // The core list still has just the day's four items.
+    expect(html).toContain('Today&#x27;s activities (0/4 done)');
+  });
+
+  it('Today keeps a finished bonus out of the core list and offers the next two', () => {
+    const state = simulateDay(defaultState(today), today, { bonus: true }).state;
+    const html = renderToStaticMarkup(<TodayView state={state} actions={actions} />);
+    expect(html).toContain('Today&#x27;s activities (4/4 done)');
+    expect(html).toContain('Finished today (2):');
+    expect(html).toContain('Bonus 2');
+    expect(html.match(/class="bonus-offer"/g)).toHaveLength(2);
+  });
+
   it('Today shows the "no plan before the start date" state', () => {
     const html = renderToStaticMarkup(
       <TodayView state={defaultState(addDays(today, 3))} actions={actions} />,

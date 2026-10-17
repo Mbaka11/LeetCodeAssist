@@ -1,5 +1,14 @@
 /** In-memory stand-ins for `chrome.storage` used by the unit tests (not part of the extension bundle). */
-import type { StorageAreaLike, StorageChangedEventLike } from './storage';
+import type { AppState } from '../core/types';
+import { createActions, type AppActions } from './actions';
+import {
+  STORAGE_KEY,
+  chromeStorageBackend,
+  createAppStore,
+  type AppStore,
+  type StorageAreaLike,
+  type StorageChangedEventLike,
+} from './storage';
 
 type ChangeListener = (changes: Record<string, { newValue?: unknown }>, areaName: string) => void;
 
@@ -51,4 +60,31 @@ export function createMockChromeStorage(): MockChromeStorage {
 /** Lets pending microtasks and timers (storage events) run. */
 export function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+/** A real store and actions over the in-memory storage, for DOM tests that click through the UI. */
+export function createTestApp(initial?: AppState): {
+  mock: MockChromeStorage;
+  store: AppStore;
+  actions: AppActions;
+} {
+  const mock = createMockChromeStorage();
+  if (initial) mock.data[STORAGE_KEY] = structuredClone(initial);
+  const store = createAppStore(chromeStorageBackend(mock.area, mock.changed));
+  return { mock, store, actions: createActions(store) };
+}
+
+/** Installs a minimal `chrome` global (storage plus a recording `runtime.sendMessage`) and returns the recorded messages. */
+export function installChromeGlobal(mock: MockChromeStorage): unknown[] {
+  const messages: unknown[] = [];
+  (globalThis as { chrome?: unknown }).chrome = {
+    storage: { local: mock.area, onChanged: mock.changed },
+    runtime: {
+      sendMessage: (message: unknown) => {
+        messages.push(message);
+        return Promise.resolve();
+      },
+    },
+  };
+  return messages;
 }

@@ -58,7 +58,6 @@ describe('planDay: day 1', () => {
 
   it('offers two optional bonus problems from the pool outside the core minutes', () => {
     expect(plan.bonuses.map((b) => b.activity.slug)).toEqual([BONUS_POOL[0], BONUS_POOL[1]]);
-    expect(plan.bonus).toBe(plan.bonuses[0]);
     expect(plan.plannedMinutes).toBe(110);
     expect(plan.bonuses.every((b) => !b.persisted && !plan.items.includes(b))).toBe(true);
   });
@@ -72,7 +71,6 @@ describe('planDay: day 1', () => {
   it('returns an empty plan before the start date', () => {
     const before = planDay(newState(), day(0));
     expect(before.items).toEqual([]);
-    expect(before.bonus).toBeNull();
     expect(before.bonuses).toEqual([]);
     expect(before.dayIndex).toBe(0);
   });

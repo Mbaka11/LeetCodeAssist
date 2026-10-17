@@ -3,6 +3,53 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.6.0
+
+### Added
+- **Two renewable bonus suggestions.** Today (and the side panel checklist) now offers **two** optional bonus
+  problems instead of one. They are stored, so they survive reloads and days, and a started one keeps its timer.
+  Finishing or skipping one refills the slot at once, as often as you like. Bonus problems are clearly marked
+  *optional*: not part of the core plan time, pace, reminders, the toolbar badge or the projections, and they
+  never become debt. Each card says how much time starting it adds and warns explicitly when that would go past
+  your daily target or the cap. They are shown even when the core plan already fills the cap.
+- **Readiness rule for suggestions.** A bonus problem is only offered when its category is ready: a problem of
+  that category was already worked or is in today's core plan, or every prerequisite category of the roadmap was
+  introduced. Graphs or Dynamic Programming therefore stay locked until Backtracking is worked. When fewer than
+  two can be offered, the card says why and which category to start next. A skipped problem moves behind the
+  ones never skipped; it is postponed, not deleted.
+- **Bigger bonus pool: 46 problems** (was 28), with 18 more Mediums (Arrays, Two Pointers, Sliding Window, Linked
+  List, Bit Manipulation and more) and original three-level hints for each. The old 28 keep their relative
+  order; the pool still has no Easy and one Hard.
+- **Distinct problems worked.** A compact total on Today and on the Calendar overview: every problem with at
+  least one finished attempt counts once, with the breakdown *Program x/50 · Benchmarks x/6 · Bonus x* (*Other*
+  only when it is not zero). Reviews, blind and re-solve attempts and extra practice never add to it, and a bonus
+  problem never replaces a program problem. It is derived from your history (no stored counter); the program
+  counter *x/50* stays separate.
+- **Blind 75 catalog in the Roadmap.** A *NeetCode 150 | Blind 75* selector, independent of *Tree | Grid* and
+  stored as the optional `settings.roadmapCatalog`. Both counters (for example *NeetCode 150 12/150 · Blind 75
+  7/75*) are always visible. Blind 75 is a subset of the NeetCode 150, so switching only filters the page: it
+  never adds 150 + 75, resets anything or changes the plan, and both catalogs share the same statuses and
+  checkboxes. The list is NeetCode's own Blind 75 flag (provenance in `src/data/blind75.ts`). Problems that need
+  LeetCode Premium carry a **Premium** label and are never scheduled.
+
+### Changed
+- **Compact Calendar.** The overview and the LeetCode streak card now sit side by side in one summary row
+  (from 1000 px wide, stacked below that) and the day grid follows directly, so the first row of days is visible
+  on a 1366×768 or 1440×900 window. The streak card is compact (Current / Longest / Active days, a 16-week heat
+  grid, Refresh, username and *Updated* in one footer; UTC days, error and paused-refresh behaviour unchanged).
+  Explanations and the start date editor moved behind *How these are counted* and *Change start date*. Today is
+  the default day detail.
+- The Calendar lists a finished bonus on the day it was completed with a *Bonus* badge; unopened offers never
+  create missed-day debt. The day table scrolls inside its card and the top bar wraps on narrow screens, so the
+  page no longer scrolls sideways.
+- Stored data stays `version: 1`: `roadmapCatalog` is optional and older data is read as before. Existing
+  one-per-day bonus records are read as offers and nothing is rewritten or deleted.
+- The program is unchanged: the same 50 problems in the same order, the same benchmarks, budgets and review
+  intervals.
+
+### Notes
+- Layout was checked in a headless Chrome with mocked extension APIs, not in a live extension install.
+
 ## 0.5.0
 
 ### Added

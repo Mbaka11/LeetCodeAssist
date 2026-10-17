@@ -239,7 +239,6 @@ describe('bonus offers: skipping, locking and exhausting the pool', () => {
   it('shows fewer offers with the next prerequisite when the remaining category is locked', () => {
     const plan = planDay(newState(), day(1), undefined, { bonusPool: ['house-robber-ii'] });
     expect(plan.bonuses).toEqual([]);
-    expect(plan.bonus).toBeNull();
     expect(plan.bonusHold).toMatchObject({
       reason: 'locked',
       category: '1-D Dynamic Programming',

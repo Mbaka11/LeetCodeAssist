@@ -1,12 +1,12 @@
 import { isBlind75 } from '../data/blind75';
 import { NEETCODE_150 } from '../data/neetcode150';
-import type { Problem } from './types';
+import type { Problem, RoadmapCatalog } from './types';
 
 /**
  * Problem catalogs the roadmap statistics can be filtered by. Both read the same state (status, checks and
  * attempts of a slug), so switching catalogs never duplicates progress.
  */
-export type CatalogId = 'neetcode150' | 'blind75';
+export type CatalogId = RoadmapCatalog;
 
 export const CATALOG_IDS: readonly CatalogId[] = ['neetcode150', 'blind75'];
 

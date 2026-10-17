@@ -251,7 +251,7 @@ describe('startExtraPractice', () => {
 
   it('starts the planned bonus problem instead of creating a duplicate extra', () => {
     const { state, now } = dayOne();
-    const bonus = planDay(state, START).bonus!;
+    const bonus = planDay(state, START).bonuses[0]!;
     const started = commands.startExtraPractice(state, bonus.activity.slug, now);
     expect(started.activityId).toBe(bonus.activity.id);
     expect(started.state.activities).toHaveLength(state.activities.length);

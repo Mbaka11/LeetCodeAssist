@@ -13,6 +13,7 @@ import type {
   Note,
   Outcome,
   ProblemStatus,
+  RoadmapCatalog,
   RoadmapViewMode,
   Settings,
   TimerState,
@@ -94,6 +95,7 @@ const PROBLEM_STATUSES: readonly ProblemStatus[] = [
   'mastered',
 ];
 const ROADMAP_VIEWS: readonly RoadmapViewMode[] = ['tree', 'grid'];
+const ROADMAP_CATALOGS: readonly RoadmapCatalog[] = ['neetcode150', 'blind75'];
 /** Allowed range of a budget override in minutes. */
 export const BUDGET_MIN_MINUTES = 1;
 export const BUDGET_MAX_MINUTES = 180;
@@ -173,6 +175,9 @@ function validateSettings(value: unknown): Settings {
   };
   if (o.roadmapView !== undefined) {
     settings.roadmapView = asOneOf(o.roadmapView, ROADMAP_VIEWS, 'settings.roadmapView');
+  }
+  if (o.roadmapCatalog !== undefined) {
+    settings.roadmapCatalog = asOneOf(o.roadmapCatalog, ROADMAP_CATALOGS, 'settings.roadmapCatalog');
   }
   if (o.budgets !== undefined) {
     const budgets = validateBudgets(o.budgets);

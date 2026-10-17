@@ -92,6 +92,65 @@ describe('LeetCodeStreakBody', () => {
   });
 });
 
+describe('LeetCodeStreakBody compact mode', () => {
+  const compact = (props: Partial<Parameters<typeof LeetCodeStreakBody>[0]> = {}): string => body({ compact: true, ...props });
+
+  it('keeps Refresh, the username link and the data age visible next to compact numbers and a 16-week grid', () => {
+    const html = compact();
+    expect(html).toContain('streak-compact');
+    expect(html).toContain('>Current<');
+    expect(html).toContain('>Longest<');
+    expect(html).toContain('>Active days<');
+    expect(html).toContain('3 days');
+    expect((html.match(/class="heat-week"/g) ?? []).length).toBe(16);
+    expect(html).toContain('heat-grid heat-grid-compact');
+    expect(html).toContain('>Refresh<');
+    expect(html).toContain('>@neo ↗<');
+    expect(html).toContain('https://leetcode.com/u/neo/');
+    expect(html).toContain('Updated 5 min ago');
+    expect(html).toContain('UTC days');
+    expect(html).toContain('including today');
+    // The long stat hints are not repeated in the compact layout.
+    expect(html).not.toContain('Current streak');
+    expect(html).not.toContain('days with a submission');
+  });
+
+  it('keeps the same paused, error, loading and empty semantics, with Refresh still visible', () => {
+    const paused = compact({ cache: cache({ blockedUntil: NOW + 10 * 60_000 }) });
+    expect(paused).toContain('Refresh paused');
+    expect(paused).toContain('disabled');
+    expect(paused).toContain('retry in 10 min');
+    const failed = compact({ cache: { username: 'neo', fetchedAt: null, attemptedAt: NOW, error: errorFromStatus(500) } });
+    expect(failed).toContain('role="alert"');
+    expect(failed).toContain('server problem');
+    expect(failed).toContain('>Refresh<');
+    expect(compact({ cache: null, refreshing: true })).toContain('Refreshing…');
+    expect(compact({ cache: null, refreshing: true })).toContain('Loading your LeetCode calendar');
+    expect(compact({ cache: null })).toContain('No data yet.');
+    expect(compact({ cache: cache({ error: errorFromStatus(429) }) })).toContain('Current');
+    const none = compact({ username: undefined, cache: null });
+    expect(none).toContain('Set your LeetCode username in');
+    expect(none).not.toContain('Refresh');
+  });
+
+  it('says when today still has no submission', () => {
+    const days = { [String(TODAY - DAY)]: 1 };
+    const html = compact({ cache: cache({ calendar: { reportedStreak: null, reportedActiveDays: null, activeYears: [], days } }) });
+    expect(html).toContain('submit today to keep it going');
+  });
+
+  it('renders the card in compact mode without a browser', () => {
+    const html = renderToStaticMarkup(<LeetCodeStreakCard now={NOW} compact />);
+    expect(html).toContain('cal-streak');
+    expect(html).toContain('Set your LeetCode username');
+  });
+
+  it('is not compact by default', () => {
+    expect(body({})).not.toContain('streak-compact');
+    expect(body({})).toContain('Open your LeetCode profile ↗');
+  });
+});
+
 describe('LeetCode settings cards', () => {
   const events: SubmissionEvent[] = [
     { type: 'submit', slug: 'two-sum', state: 'SUBMITTED', status_msg: '', lang: '', at: NOW - 60_000 },

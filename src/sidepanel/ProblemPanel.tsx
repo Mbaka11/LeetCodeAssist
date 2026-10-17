@@ -127,8 +127,10 @@ function ExtraPractice({
         {doneToday
           ? 'You already finished this problem today. You can still start an optional extra attempt.'
           : learned
-          ? 'You have learned this problem already. Start an extra re-solve: it is optional and never becomes debt.'
-          : 'Start it as extra practice: finishing it starts its review cycle like any new problem.'}
+            ? 'You have learned this problem already. Start an extra re-solve: it is optional and never becomes debt.'
+            : isBonusProblem(slug)
+              ? 'This is a bonus-pool problem. Starting it is optional: it is not part of the core plan time, and finishing it adds its own later reviews.'
+              : 'Start it as extra practice: finishing it starts its review cycle like any new problem.'}
       </p>
       <div className="row">
         <Button
@@ -147,6 +149,8 @@ function ExtraPractice({
     </Card>
   );
 }
+
+const OPTIONAL_BONUS_TAG = 'Optional bonus';
 
 function ChecklistRow({
   item,
@@ -167,7 +171,7 @@ function ChecklistRow({
         {done ? '✓' : activity.status === 'in_progress' ? '▶' : '○'}
       </span>
       <span className="visually-hidden">
-        {done ? 'Done: ' : activity.status === 'in_progress' ? 'In progress: ' : 'To do: '}
+        {done ? 'Done: ' : activity.status === 'in_progress' ? 'In progress: ' : tag === OPTIONAL_BONUS_TAG ? 'Optional: ' : 'To do: '}
       </span>
       <Badge tone={activity.type}>{ACTIVITY_LABELS[activity.type]}</Badge>
       {tag ? <Badge tone="warn">{tag}</Badge> : null}
@@ -206,7 +210,9 @@ function TodayChecklist({
         {plan.items.map((item) => (
           <ChecklistRow key={item.activity.id} item={item} openProblem={openProblem} />
         ))}
-        {plan.bonus ? <ChecklistRow item={plan.bonus} tag="Bonus" openProblem={openProblem} /> : null}
+        {plan.bonuses.map((item) => (
+          <ChecklistRow key={item.activity.id} item={item} tag={OPTIONAL_BONUS_TAG} openProblem={openProblem} />
+        ))}
         {plan.carriedOver.map((item) => (
           <ChecklistRow key={item.activity.id} item={item} tag="Carried over" openProblem={openProblem} />
         ))}
@@ -270,7 +276,7 @@ export function ProblemPanel({
     matches.push({ activity, variant });
   };
   for (const item of plan.items) collect(item.activity, 'planned');
-  if (plan.bonus) collect(plan.bonus.activity, 'bonus');
+  for (const item of plan.bonuses) collect(item.activity, 'bonus');
   for (const item of plan.carriedOver) collect(item.activity, 'carried');
   const hasOpen = matches.some((m) => m.activity.status === 'planned' || m.activity.status === 'in_progress');
 
