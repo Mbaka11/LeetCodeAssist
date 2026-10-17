@@ -14,14 +14,15 @@ import { addDays, compareDates, isValidDateString, localDateFromTimestamp } from
 import { materializePlan, planDay } from '../core/planner';
 import { getProblem } from '../data/neetcode150';
 import { postponeInQueue, programQueue } from '../core/queue';
-import { applyOutcome, scheduleReview } from '../core/reviews';
+import { applyOutcome, backfillBenchmarkReviews, scheduleReview } from '../core/reviews';
 import { MAX_HINTS, validateState } from '../core/state';
 import { pauseTimer, resumeTimer, startTimer } from '../core/timer';
 import type { Activity, AppState, Note, Outcome, ReviewType, Settings } from '../core/types';
 
 /** Persists the activities of today's plan (new problems, benchmarks, bonus) so timers can persist. */
 export function materializeToday(state: AppState, now: number): AppState {
-  return materializePlan(state, planDay(state, localDateFromTimestamp(now)));
+  const backfilled = backfillBenchmarkReviews(state);
+  return materializePlan(backfilled, planDay(backfilled, localDateFromTimestamp(now)));
 }
 
 function requireOpen(state: AppState, id: string): Activity {

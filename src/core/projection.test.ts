@@ -18,7 +18,7 @@ describe('projectDay', () => {
     // Nothing done yet: day 2 holds recalls of day 1's new problems and the next two new problems.
     const state = newState();
     const dayOne = planDay(state, day(1))
-      .items.filter((i) => i.activity.type === 'new')
+      .items.filter((i) => i.activity.type === 'new' || i.activity.type === 'benchmark')
       .map((i) => i.activity.slug);
     const projection = projectDay(state, day(2), day(1));
     const recalls = projection.items.filter((i) => i.type === 'recall').map((i) => i.slug);
@@ -31,7 +31,7 @@ describe('projectDay', () => {
 
   it('projects a later review stage from the same assumption (rebuild on day 4)', () => {
     const state = simulateDay(newState(), day(1)).state;
-    const learned = state.activities.filter((a) => a.type === 'new' && a.status === 'done').map((a) => a.slug);
+    const learned = state.activities.filter((a) => (a.type === 'new' || a.type === 'benchmark') && a.status === 'done').map((a) => a.slug);
     const projection = projectDay(state, day(4), day(2));
     const rebuilds = projection.items.filter((i) => i.type === 'rebuild').map((i) => i.slug);
     expect(rebuilds.sort()).toEqual([...learned].sort());

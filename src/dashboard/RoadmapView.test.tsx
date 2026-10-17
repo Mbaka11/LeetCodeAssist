@@ -49,7 +49,7 @@ describe('RoadmapView grid layout (render smoke test)', () => {
     expect(html).toContain('Mastered');
     expect(html).toContain('Consolidating');
     expect(html).toContain('worked 3 · solo in review 1 · consolidating 1');
-    expect(html.match(/checked=""/g)).toHaveLength(1);
+    expect(html.match(/checked=""/g)).toHaveLength(3);
   });
 });
 
@@ -99,6 +99,18 @@ describe('RoadmapView tree layout (render smoke test)', () => {
     const html = renderToStaticMarkup(<RoadmapView state={state} actions={actions} />);
     expect(html).toContain('Easy 3/3');
     expect(html).toContain('solo 1 · consolidating 1');
-    expect(html.match(/checked=""/g)).toHaveLength(1);
+    expect(html.match(/checked=""/g)).toHaveLength(3);
+  });
+});
+
+describe('RoadmapView worked problems', () => {
+  it('shows a problem worked in the plan as checked, even without a manual check', () => {
+    const state: AppState = {
+      ...withView(defaultState('2025-01-06'), 'grid'),
+      problemStatus: { 'valid-anagram': 'learning' },
+    };
+    const html = renderToStaticMarkup(<RoadmapView state={state} actions={actions} />);
+    expect(html.match(/type="checkbox"[^>]*checked=""/g)?.length ?? 0).toBe(1);
+    expect(html).toContain('Completed in your plan');
   });
 });

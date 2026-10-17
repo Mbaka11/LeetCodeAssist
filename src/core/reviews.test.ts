@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createActivity } from './activities';
 import { addDays } from './dates';
-import { applyOutcome } from './reviews';
+import { applyOutcome, backfillBenchmarkReviews, needsBenchmarkBackfill } from './reviews';
 import { deserializeState, serializeState } from './state';
 import { startTimer } from './timer';
 import {
@@ -324,11 +324,11 @@ describe('applyOutcome: merging overlapping reviews', () => {
 });
 
 describe('applyOutcome: benchmarks', () => {
-  it('completes without creating follow-ups or changing problem status', () => {
+  it('completes and starts the review cycle like a new problem', () => {
     const state = planAndComplete(newState(), day(1), 'contains-duplicate', 'benchmark', 'solo', 18);
-    expect(state.problemStatus['contains-duplicate']).toBeUndefined();
+    expect(state.problemStatus['contains-duplicate']).toBe('learning');
     const types = state.activities.filter((a) => a.slug === 'contains-duplicate').map((a) => a.type);
-    expect(types).toEqual(['benchmark']);
+    expect(types).toEqual(['benchmark', 'recall', 'rebuild', 'resolve', 'blind']);
     expect(activitiesOf(state, 'contains-duplicate')[0]!.totalMs).toBe(18 * 60_000);
   });
 });
@@ -339,5 +339,34 @@ describe('review generation helpers', () => {
     const ids = state.activities.map((a) => a.id);
     expect(new Set(ids).size).toBe(ids.length);
     expect(START).toBe(addDays(day(1), 0));
+  });
+});
+
+describe('benchmarks enter the review cycle', () => {
+  const SLUG_B = 'contains-duplicate';
+
+  it('completing a benchmark schedules recall/rebuild/resolve/blind from that day', () => {
+    const state = planAndComplete(newState(), day(1), SLUG_B, 'benchmark', 'solo', 15);
+    expect(plannedOf(state, SLUG_B, 'recall').map((a) => a.dueDate)).toEqual([day(2)]);
+    expect(plannedOf(state, SLUG_B, 'rebuild').map((a) => a.dueDate)).toEqual([day(4)]);
+    expect(plannedOf(state, SLUG_B, 'resolve').map((a) => a.dueDate)).toEqual([day(8)]);
+    expect(plannedOf(state, SLUG_B, 'blind').map((a) => a.dueDate)).toEqual([day(22)]);
+    expect(state.problemStatus[SLUG_B]).toBe('learning');
+  });
+
+  it('backfills benchmarks completed before this rule existed, once', () => {
+    const base = planAndComplete(newState(), day(1), SLUG_B, 'benchmark', 'solo', 15);
+    const legacy: AppState = {
+      ...base,
+      problemStatus: {},
+      activities: base.activities.filter((a) => a.type === 'benchmark'),
+    };
+    expect(needsBenchmarkBackfill(legacy)).toBe(true);
+    const fixed = backfillBenchmarkReviews(legacy);
+    expect(plannedOf(fixed, SLUG_B, 'recall').map((a) => a.dueDate)).toEqual([day(2)]);
+    expect(plannedOf(fixed, SLUG_B, 'blind').map((a) => a.dueDate)).toEqual([day(22)]);
+    expect(fixed.problemStatus[SLUG_B]).toBe('learning');
+    expect(needsBenchmarkBackfill(fixed)).toBe(false);
+    expect(backfillBenchmarkReviews(fixed)).toBe(fixed);
   });
 });

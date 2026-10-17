@@ -36,12 +36,15 @@ function ProblemList({ name, state, actions }: { name: CategoryName; state: AppS
     <ul className="problem-list">
       {problemsInCategory(name).map((problem) => {
         const status = getProblemStatus(state, problem.slug);
+        const worked = status !== 'untouched'; // done in the program or a benchmark: shown as checked
         return (
           <li key={problem.slug} className="problem-row">
             <label className="choice">
               <input
                 type="checkbox"
-                checked={state.checked[problem.slug] === true}
+                checked={worked || state.checked[problem.slug] === true}
+                disabled={worked}
+                title={worked ? 'Completed in your plan' : undefined}
                 onChange={() => void actions.toggleChecked(problem.slug)}
                 aria-label={`${problem.title} solved`}
               />

@@ -7,6 +7,7 @@ import { ProgressBar } from '../components/ProgressBar';
 import { Stat } from '../components/Stat';
 import { diffDays, localDateFromTimestamp } from '../core/dates';
 import { planDay, type PlanItem } from '../core/planner';
+import { needsBenchmarkBackfill } from '../core/reviews';
 import { computeStreak, dailyTargetMinutes } from '../core/state';
 import { elapsedMs } from '../core/timer';
 import type { AppState } from '../core/types';
@@ -40,7 +41,9 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
   };
 
   const needsMaterializing =
-    plan.items.some((i) => !i.persisted) || (plan.bonus !== null && !plan.bonus.persisted);
+    plan.items.some((i) => !i.persisted) ||
+    (plan.bonus !== null && !plan.bonus.persisted) ||
+    needsBenchmarkBackfill(state);
   useEffect(() => {
     if (needsMaterializing) actions.materializeToday().catch(console.error);
   }, [needsMaterializing, actions, state, today]);

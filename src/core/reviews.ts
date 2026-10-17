@@ -126,8 +126,9 @@ export function applyOutcome(state: AppState, activityId: string, completion: Co
   }
 
   switch (activity.type) {
-    case 'new': {
-      // (Re)start the review cycle from the actual completion date.
+    case 'new':
+    case 'benchmark': {
+      // (Re)start the review cycle from the actual completion date. A benchmark is a real problem too.
       activities = skipPlanned(activities, slug, (a) =>
         (CYCLE_TYPES as readonly ActivityType[]).includes(a.type),
       );
@@ -180,9 +181,51 @@ export function applyOutcome(state: AppState, activityId: string, completion: Co
       }
       break;
     }
-    case 'benchmark':
-      break;
   }
 
   return { ...next, activities };
+}
+
+/** Done benchmarks whose problem never entered the review cycle (completed before benchmarks were reviewed). */
+function benchmarksToBackfill(state: AppState): Activity[] {
+  const seen = new Set<string>();
+  return state.activities.filter((a) => {
+    if (a.type !== 'benchmark' || a.status !== 'done' || !a.completedAt || seen.has(a.slug)) return false;
+    const inCycle = state.activities.some(
+      (b) => b.slug === a.slug && ((CYCLE_TYPES as readonly ActivityType[]).includes(b.type) || b.type === 'new'),
+    );
+    if (inCycle) return false;
+    seen.add(a.slug);
+    return true;
+  });
+}
+
+export function needsBenchmarkBackfill(state: AppState): boolean {
+  return benchmarksToBackfill(state).length > 0;
+}
+
+/** Puts already-completed benchmark problems into the review cycle, counted from their completion date. */
+export function backfillBenchmarkReviews(state: AppState): AppState {
+  let next = state;
+  for (const benchmark of benchmarksToBackfill(state)) {
+    const completedDate = benchmark.completedAt!;
+    let activities = next.activities;
+    const schedule = (type: ReviewType, days: number): void => {
+      activities = scheduleReview(activities, {
+        type,
+        slug: benchmark.slug,
+        dueDate: addDays(completedDate, days),
+        createdAt: completedDate,
+      });
+    };
+    schedule('recall', REVIEW_OFFSETS.recall);
+    schedule('rebuild', REVIEW_OFFSETS.rebuild);
+    schedule('resolve', REVIEW_OFFSETS.resolve);
+    schedule('blind', REVIEW_OFFSETS.blind);
+    next = { ...next, activities };
+    if ((next.problemStatus[benchmark.slug] ?? 'untouched') === 'untouched') {
+      next = withStatus(next, benchmark.slug, 'learning');
+    }
+  }
+  return next;
 }

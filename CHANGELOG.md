@@ -3,6 +3,21 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.2.1
+
+### Fixed
+- **Pace** no longer shows "behind" the morning of a day: it compares with what earlier days required
+  (behind), what today requires (on pace) and beyond that (ahead).
+- **Skipping a new problem** (for example the optional bonus) no longer removes it from the program: it
+  returns to the queue.
+- **Roadmap** lists show a problem as checked (and locked) once it is worked in the plan, not only when
+  ticked by hand.
+
+### Changed
+- **Benchmark problems enter the review cycle** (recall D+1, rebuild D+3, resolve D+7, blind D+21) and count
+  as worked in the roadmap. Benchmarks already completed are backfilled from their completion date. They
+  still do not count toward the new-problem pace.
+
 ## 0.2.0
 
 ### Added

@@ -33,7 +33,7 @@ Benchmark problems are reserved and never appear in the learning queue.
 | `resolve` | done + 7 days | Solve from a blank editor, no hints, no old solution. | 20 |
 | `blind` | done + 21 days | Solve with the category hidden. Solved alone ⇒ **mastered**. | 15 |
 | `retry` | next day after a failure | Targeted redo of a failed review. | 15 |
-| `benchmark` | days 1, 15, 30 | Timed unseen Easy + Medium. | 60 |
+| `benchmark` | days 1, 15, 30 | Timed unseen Easy + Medium. Once done, each problem enters the normal review cycle (D+1/3/7/21) like a `new` problem. | 60 |
 
 **Offsets are computed from the date the `new` activity was actually completed**, not the
 planned date. Every later stage is scheduled from the actual completion of the previous
