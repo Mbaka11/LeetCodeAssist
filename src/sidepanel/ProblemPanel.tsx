@@ -284,7 +284,8 @@ export function ProblemPanel({
     matches.map((m) => m.activity).find((a) => a.status === 'planned');
   const locked = isNotesLocked(state, slug, today);
   // The activity model stores no first-start time, so "after the activity started" is approximated by
-  // "since local midnight today" (a started activity is always one of today's).
+  // "since local midnight today" (a started activity is always one of today's); the latest Accepted
+  // since then is used.
   const accepted = acceptedPrompt(submissionEvents, {
     slug,
     since: new Date(now).setHours(0, 0, 0, 0),

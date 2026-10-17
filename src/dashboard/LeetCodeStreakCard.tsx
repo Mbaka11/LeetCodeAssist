@@ -70,6 +70,7 @@ export function LeetCodeStreakBody({
     );
   }
   const current = cache !== null && cache.username === username ? cache : null;
+  const paused = current?.blockedUntil !== undefined && now < current.blockedUntil;
   const stats = current?.calendar ? computeStreakStats(current.calendar.days, now) : null;
   return (
     <div className="stack-tight">
@@ -112,9 +113,12 @@ export function LeetCodeStreakBody({
         <p className="muted">{refreshing ? 'Loading your LeetCode calendar…' : 'No data yet.'}</p>
       )}
       <div className="row">
-        <Button onClick={onRefresh} disabled={refreshing}>
-          {refreshing ? 'Refreshing…' : 'Refresh'}
+        <Button onClick={onRefresh} disabled={refreshing || paused}>
+          {refreshing ? 'Refreshing…' : paused ? 'Refresh paused' : 'Refresh'}
         </Button>
+        {paused && current?.blockedUntil !== undefined ? (
+          <span className="muted">LeetCode asked to slow down; retry in {Math.ceil((current.blockedUntil - now) / 60_000)} min.</span>
+        ) : null}
         <a href={profileUrl(username)} target="_blank" rel="noreferrer">
           Open your LeetCode profile ↗
         </a>

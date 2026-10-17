@@ -190,7 +190,7 @@ describe('acceptedPrompt', () => {
     expect(acceptedPrompt([check({ at: t(1), status_msg: 'Wrong Answer' })], { slug: 'two-sum', since })).toBeNull();
   });
 
-  it('counts the failed attempts before the first Accepted and ignores other problems and old events', () => {
+  it('counts the failed attempts before the latest Accepted and ignores other problems and old events', () => {
     const events = [
       check({ at: since - 1000, status_msg: 'Accepted' }), // before the activity: ignored
       check({ at: t(1), status_msg: 'Wrong Answer' }),
@@ -201,11 +201,27 @@ describe('acceptedPrompt', () => {
       check({ at: t(20), lang: 'java' }),
     ];
     expect(acceptedPrompt(events, { slug: 'two-sum', since })).toEqual({
+      acceptedAt: t(20),
+      lang: 'java',
+      python: false,
+      attemptsBefore: 0,
+    });
+    expect(acceptedPrompt(events.slice(0, -1), { slug: 'two-sum', since })).toEqual({
       acceptedAt: t(14),
       lang: 'python3',
       python: true,
       attemptsBefore: 2,
     });
+  });
+
+  it('uses the latest Accepted so an earlier one does not answer a later activity', () => {
+    const events = [
+      check({ at: t(1), status_msg: 'Accepted' }),
+      check({ at: t(30), status_msg: 'Wrong Answer' }),
+      check({ at: t(40) }),
+    ];
+    expect(acceptedPrompt(events, { slug: 'two-sum', since })).toMatchObject({ acceptedAt: t(40), attemptsBefore: 1 });
+    expect(acceptedPrompt(events.slice(0, 2), { slug: 'two-sum', since })).toMatchObject({ acceptedAt: t(1) });
   });
 
   it('flags a non-Python language', () => {

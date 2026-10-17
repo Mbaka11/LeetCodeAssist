@@ -30,7 +30,7 @@ export function TimerBadge({
   if (running) classes.push('timer-running');
   return (
     <span className="timer-badge">
-      <span className={classes.join(' ')} aria-label="Elapsed time">
+      <span className={classes.join(' ')} role="timer" aria-label="Elapsed time">
         {formatElapsed(elapsedMs)}
       </span>
       {text ? (

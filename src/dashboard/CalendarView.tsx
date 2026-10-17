@@ -449,7 +449,7 @@ function DayDetail({
       <p className="muted">
         Target {formatMinutes(day.targetMinutes)}
         {day.kind === 'future'
-          ? '. Future days list the reviews already scheduled plus the expected program work (estimated). Hover or focus a day above for a projection.'
+          ? '. Future days list the reviews already scheduled plus the expected program work (estimated; an Easy day can get a third new problem). Hover or focus a day above for a projection.'
           : ` · logged ${formatMinutes(day.loggedMinutes)}`}
         {day.planDone ? (
           <>

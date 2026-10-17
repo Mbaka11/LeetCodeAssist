@@ -38,6 +38,14 @@ describe('LeetCodeStreakBody', () => {
     expect(html).not.toContain('Refresh');
   });
 
+  it('disables Refresh and says so while LeetCode has asked to slow down', () => {
+    const html = body({ cache: cache({ blockedUntil: NOW + 10 * 60_000 }) });
+    expect(html).toContain('Refresh paused');
+    expect(html).toContain('disabled');
+    expect(html).toContain('retry in 10 min');
+    expect(body({})).not.toContain('Refresh paused');
+  });
+
   it('shows streak stats, a 16-week grid, the profile link and the data age', () => {
     const html = body({});
     expect(html).toContain('Current streak');

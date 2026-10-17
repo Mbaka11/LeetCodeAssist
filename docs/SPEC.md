@@ -1,4 +1,4 @@
-# LeetCode Assist — Product & Technical Spec (v1, extension 0.4)
+# LeetCode Assist — Product & Technical Spec (v1, extension 0.5)
 
 A Chrome extension (Manifest V3) that runs a **30-day LeetCode bootcamp** built on the
 **NeetCode 150** roadmap. You open it and it tells you exactly what to do today:
@@ -117,7 +117,8 @@ Problem status: `untouched` → `learning` (new done) → `consolidating` (a rev
   4. **Pace indicator**: `actualNewDone - expectedNewDone(dayIndex, queueLength)` ("+2 ahead" /
      "−1 behind"); `expectedNewDone` is 2 per normal day capped by the real queue length, so it reaches the
      whole queue by day 30 (the queue stays within 2 × the 26 normal days). Only program-queue problems
-     count, bonus-pool problems do not.
+     count, bonus-pool problems do not. The expectation does not count the optional third Easy problem, so
+     a user who follows the plan on those days reads "+1 ahead" until the queue is exhausted (day 30 is "on pace").
 - Missing days never produce an impossible day: the cap is always respected.
 - The queue order is `PROGRAM_QUEUE` unless the user postponed problems (`AppState.queue`).
 - History is append-only; past activities are never rewritten.
@@ -235,8 +236,8 @@ polling route (`/submissions/detail/<id>/check/`) it reads a bounded clone of th
 it to a capped list (200 events, own storage key `leetcodeAssist.submissionEvents.v1`, written under a lock,
 not part of `AppState`). Pure parsing and validation: `src/lib/leetcodeSubmissions.ts`.
 - Side panel: when the current problem has an **in-progress** activity and an *Accepted* verdict was detected
-  today, the card shows *Accepted at 23:14 (Python3) — finish this activity?* plus the number of failed
-  verdicts before it. *Finish this activity…* opens the usual finish form with the logged time taken from the
+  today, the card shows *Accepted at 23:14 (Python3) — finish this activity?* (the **latest** Accepted since local
+  midnight) plus the number of failed verdicts since the previous Accepted. *Finish this activity…* opens the usual finish form with the logged time taken from the
   timer and **Solo** pre-selected only when `hintsUsed` is 0; the user always confirms. Nothing is ever
   completed automatically. A non-Python language adds a gentle note. (The activity model has no first-start
   timestamp, so "after the activity started" is approximated by "since local midnight today".)

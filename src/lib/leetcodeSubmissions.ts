@@ -260,13 +260,15 @@ export interface AcceptedPrompt {
   acceptedAt: number;
   lang: string;
   python: boolean;
-  /** Final non-Accepted verdicts for the problem between `since` and the Accepted one. */
+  /** Final non-Accepted verdicts for the problem between the previous Accepted (or `since`) and the Accepted one. */
   attemptsBefore: number;
 }
 
 /**
- * The earliest Accepted verdict for `slug` at or after `since` (epoch ms), with the number of failed
- * verdicts before it. Null when nothing was detected, so the activity is finished by hand as always.
+ * The latest Accepted verdict for `slug` at or after `since` (epoch ms), with the number of failed
+ * verdicts between the Accepted before it (or `since`) and it. The latest one is used so that a morning
+ * Accepted does not answer an evening re-solve. Null when nothing was detected, so the activity is
+ * finished by hand as always.
  */
 export function acceptedPrompt(
   events: readonly SubmissionEvent[],
@@ -275,13 +277,15 @@ export function acceptedPrompt(
   const relevant = events
     .filter((e) => e.type === 'check' && e.slug === query.slug && e.at >= query.since)
     .sort((a, b) => a.at - b.at);
-  const accepted = relevant.find(isAccepted);
+  const acceptedEvents = relevant.filter(isAccepted);
+  const accepted = acceptedEvents[acceptedEvents.length - 1];
   if (!accepted) return null;
+  const previousAt = acceptedEvents.length > 1 ? acceptedEvents[acceptedEvents.length - 2]!.at : -Infinity;
   return {
     acceptedAt: accepted.at,
     lang: accepted.lang,
     python: isPythonLang(accepted.lang),
-    attemptsBefore: relevant.filter((e) => e.at < accepted.at && !isAccepted(e)).length,
+    attemptsBefore: relevant.filter((e) => e.at < accepted.at && e.at > previousAt && !isAccepted(e)).length,
   };
 }
 
