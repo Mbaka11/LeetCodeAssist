@@ -266,7 +266,7 @@ export function validateState(value: unknown): AppState {
 }
 
 // ---------------------------------------------------------------------------
-// Daily progress, streak and goal
+// Daily progress, streak and plan done
 // ---------------------------------------------------------------------------
 
 export function getProblemStatus(state: AppState, slug: string): ProblemStatus {
@@ -279,8 +279,31 @@ export interface DayProgress {
   loggedMs: number;
   /** >= 1 activity done and >= 30 minutes logged. */
   streakQualified: boolean;
-  /** Logged time reached the day's target. */
-  goalMet: boolean;
+}
+
+/** Share of a day's core activities that must be done for the day's plan to count as done. */
+export const PLAN_DONE_RATIO = 0.8;
+
+/**
+ * A day's plan is done when at least 80% of its core activities are done. A day without core
+ * activities (`total` 0) is neither done nor missed.
+ */
+export function isPlanDone(doneCount: number, totalCount: number): boolean {
+  return totalCount >= 1 && doneCount * 5 >= totalCount * 4;
+}
+
+/** Logged milliseconds of activities completed in the 7 days ending `today`, and of all time. */
+export function loggedTotals(state: AppState, today: string): { last7DaysMs: number; allTimeMs: number } {
+  const windowStart = addDays(today, -6);
+  let last7DaysMs = 0;
+  let allTimeMs = 0;
+  for (const a of state.activities) {
+    if (a.status !== 'done' || a.completedAt === undefined) continue;
+    const ms = a.totalMs ?? 0;
+    allTimeMs += ms;
+    if (a.completedAt >= windowStart && a.completedAt <= today) last7DaysMs += ms;
+  }
+  return { last7DaysMs, allTimeMs };
 }
 
 /** Target minutes for `date`: 90 on consolidation days, otherwise the configured target. */
@@ -304,7 +327,6 @@ export function dayProgress(state: AppState, date: string): DayProgress {
     doneCount,
     loggedMs,
     streakQualified: doneCount >= 1 && loggedMs >= STREAK_MIN_LOGGED_MIN * 60_000,
-    goalMet: loggedMs >= dailyTargetMinutes(state.settings, date) * 60_000,
   };
 }
 

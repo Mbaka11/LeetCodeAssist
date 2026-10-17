@@ -14,12 +14,12 @@ import {
 } from '../core/calendar';
 import { addDays, localDateFromTimestamp } from '../core/dates';
 import { projectDay } from '../core/projection';
-import { computeStreak } from '../core/state';
+import { computeStreak, loggedTotals } from '../core/state';
 import type { ActivityType, AppState } from '../core/types';
 import { getProblem } from '../data/neetcode150';
 import type { AppActions } from '../lib/actions';
 import { MAX_MOVE_DAYS } from '../lib/commands';
-import { formatDate, formatMinutes } from '../lib/format';
+import { formatDate, formatMinutes, formatMs } from '../lib/format';
 import { ACTIVITY_LABELS, OUTCOME_LABELS } from '../lib/instructions';
 import { problemHref } from '../lib/route';
 import { useNow } from '../lib/useNow';
@@ -96,7 +96,7 @@ function DayCell({
 }) {
   const classes = ['cal-day', `cal-${day.kind}`];
   if (selected) classes.push('selected');
-  if (day.goalMet) classes.push('goal-met');
+  if (day.planDone) classes.push('plan-done');
   const future = day.kind === 'future';
   const barMinutes = future ? day.plannedMinutes : day.loggedMinutes;
   const barPercent =
@@ -131,10 +131,10 @@ function DayCell({
       <span className={`cal-bar${future ? ' cal-bar-planned' : ''}`} aria-hidden="true">
         <span className="cal-bar-fill" style={{ width: `${barPercent}%` }} />
       </span>
-      {day.streakQualified || day.goalMet ? (
+      {day.streakQualified || day.planDone ? (
         <span className="cal-badges">
           {day.streakQualified ? <Badge tone="good">Streak day</Badge> : null}
-          {day.goalMet ? <Badge tone="good">Goal met</Badge> : null}
+          {day.planDone ? <Badge tone="good">Plan done</Badge> : null}
         </span>
       ) : null}
     </button>
@@ -445,6 +445,12 @@ function DayDetail({
         {day.kind === 'future'
           ? '. Future days list the reviews already scheduled plus the expected program work (estimated). Hover or focus a day above for a projection.'
           : ` · logged ${formatMinutes(day.loggedMinutes)}`}
+        {day.planDone ? (
+          <>
+            {' '}
+            <Badge tone="good">Plan done</Badge>
+          </>
+        ) : null}
       </p>
       {error ? <p className="error">{error}</p> : null}
       {day.entries.length === 0 ? (
@@ -507,7 +513,9 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
     days.find((d) => d.date === selectedDate) ?? days.find((d) => d.kind === 'today') ?? days[0]!;
   const streak = computeStreak(state, today);
   const elapsed = days.filter((d) => d.kind !== 'future');
-  const goalDays = elapsed.filter((d) => d.goalMet).length;
+  const countedDays = elapsed.filter((d) => d.coreCount > 0);
+  const planDoneDays = countedDays.filter((d) => d.planDone).length;
+  const logged = loggedTotals(state, today);
 
   return (
     <div className="stack">
@@ -519,10 +527,15 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
             hint={`longest ${streak.longest} · a day needs 1+ activity and 30+ min logged`}
           />
           <Stat
-            label="Daily goal met"
-            value={`${goalDays} of ${elapsed.length} days`}
-            hint="logged time reached the day's target (the daily target; 90 min on consolidation days)"
-            {...(goalDays > 0 ? { tone: 'good' as const } : {})}
+            label="Plan done"
+            value={`${planDoneDays} of ${countedDays.length} days`}
+            hint="finished 80%+ of the day's plan"
+            {...(planDoneDays > 0 ? { tone: 'good' as const } : {})}
+          />
+          <Stat
+            label="Time logged"
+            value={formatMs(logged.last7DaysMs)}
+            hint={`last 7 days · ${formatMs(logged.allTimeMs)} total`}
           />
         </div>
         <ProgramProgressCard state={state} today={today} />

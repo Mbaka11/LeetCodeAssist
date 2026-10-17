@@ -595,7 +595,7 @@ textarea.mono {
   background: var(--surface-2);
 }
 
-.cal-day.goal-met {
+.cal-day.plan-done {
   border-left: 4px solid var(--good);
 }
 

@@ -9,7 +9,7 @@ import {
 import { estimatedMinutes, isReviewType } from './activities';
 import { compareDates, dateFromDayIndex, dayIndex } from './dates';
 import { planDay } from './planner';
-import { dailyTargetMinutes, dayProgress } from './state';
+import { dailyTargetMinutes, dayProgress, isPlanDone } from './state';
 import type { Activity, ActivityType, AppState, Outcome } from './types';
 
 /**
@@ -60,8 +60,12 @@ export interface CalendarDay {
   targetMinutes: number;
   /** >= 1 activity done and >= 30 minutes logged. */
   streakQualified: boolean;
-  /** Logged time reached the day's target. */
-  goalMet: boolean;
+  /** Core activities due this day: not optional practice, bonus or postponed. 0 on future days. */
+  coreCount: number;
+  /** Core activities of this day that were completed on it. */
+  coreDoneCount: number;
+  /** At least 80% of the day's core activities are done (see `isPlanDone`). Never on future days. */
+  planDone: boolean;
   entries: CalendarEntry[];
 }
 
@@ -72,6 +76,12 @@ interface Draft {
   entry: CalendarEntry;
   /** Counts towards the day's planned total. */
   planned: boolean;
+  /** Counts towards the day's plan-done ratio: planned, due this day, not optional practice. */
+  core: boolean;
+}
+
+function isCoreActivity(a: Activity, date: string): boolean {
+  return a.dueDate === date && !a.extra && !a.postponed;
 }
 
 function entryOf(a: Activity, state: EntryState): CalendarEntry {
@@ -130,17 +140,26 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
     drafts.set(a.id, {
       entry: entryOf(a, isBonus && date < today ? 'skipped' : entryState),
       planned: dueHere && !isBonus && !a.postponed,
+      core: dueHere && !isBonus && isCoreActivity(a, date),
     });
   }
   if (plan) {
     for (const item of plan.items) {
       const existing = drafts.get(item.activity.id);
-      if (existing) existing.planned = !bonus.has(item.activity.id);
-      else drafts.set(item.activity.id, { entry: entryOf(item.activity, 'open'), planned: true });
+      if (existing) {
+        existing.planned = !bonus.has(item.activity.id);
+        existing.core = existing.planned && isCoreActivity(item.activity, date);
+      } else {
+        drafts.set(item.activity.id, {
+          entry: entryOf(item.activity, 'open'),
+          planned: true,
+          core: isCoreActivity(item.activity, date),
+        });
+      }
     }
     for (const item of plan.carriedOver) {
       const existing = drafts.get(item.activity.id);
-      if (!existing) drafts.set(item.activity.id, { entry: entryOf(item.activity, 'carried'), planned: false });
+      if (!existing) drafts.set(item.activity.id, { entry: entryOf(item.activity, 'carried'), planned: false, core: false });
     }
   }
   return [...drafts.values()];
@@ -179,7 +198,7 @@ function draftsAfterToday(state: AppState, date: string, index: number): Draft[]
       });
     }
   }
-  return entries.map((entry) => ({ entry, planned: true }));
+  return entries.map((entry) => ({ entry, planned: true, core: false }));
 }
 
 function buildDay(state: AppState, date: string, today: string): CalendarDay {
@@ -189,6 +208,8 @@ function buildDay(state: AppState, date: string, today: string): CalendarDay {
     kind === 'future' ? draftsAfterToday(state, date, index) : draftsUpToToday(state, date, today);
   const planned = drafts.filter((d) => d.planned);
   const progress = dayProgress(state, date);
+  const core = drafts.filter((d) => d.core);
+  const coreDoneCount = core.filter((d) => d.entry.state === 'done').length;
 
   return {
     date,
@@ -204,7 +225,9 @@ function buildDay(state: AppState, date: string, today: string): CalendarDay {
     carriedCount: drafts.filter((d) => d.entry.state === 'carried').length,
     targetMinutes: dailyTargetMinutes(state.settings, date),
     streakQualified: progress.streakQualified,
-    goalMet: progress.goalMet,
+    coreCount: core.length,
+    coreDoneCount,
+    planDone: isPlanDone(coreDoneCount, core.length),
     entries: drafts.map((d) => d.entry),
   };
 }

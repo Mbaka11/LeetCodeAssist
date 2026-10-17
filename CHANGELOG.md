@@ -3,6 +3,15 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.3.0 (unreleased)
+
+### Changed
+- **Calendar**: the "Daily goal met" indicator is replaced by **Plan done**: a day counts when at least
+  80% of its core activities (due that day, excluding optional practice, the bonus and postponed
+  problems) are done. The tile reads "n of m days" over the elapsed days that had core activities, and
+  done days show a *Plan done* badge. A new **Time logged** tile shows the last 7 days with the
+  all-time total as hint. The streak rule is unchanged.
+
 ## 0.2.1
 
 ### Fixed

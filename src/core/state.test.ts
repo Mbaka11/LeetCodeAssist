@@ -8,6 +8,8 @@ import {
   defaultState,
   deserializeState,
   getProblemStatus,
+  isPlanDone,
+  loggedTotals,
   problemStats,
   serializeState,
   validateState,
@@ -149,7 +151,6 @@ describe('daily progress and goal', () => {
     expect(progress.doneCount).toBe(2);
     expect(progress.loggedMs).toBe(35 * 60_000);
     expect(progress.streakQualified).toBe(true);
-    expect(progress.goalMet).toBe(false);
     expect(dayProgress(state, day(3)).streakQualified).toBe(false);
     expect(dayProgress(state, day(4))).toMatchObject({ doneCount: 0, loggedMs: 0, streakQualified: false });
   });
@@ -157,12 +158,32 @@ describe('daily progress and goal', () => {
   it('uses the configured target, and 90 minutes on consolidation days', () => {
     expect(dailyTargetMinutes(newState().settings, day(2))).toBe(150);
     expect(dailyTargetMinutes(newState().settings, day(7))).toBe(90);
-    let state = withDone(newState(), 'two-sum', day(7), 90);
-    expect(dayProgress(state, day(7)).goalMet).toBe(true);
-    state = withDone(state, 'two-sum', day(8), 90);
-    expect(dayProgress(state, day(8)).goalMet).toBe(false);
-    state = withDone(state, 'valid-anagram', day(8), 60);
-    expect(dayProgress(state, day(8)).goalMet).toBe(true);
+  });
+});
+
+describe('isPlanDone', () => {
+  it('needs at least 80% of a non-empty set of core activities done', () => {
+    expect(isPlanDone(0, 0)).toBe(false);
+    expect(isPlanDone(1, 1)).toBe(true);
+    expect(isPlanDone(4, 5)).toBe(true);
+    expect(isPlanDone(3, 4)).toBe(false);
+    expect(isPlanDone(1, 2)).toBe(false);
+    expect(isPlanDone(8, 10)).toBe(true);
+    expect(isPlanDone(7, 10)).toBe(false);
+    expect(isPlanDone(0, 3)).toBe(false);
+  });
+});
+
+describe('loggedTotals', () => {
+  it('sums the last 7 days (today included) and all time', () => {
+    let state = newState();
+    state = withDone(state, 'two-sum', day(1), 30);
+    state = withDone(state, 'valid-anagram', day(2), 20);
+    state = withDone(state, 'valid-anagram', day(8), 10);
+    state = withDone(state, 'two-sum', day(9), 5);
+    expect(loggedTotals(state, day(8))).toEqual({ last7DaysMs: 30 * 60_000, allTimeMs: 65 * 60_000 });
+    expect(loggedTotals(state, day(7))).toEqual({ last7DaysMs: 50 * 60_000, allTimeMs: 65 * 60_000 });
+    expect(loggedTotals(newState(), day(1))).toEqual({ last7DaysMs: 0, allTimeMs: 0 });
   });
 });
 

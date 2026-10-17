@@ -14,7 +14,7 @@ const actions = new Proxy({}, { get: () => () => Promise.resolve() }) as AppActi
 const today = localDateFromTimestamp(Date.now());
 
 describe('CalendarView (render smoke test)', () => {
-  it('shows 30 days with markers, today, the start date picker and separate streak/goal stats', () => {
+  it('shows 30 days with markers, today, the start date picker and separate streak, plan done and time logged stats', () => {
     const html = renderToStaticMarkup(<CalendarView state={defaultState(today)} actions={actions} />);
     expect(html.match(/class="cal-day/g)).toHaveLength(30);
     expect(html).toContain('cal-today');
@@ -22,7 +22,12 @@ describe('CalendarView (render smoke test)', () => {
     expect(html).toContain('Benchmark');
     expect(html).toContain('Program start (day 1)');
     expect(html).toContain('Streak');
-    expect(html).toContain('Daily goal met');
+    expect(html).toContain('Plan done');
+    expect(html).toContain('0 of 1 days');
+    expect(html).toContain("finished 80%+ of the day&#x27;s plan");
+    expect(html).toContain('Time logged');
+    expect(html).toContain('last 7 days · 0 min total');
+    expect(html).not.toContain('Daily goal met');
     expect(html).toContain('planned');
     // Overall progress and the per-day minutes bar.
     expect(html).toContain('Problems learned');
@@ -44,13 +49,16 @@ describe('CalendarView (render smoke test)', () => {
     expect(html).toContain('Contains Duplicate');
   });
 
-  it('shows done, carried and streak/goal flags for past days', () => {
+  it('shows done, carried and streak/plan done flags for past days', () => {
     const start = addDays(today, -2);
     let state = defaultState(start);
     state = simulateDay(state, start, { minutes: 45 }).state;
     const html = renderToStaticMarkup(<CalendarView state={state} actions={actions} />);
     expect(html).toContain('Streak day');
-    expect(html).toContain('Goal met');
+    expect(html).toContain('Plan done');
+    expect(html).not.toContain('Goal met');
+    expect(html).toContain('cal-day cal-past plan-done');
+    expect(html).toContain('Time logged');
     expect(html).toContain('carried');
   });
 });

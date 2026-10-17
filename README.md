@@ -80,7 +80,8 @@ you really need them.
 
 - **Toolbar icon** opens (or focuses) the dashboard.
 - **Dashboard** views: *Today* (plan, timers, outcome form, pace and streak), *Calendar* (program
-  progress, days 1–30 plus later review days with a minutes bar, a hover/focus popover per day with a
+  progress, streak, *Plan done* days (80%+ of a day's plan finished) and time logged, days 1–30 plus
+  later review days with a minutes bar, a hover/focus popover per day with a
   *projected* plan for future days, `Move…`), *Roadmap* (the 150 problems as a prerequisite **tree** or
   a **grid**, with progress counters and checkboxes), *Problem sheet* (notes, hints, attempt history,
   next review) and *Settings*.

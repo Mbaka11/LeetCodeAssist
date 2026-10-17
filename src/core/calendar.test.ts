@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { calendarDays, programProgress } from './calendar';
+import { createActivity } from './activities';
 import { materializePlan, planDay } from './planner';
-import { START, day, newState, simulateDay } from './testing';
+import { START, complete, day, newState, simulateDay } from './testing';
 import { applyOutcome } from './reviews';
+import type { Activity, ActivityType, AppState } from './types';
 
 describe('calendarDays', () => {
   it('lists days 1-30 with markers and a highlighted today', () => {
@@ -44,7 +46,7 @@ describe('calendarDays', () => {
     expect(first.loggedMinutes).toBe(first.doneCount * 40);
     expect(first.carriedCount).toBe(0);
     expect(first.streakQualified).toBe(true);
-    expect(first.goalMet).toBe(true);
+    expect(first.planDone).toBe(true);
     // Recalls scheduled for day 2 are part of day 2's plan (today).
     expect(days[1]!.entries.some((e) => e.type === 'recall' && e.state === 'open')).toBe(true);
     // Rebuilds are scheduled on day 4 (a future day): shown as open reviews.
@@ -88,12 +90,12 @@ describe('calendarDays', () => {
     expect(today.entries.filter((e) => e.state === 'carried')).toHaveLength(plan.carriedOver.length);
   });
 
-  it('keeps goal met and streak qualified as separate flags', () => {
-    // 4 activities x 10 minutes: counts for the streak (>= 30) but not for the 150 minute goal.
-    const state = simulateDay(newState(), day(1), { minutes: 10 }).state;
+  it('keeps plan done and streak qualified as separate flags', () => {
+    // Everything planned is done, but only 10 minutes in total: plan done without a streak day.
+    const state = simulateDay(newState(), day(1), { minutes: 2 }).state;
     const first = calendarDays(state, day(2))[0]!;
-    expect(first.streakQualified).toBe(true);
-    expect(first.goalMet).toBe(false);
+    expect(first.planDone).toBe(true);
+    expect(first.streakQualified).toBe(false);
   });
 
   it('adds overflow days that have reviews and today when it is past day 30', () => {
@@ -164,5 +166,126 @@ describe('programProgress', () => {
   it('clamps the elapsed days before the start and after day 30, and ignores non-program problems', () => {
     expect(programProgress(newState(), day(-5)).daysElapsed).toBe(0);
     expect(programProgress(newState(), day(45)).daysElapsed).toBe(30);
+  });
+});
+
+describe('plan done', () => {
+  interface Seed {
+    type: ActivityType;
+    slug: string;
+    status?: Activity['status'];
+    extra?: boolean;
+    postponed?: boolean;
+  }
+
+  /** State whose only activities are the given ones, all due on `date`; done ones completed on it. */
+  function stateWith(date: string, seeds: Seed[]): AppState {
+    const state = newState();
+    const activities: Activity[] = [];
+    for (const seed of seeds) {
+      const base = createActivity(activities, {
+        type: seed.type,
+        slug: seed.slug,
+        dueDate: date,
+        createdAt: date,
+        ...(seed.extra ? { extra: true } : {}),
+      });
+      const status = seed.status ?? 'planned';
+      activities.push({
+        ...base,
+        status,
+        ...(status === 'done' ? { completedAt: date, outcome: 'solo' as const, totalMs: 20 * 60_000 } : {}),
+        ...(seed.postponed ? { postponed: true } : {}),
+      });
+    }
+    return { ...state, activities };
+  }
+
+  const dayTwo = (state: AppState, today = day(3)) => calendarDays(state, today)[1]!;
+
+  it('is done when every core activity is done', () => {
+    const state = stateWith(day(2), [
+      { type: 'new', slug: 'two-sum', status: 'done' },
+      { type: 'new', slug: 'valid-anagram', status: 'done' },
+    ]);
+    expect(dayTwo(state)).toMatchObject({ coreCount: 2, coreDoneCount: 2, planDone: true });
+  });
+
+  it('is not done with one of two core activities done, and skipped ones count as not done', () => {
+    const open = stateWith(day(2), [
+      { type: 'new', slug: 'two-sum', status: 'done' },
+      { type: 'new', slug: 'valid-anagram' },
+    ]);
+    expect(dayTwo(open)).toMatchObject({ coreCount: 2, coreDoneCount: 1, planDone: false });
+    const skipped = stateWith(day(2), [
+      { type: 'new', slug: 'two-sum', status: 'done' },
+      { type: 'new', slug: 'valid-anagram', status: 'skipped' },
+    ]);
+    expect(dayTwo(skipped)).toMatchObject({ coreCount: 2, coreDoneCount: 1, planDone: false });
+  });
+
+  it('reaches 80% with four of five done', () => {
+    const state = stateWith(day(2), [
+      { type: 'benchmark', slug: 'two-sum', status: 'done' },
+      { type: 'benchmark', slug: 'valid-anagram', status: 'done' },
+      { type: 'resolve', slug: 'contains-duplicate', status: 'done' },
+      { type: 'resolve', slug: 'group-anagrams', status: 'done' },
+      { type: 'resolve', slug: 'top-k-frequent-elements' },
+    ]);
+    expect(dayTwo(state)).toMatchObject({ coreCount: 5, coreDoneCount: 4, planDone: true });
+  });
+
+  it('leaves out the unstarted bonus, postponed problems and optional practice', () => {
+    const state = stateWith(day(2), [
+      { type: 'new', slug: 'two-sum', status: 'done' },
+      { type: 'new', slug: 'valid-anagram', status: 'done' },
+      { type: 'new', slug: 'contains-duplicate' }, // unstarted third problem: the bonus
+      { type: 'new', slug: 'group-anagrams', status: 'skipped', postponed: true },
+      { type: 'blind', slug: 'two-sum', status: 'done', extra: true },
+      { type: 'blind', slug: 'valid-anagram', extra: true },
+    ]);
+    expect(dayTwo(state)).toMatchObject({ coreCount: 2, coreDoneCount: 2, planDone: true });
+  });
+
+  it('is neither done nor counted on a day without core activities', () => {
+    const empty = dayTwo(newState());
+    expect(empty).toMatchObject({ coreCount: 0, coreDoneCount: 0, planDone: false });
+    const onlyOptional = stateWith(day(2), [{ type: 'blind', slug: 'two-sum', status: 'done', extra: true }]);
+    expect(dayTwo(onlyOptional)).toMatchObject({ coreCount: 0, planDone: false });
+  });
+
+  it('counts a day with only the benchmark pair', () => {
+    const pair = [
+      { type: 'benchmark' as const, slug: 'contains-duplicate' },
+      { type: 'benchmark' as const, slug: 'two-sum' },
+    ];
+    const half = stateWith(day(2), [{ ...pair[0]!, status: 'done' as const }, pair[1]!]);
+    expect(dayTwo(half)).toMatchObject({ coreCount: 2, coreDoneCount: 1, planDone: false });
+    const both = stateWith(day(2), pair.map((p) => ({ ...p, status: 'done' as const })));
+    expect(dayTwo(both)).toMatchObject({ coreCount: 2, coreDoneCount: 2, planDone: true });
+  });
+
+  it('judges the current day by its progress so far, and never a future day', () => {
+    const fresh = calendarDays(newState(), day(1))[0]!;
+    expect(fresh).toMatchObject({ kind: 'today', planDone: false });
+    expect(fresh.coreCount).toBeGreaterThan(0);
+    expect(fresh.coreDoneCount).toBe(0);
+    const done = simulateDay(newState(), day(1)).state;
+    const today = calendarDays(done, day(1))[0]!;
+    expect(today).toMatchObject({ kind: 'today', planDone: true });
+    expect(today.coreDoneCount).toBe(today.coreCount);
+    const future = calendarDays(newState(), day(1))[1]!;
+    expect(future).toMatchObject({ kind: 'future', coreCount: 0, planDone: false });
+  });
+
+  it('does not count a review finished after its day', () => {
+    let state = simulateDay(newState(), day(1)).state;
+    const plan3 = planDay(state, day(3));
+    state = materializePlan(state, plan3);
+    const late = plan3.items.find((i) => i.activity.type === 'recall' && i.activity.dueDate === day(2))!;
+    state = complete(state, late.activity.id, 'solo', day(3));
+    const second = calendarDays(state, day(3))[1]!;
+    expect(second.coreDoneCount).toBe(0);
+    expect(second.planDone).toBe(false);
   });
 });

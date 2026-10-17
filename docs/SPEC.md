@@ -142,7 +142,11 @@ key, versioned), JSON export/import from Settings.
    - **Calendar**: an overall progress header (program problems learned *x*/53 and days elapsed
      *d*/30), start date picker, days 1–30 (+ overflow), planned/done/carried counts and minutes per
      day with a small minutes bar per cell, streak (≥ 1 activity done and ≥ 30 min logged) separate
-     from "daily goal met". **Hovering or focusing** a day opens a popover (not a `title`) listing its
+     from **Plan done** (a past or current day whose *core* activities are ≥ 80% done: activities
+     due that day that are not optional practice, the bonus or postponed; skipped ones count as not
+     done; a day without core activities is neither done nor missed; the stats tile reads "*n* of *m*
+     days" over the elapsed days that had core activities, and done days carry a *Plan done* badge),
+     and a **Time logged** tile (total over the last 7 days, all-time total as hint). **Hovering or focusing** a day opens a popover (not a `title`) listing its
      activities (type, problem, estimated minutes, total); Escape closes it. For **future** days the
      popover is a **projection** labelled *projected*: the pure planner is run day by day from today,
      assuming every planned activity is done solo on budget and nothing else changes
