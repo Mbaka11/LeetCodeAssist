@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityCard, type CardVariant } from '../components/ActivityCard';
 import { AttemptHistory } from '../components/AttemptHistory';
 import { Badge } from '../components/Badge';
@@ -235,6 +235,13 @@ export function ProblemPanel({
 }: ProblemPanelProps) {
   const today = localDateFromTimestamp(now);
   const plan = useMemo(() => planDay(state, today), [state, today]);
+  const needsMaterializing =
+    plan.items.some((item) => !item.persisted) || plan.bonuses.some((item) => !item.persisted);
+  useEffect(() => {
+    // Keep offers sticky even when the side panel is the only surface open. The shared store locks
+    // this update against the dashboard, and materializing an existing plan is a no-op.
+    if (needsMaterializing) actions.materializeToday().catch(console.error);
+  }, [needsMaterializing, actions, state, today]);
 
   if (slug === null) {
     return (

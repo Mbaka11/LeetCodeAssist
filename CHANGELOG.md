@@ -35,7 +35,8 @@ fields are optional, so data saved by earlier versions keeps working.
 ### Changed
 - **Compact Calendar.** The overview and the LeetCode streak card now sit side by side in one summary row
   (from 1000 px wide, stacked below that) and the day grid follows directly, so the first row of days is visible
-  on a 1366×768 or 1440×900 window. The streak card is compact (Current / Longest / Active days, a 16-week heat
+  in the tested 1366×768 and 1440×900 viewports (actual visibility depends on zoom and window size). The streak
+  card is compact (Current / Longest / Active days, a 16-week heat
   grid, Refresh, username and *Updated* in one footer; UTC days, error and paused-refresh behaviour unchanged).
   Explanations and the start date editor moved behind *How these are counted* and *Change start date*. Today is
   the default day detail.
@@ -51,6 +52,8 @@ fields are optional, so data saved by earlier versions keeps working.
 - A bonus problem skipped on a later day is now dated to the day it was skipped (Calendar and Logs) instead of
   the day it was first offered. Retired older duplicates are re-dated the same way; nothing is deleted.
 - The time-impact line of a bonus offer now also counts a bonus problem that is already running.
+- The side panel now persists and replenishes offers even when Today is never opened. Pending offers keep
+  their IDs across midnight and neither a reload nor another surface creates duplicates.
 
 ### Notes
 - Layout was checked in a headless Chrome with mocked extension APIs, not in a live extension install. The
