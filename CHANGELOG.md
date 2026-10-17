@@ -3,6 +3,41 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.5.0
+
+### Added
+- **Accepted detection (passive):** a content script watches the submit and result responses LeetCode
+  already makes in your own browser. When a problem you have in progress is Accepted, the side panel
+  offers "Accepted at 23:14 (Python3) — finish this activity?" with the number of earlier failed
+  attempts. It pre-fills the finish form (time from the timer, Solo only when no hint was used) and never
+  completes anything for you. Only the verdict text, language, problem and time are kept (last 200
+  events, on this device). Settings has a "LeetCode detection" card (switch, diagnostics, clear events,
+  privacy note). The contract is inferred and not live-verified: see `docs/leetcode-api.md`.
+- **LeetCode submission streak:** an optional LeetCode username (Settings) powers a card on the Calendar
+  page: current and longest streak, active days this year and a 16-week heat grid, computed locally from
+  your public submission calendar (UTC days). Anonymous request with timeout and size limit, no retries,
+  at most hourly plus a Refresh button; a 429 or access-denied answer pauses it for 15 minutes.
+- **Timer colours:** green under 75% of the budget, amber ("near limit") up to 100% and red
+  ("over budget") beyond, neutral when paused, always with an icon and text. New problems also show
+  help-ladder cues at 15 min (consider a hint) and 35 min (read the solution, then re-code it).
+
+### Changed
+- **Shorter default review budgets** (Easy / Medium / Hard, minutes): recall 5/8/10, rebuild 10/15/18,
+  retry 10/15/18, resolve 15/25/30, blind 15/20/25; new problems stay 25/40/50. The 0.4.0 values made
+  the plan impossible to finish. Settings overrides still apply.
+- **Every free Easy problem is in the program**: 9 added (linked list cycle, diameter of binary tree,
+  subtree of another tree, plus one, single number, number of 1 bits, counting bits, reverse bits,
+  missing number); Meeting Rooms is Premium and left out. The queue is now **50 problems with no Hard**;
+  both Hards were removed.
+- Ten Mediums that no longer fit in 30 days moved to the front of their category in the bonus pool
+  (generate parentheses, word search, clone graph, house robber II, longest palindromic substring,
+  decode ways, word break, jump game II, gas station, insert interval). The pool has 28 problems.
+- **Soft overflow:** a normal day adds a third new problem when the next one is Easy and the day stays
+  within the cap + 30 min. All 50 problems are introduced by day 29 with reviews on time. A problem
+  postponed or skipped today is not offered again the same day.
+- Pace and every "x/N" counter use the real queue length instead of a fixed 53. Following a third-Easy
+  day reads "+1 ahead" until day 30.
+
 ## 0.4.0
 
 ### Added

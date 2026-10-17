@@ -37,13 +37,15 @@ measure progress. Benchmark problems are reserved and never appear in the learni
 - Default target **150 min**, hard planning cap **180 min** (both configurable in Settings).
 - **Consolidation days 7, 14, 21 and 28**: no new problems, target **90 min** (reviews, failed
   items and "blind" mixed practice).
-- A normal day has **2 new problems**. After them (also on consolidation days and after day 30) an
+- A normal day has **2 new problems**, plus a third when the next one is an Easy and the day stays within
+  the cap + 30 min (soft overflow). After them (also on consolidation days and after day 30) an
   optional **bonus** is offered if the plan stays under the cap. It never becomes debt.
-- The bonus comes from a separate **bonus pool** of about 20 extra NeetCode 150 problems outside the
-  53-problem program (Tries, Math & Geometry, 2-D DP, Bit Manipulation and more), in a fixed order with
+- The bonus comes from a separate **bonus pool** of 28 extra NeetCode 150 problems outside the
+  50-problem program (Tries, Math & Geometry, 2-D DP, Bit Manipulation, plus the Mediums that did not fit the 30 days), in a fixed order with
   hints. Finishing one starts the normal review cycle and counts as worked in the roadmap, but it does
   **not** count toward your pace or the program counter, and it never uses up the program queue.
-- New problems come from an ordered queue (about 50 problems in NeetCode roadmap order), not
+- New problems come from an ordered queue (50 problems in NeetCode roadmap order, **every free Easy
+  problem**, no Hard), not
   from fixed dates, so a missed day never produces an impossible day. Reviews are never dropped:
   what does not fit under the cap is carried over to the next days.
 
@@ -55,11 +57,11 @@ are counted from the day the `new` activity was actually completed.
 | Type | When | What to do | Budget Easy / Medium / Hard (min) |
 |---|---|---|---:|
 | `new` | from the queue | Search, code, understand, write notes. Hint at 15–20 min without an approach; read the solution at 35–45 min, then re-code it from memory. | 25 / 40 / 50 |
-| `recall` | done + 1 day | Without notes: state the approach, why it works, time and space complexity. | 5 / 15 / 20 |
-| `rebuild` | done + 3 days | Rebuild the algorithm in pseudocode or code, check edge cases. | 10 / 20 / 25 |
-| `resolve` | done + 7 days | Solve from a blank editor: no hints, no old solution. | 15 / 30 / 40 |
-| `blind` | done + 21 days | Solve with the category hidden. Solved alone means **mastered**. | 15 / 25 / 35 |
-| `retry` | the day after a failed review | Targeted redo. | 10 / 20 / 25 |
+| `recall` | done + 1 day | Without notes: state the approach, why it works, time and space complexity. | 5 / 8 / 10 |
+| `rebuild` | done + 3 days | Rebuild the algorithm in pseudocode or code, check edge cases. | 10 / 15 / 18 |
+| `resolve` | done + 7 days | Solve from a blank editor: no hints, no old solution. | 15 / 25 / 30 |
+| `blind` | done + 21 days | Solve with the category hidden. Solved alone means **mastered**. | 15 / 20 / 25 |
+| `retry` | the day after a failed review | Targeted redo. | 10 / 15 / 18 |
 | `benchmark` | days 1, 15, 30 | Timed, unseen Easy + Medium. | 30 per problem (60) |
 
 Budgets depend on the problem's difficulty. These are the defaults; you can change every cell in
@@ -154,6 +156,22 @@ are covered by unit tests; storage and the background worker are tested against 
 - `src/dashboard/`, `src/sidepanel/` – the two UIs.
 - `src/entrypoints/` – WXT entrypoints (dashboard, side panel, background worker).
 - `scripts/` – icon generator.
+
+## LeetCode features and privacy
+
+- **Accepted detection (optional, on by default):** when you submit on leetcode.com the side panel can
+  notice "Accepted" and offer to finish the matching activity. You always confirm the outcome. Turn it
+  off or clear the detected events in **Settings → LeetCode detection**. The observer reads only the
+  verdict, language, problem and time of your own submissions: never your code, cookies or headers.
+- **LeetCode streak:** add your LeetCode username in **Settings** to see your submission streak and a
+  16-week heat grid on the Calendar page. It makes one anonymous request to leetcode.com per refresh
+  (at most hourly) and only reads your public profile calendar.
+- **Coloured timers:** green, amber ("near limit") and red ("over budget") against the budget on the
+  card, plus help-ladder cues at 15 and 35 minutes on new problems.
+- Both LeetCode features rely on endpoints that are not publicly documented. They are inferred and
+  **not live-verified**; see [`docs/leetcode-api.md`](docs/leetcode-api.md). If nothing is detected,
+  everything still works manually. No new permissions are used and the content scripts run on
+  `https://leetcode.com/problems/*` only. *Reset all data* clears these keys.
 
 ## Your data and backups
 
