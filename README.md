@@ -52,15 +52,19 @@ measure progress. Benchmark problems are reserved and never appear in the learni
 Every activity ends with an outcome: **solo**, **hint**, **solution** or **stuck**. Review dates
 are counted from the day the `new` activity was actually completed.
 
-| Type | When | What to do | Budget |
+| Type | When | What to do | Budget Easy / Medium / Hard (min) |
 |---|---|---|---:|
-| `new` | from the queue | Search, code, understand, write notes. Hint at 15–20 min without an approach; read the solution at 35–45 min, then re-code it from memory. | Easy 25 / Medium 40 min |
-| `recall` | done + 1 day | Without notes: state the approach, why it works, time and space complexity. | 5 min |
-| `rebuild` | done + 3 days | Rebuild the algorithm in pseudocode or code, check edge cases. | 10 min |
-| `resolve` | done + 7 days | Solve from a blank editor: no hints, no old solution. | 20 min |
-| `blind` | done + 21 days | Solve with the category hidden. Solved alone means **mastered**. | 15 min |
-| `retry` | the day after a failed review | Targeted redo. | 15 min |
-| `benchmark` | days 1, 15, 30 | Timed, unseen Easy + Medium. | 60 min |
+| `new` | from the queue | Search, code, understand, write notes. Hint at 15–20 min without an approach; read the solution at 35–45 min, then re-code it from memory. | 25 / 40 / 50 |
+| `recall` | done + 1 day | Without notes: state the approach, why it works, time and space complexity. | 5 / 15 / 20 |
+| `rebuild` | done + 3 days | Rebuild the algorithm in pseudocode or code, check edge cases. | 10 / 20 / 25 |
+| `resolve` | done + 7 days | Solve from a blank editor: no hints, no old solution. | 15 / 30 / 40 |
+| `blind` | done + 21 days | Solve with the category hidden. Solved alone means **mastered**. | 15 / 25 / 35 |
+| `retry` | the day after a failed review | Targeted redo. | 10 / 20 / 25 |
+| `benchmark` | days 1, 15, 30 | Timed, unseen Easy + Medium. | 30 per problem (60) |
+
+Budgets depend on the problem's difficulty. These are the defaults; you can change every cell in
+**Settings → Time budgets** (whole minutes, 1–180, with a *Reset to defaults* button). The plan, the
+calendar, the reminders and the cards all follow your values.
 
 A failed `recall` or `rebuild` (solution/stuck) schedules a `retry` for the next day. A
 `resolve` that is not solved alone puts the problem back to *consolidating* and schedules a new
@@ -88,7 +92,8 @@ you really need them.
   later review days with a minutes bar, a hover/focus popover per day with a
   *projected* plan for future days, `Move…`), *Roadmap* (the 150 problems as a prerequisite **tree** or
   a **grid**, with progress counters and checkboxes), *Problem sheet* (notes, hints, attempt history,
-  next review) and *Settings*.
+  next review), *Logs* (a filterable table of every completed or skipped activity with time against
+  budget, a summary row and CSV export) and *Settings*.
 - **Side panel**: one global panel per window that stays open across tabs. On a leetcode.com problem
   page it shows the problem (difficulty, category, program position), today's activity with its
   instruction and timer, hints, the outcome form, notes, attempt history and the next review date. On
@@ -140,7 +145,7 @@ are covered by unit tests; storage and the background worker are tested against 
 ### Layout
 
 - `src/core/` – pure TypeScript (no browser APIs): types, dates, timer, review cycle, planner,
-  projection, queue, calendar, roadmap tree layout, state.
+  projection, queue, calendar, roadmap tree layout, state, logs.
 - `src/data/` – static NeetCode 150 list, roadmap categories, the 30-day program (queue,
   benchmarks), the bonus pool and the three-level hints.
 - `src/lib/` – storage, commands and actions, reminders and background tasks, URL and side panel

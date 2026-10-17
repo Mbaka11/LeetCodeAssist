@@ -3,6 +3,27 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.4.0
+
+### Added
+- **Logs page** (`#/logs`, nav entry *Logs*): a table of every completed or skipped activity, newest first,
+  with date, program day, type, problem (linked to its sheet) and difficulty, category, logged time,
+  approach time, budget, delta against the budget, outcome, hints used and status (done, skipped,
+  postponed). Filter by type, difficulty, outcome, category, date range and title search. A summary row
+  shows the count, total time, average time against budget and the solo rate for the filtered set, and
+  *Export CSV* downloads the filtered rows.
+- **Editable time budgets**: Settings has a compact table (activity type by Easy / Medium / Hard) with a
+  *Reset to defaults* button. Overrides are stored as the optional `settings.budgets` (integers 1-180);
+  saved data without it keeps working and uses the defaults.
+
+### Changed
+- **Review budgets depend on difficulty**. Defaults in minutes (Easy / Medium / Hard): recall 5 / 15 / 20,
+  rebuild 10 / 20 / 25, retry 10 / 20 / 25, re-solve 15 / 30 / 40, blind 15 / 25 / 35, new 25 / 40 / 50
+  (a Hard new problem is now 50 instead of 40). Benchmarks stay at 30 per problem. Longer reviews mean
+  fuller days, so fewer carried-over reviews fit under the cap and the planner may offer the bonus less
+  often. Every consumer (planner, projection, calendar, reminders, cards) uses one function, so overrides
+  apply everywhere.
+
 ## 0.3.0
 
 ### Added

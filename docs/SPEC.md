@@ -1,4 +1,4 @@
-# LeetCode Assist — Product & Technical Spec (v1, extension 0.2)
+# LeetCode Assist — Product & Technical Spec (v1, extension 0.4)
 
 A Chrome extension (Manifest V3) that runs a **30-day LeetCode bootcamp** built on the
 **NeetCode 150** roadmap. You open it and it tells you exactly what to do today:
@@ -33,15 +33,22 @@ Benchmark problems are reserved and never appear in the learning queue.
 
 ## 3. Activity types & review cycle
 
-| Type | When | Instruction | Budget |
+| Type | When | Instruction | Budget Easy / Medium / Hard (min) |
 |---|---|---|---:|
-| `new` | queue | Search, code, understand, write notes. Help ladder: hint at 15–20 min without an approach, read the solution at 35–45 min then **re-code it from memory**. | Easy 25 / Medium 40 |
-| `recall` | done + 1 day | Without notes: state the approach, why it works, time/space complexity. | 5 |
-| `rebuild` | done + 3 days | Rebuild the algorithm in pseudocode or code, check edge cases. | 10 |
-| `resolve` | done + 7 days | Solve from a blank editor, no hints, no old solution. | 20 |
-| `blind` | done + 21 days | Solve with the category hidden. Solved alone ⇒ **mastered**. | 15 |
-| `retry` | next day after a failure | Targeted redo of a failed review. | 15 |
-| `benchmark` | days 1, 15, 30 | Timed unseen Easy + Medium. Once done, each problem enters the normal review cycle (D+1/3/7/21) like a `new` problem. | 60 |
+| `new` | queue | Search, code, understand, write notes. Help ladder: hint at 15–20 min without an approach, read the solution at 35–45 min then **re-code it from memory**. | 25 / 40 / 50 |
+| `recall` | done + 1 day | Without notes: state the approach, why it works, time/space complexity. | 5 / 15 / 20 |
+| `rebuild` | done + 3 days | Rebuild the algorithm in pseudocode or code, check edge cases. | 10 / 20 / 25 |
+| `resolve` | done + 7 days | Solve from a blank editor, no hints, no old solution. | 15 / 30 / 40 |
+| `blind` | done + 21 days | Solve with the category hidden. Solved alone ⇒ **mastered**. | 15 / 25 / 35 |
+| `retry` | next day after a failure | Targeted redo of a failed review. | 10 / 20 / 25 |
+| `benchmark` | days 1, 15, 30 | Timed unseen Easy + Medium. Once done, each problem enters the normal review cycle (D+1/3/7/21) like a `new` problem. | 30 per problem (60 for the pair) |
+
+**Budgets depend on the problem difficulty.** A problem outside NeetCode 150 counts as Medium. The values
+above are the defaults (`DEFAULT_BUDGETS`, `src/core/activities.ts`); the user can override any cell in
+Settings (`settings.budgets`, integers 1–180). Every consumer (planner time totals and cap, projection,
+calendar, reminders and the cards in the UI) gets its minutes from the single function
+`estimatedMinutes(type, slug, settings.budgets)`, so an override applies everywhere. Benchmarks keep their
+flat budget. Changing a budget changes the plan from then on; history is never rewritten.
 
 **Offsets are computed from the date the `new` activity was actually completed**, not the
 planned date. Every later stage is scheduled from the actual completion of the previous
@@ -129,13 +136,15 @@ interface Note { slug: string; trigger: string /*"Click"*/; principle: string; p
   complexity: string; code?: string; updatedAt: string }
 interface Settings { startDate: string; dailyTargetMin: number; dailyCapMin: number;
   morningNotify: string /*"08:30"*/; eveningNotify: string /*"20:00"*/; language: 'python';
-  roadmapView?: 'tree'|'grid' }   // absent = 'tree'
+  roadmapView?: 'tree'|'grid';    // absent = 'tree'
+  budgets?: BudgetOverrides }     // partial minutes per type and difficulty; absent = defaults
+type BudgetOverrides = { [T in Exclude<ActivityType,'benchmark'>]?: Partial<Record<Difficulty, number>> }
 interface AppState { version: 1; settings: Settings; activities: Activity[];
   notes: Record<string, Note>; problemStatus: Record<string, ProblemStatus>; checked: Record<string, boolean>;
   queue?: string[] }               // saved queue order after postponing; absent = PROGRAM_QUEUE
 ```
 
-`hintsUsed`, `postponed`, `roadmapView` and `queue` are optional and additive: data saved by 0.1 stays
+`hintsUsed`, `postponed`, `roadmapView`, `budgets` and `queue` are optional and additive: data saved by 0.1 stays
 valid, so `version` remains `1`.
 
 The timer is derived from timestamps (`accumulatedMs + (now - startedAt)`), never from tick counting.
@@ -169,10 +178,19 @@ key, versioned), JSON export/import from Settings.
      selecting a node lists its problems below (checkbox, status pill, program/benchmark/bonus badges,
      LeetCode link). *Grid* is the earlier card layout: per category "worked / solo in review /
      consolidating", Easy/Medium/Hard counters (x/150), check boxes, program items badged.
+   - **Logs**: a table of every completed or skipped activity, newest first: date, program day, type,
+     problem (link to its sheet) with difficulty, category, logged time, approach time, budget, delta
+     versus budget, outcome, hints used and status (done, skipped or postponed). Skipped rows show the due
+     date; the budget is the *current* budget (including overrides), also for older rows. Filters: type,
+     difficulty, outcome, category, date range and free-text search on the title. A summary row covers the
+     filtered set: count, total time, average time against average budget, and the solo rate (share of
+     done rows with outcome `solo`). *Export CSV* downloads the filtered rows. Filtering, summary and CSV
+     are pure helpers in `src/core/logs.ts`.
    - **Problem sheet**: program position, notes (Trigger, Principle, Pitfall, Complexity, Python
      snippet), hints, attempt history (type, duration, approach time, hints used, outcome), next review.
      During review activities notes are **hidden until the user clicks "Reveal"**.
-   - **Settings**: start date, budgets, notification times, export/import/reset.
+   - **Settings**: start date, daily target and cap, notification times, a compact **time budgets** table
+     (rows = activity types, columns = Easy / Medium / Hard, *Reset to defaults*), export/import/reset.
 2. **Side panel** (`chrome.sidePanel`): one **global** panel per window. The service worker calls
    `setOptions({ path, enabled: true })` once (no per-tab enabling), so the panel stays open while
    the user switches or opens tabs and follows the active tab's URL.
