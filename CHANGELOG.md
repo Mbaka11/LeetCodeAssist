@@ -3,7 +3,7 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
-## 0.3.0 (unreleased)
+## 0.3.0
 
 ### Added
 - **Bonus pool**: the optional bonus is now taken from a separate pool of about 20 extra NeetCode 150
