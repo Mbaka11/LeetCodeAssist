@@ -12,6 +12,7 @@ import { programQueue, queuePosition } from '../core/queue';
 import { getProblemStatus } from '../core/state';
 import type { AppState } from '../core/types';
 import { getProblem, problemUrl } from '../data/neetcode150';
+import { isBonusProblem } from '../data/bonus';
 import { BENCHMARKS } from '../data/program';
 import type { AppActions } from '../lib/actions';
 import { formatDate } from '../lib/format';
@@ -60,6 +61,7 @@ export function ProblemView({
         <Badge tone={STATUS_TONES[status]}>{STATUS_LABELS[status]}</Badge>
         {position !== null ? <Badge>30-day program</Badge> : null}
         {inBenchmark ? <Badge tone="benchmark">Benchmark</Badge> : null}
+        {isBonusProblem(slug) ? <Badge tone="warn">Bonus</Badge> : null}
       </div>
 
       <Card>
@@ -72,7 +74,9 @@ export function ProblemView({
           <dd>
             {position !== null
               ? `${position} of ${programQueue(state).length}`
-              : 'Not in the 30-day program'}
+              : isBonusProblem(slug)
+                ? 'Bonus problem (not in the 30-day program)'
+                : 'Not in the 30-day program'}
           </dd>
           <dt>Next review</dt>
           <dd>

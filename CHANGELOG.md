@@ -5,6 +5,15 @@ fields are optional, so data saved by earlier versions keeps working.
 
 ## 0.3.0 (unreleased)
 
+### Added
+- **Bonus pool**: the optional bonus is now taken from a separate pool of about 20 extra NeetCode 150
+  problems outside the 53-problem program (Stack, Binary Search, Trees, Heap, Tries, Graphs, 2-D DP,
+  Intervals, Math & Geometry, Bit Manipulation and more), with three-level hints. It is offered after the
+  day's own problems when it fits under the cap, also on consolidation days and after day 30. A finished
+  bonus starts the normal review cycle and counts as worked in the roadmap, but not toward pace or the
+  program counter, and it no longer uses up the program queue. Bonus problems carry a **Bonus** badge
+  (Today, side panel, Calendar, roadmap, problem sheet) and can be skipped, not postponed.
+
 ### Changed
 - **Calendar**: the "Daily goal met" indicator is replaced by **Plan done**: a day counts when at least
   80% of its core activities (due that day, excluding optional practice, the bonus and postponed

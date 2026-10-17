@@ -1,5 +1,5 @@
 /**
- * Three-level help ladder for every program and benchmark problem, keyed by LeetCode slug.
+ * Three-level help ladder for every program, benchmark and bonus-pool problem, keyed by LeetCode slug.
  * Level 1 names the technique family, level 2 gives the key observation, level 3 outlines
  * the algorithm with target complexity. No code, so the user can still write it themselves.
  */
@@ -455,6 +455,155 @@ export const HINTS: Record<string, Hint> = {
       'After sorting by end time, always keeping the interval that finishes earliest leaves the most room for later ones, so the minimum removals equal the total count minus the maximum number of non-overlapping intervals.',
     sketch:
       '1) Sort the intervals by end. 2) Keep the end of the last chosen interval. 3) For each interval, if its start is >= that end, keep it and update the end. 4) Otherwise count it as removed. Time O(n log n), space O(1) beyond sorting.',
+  },
+
+  // ---- Bonus pool ----
+  'evaluate-reverse-polish-notation': {
+    nudge: 'Each operator works on the values produced just before it: which structure hands back the most recent items first?',
+    insight:
+      'In postfix notation an operator always applies to the two most recent results, and its own result then becomes an operand for something later, so only the latest values ever matter.',
+    sketch:
+      '1) Scan the tokens left to right. 2) Push every number. 3) For an operator, pop the right operand first, then the left one, apply the operator and push the result. 4) Division truncates toward zero. 5) The single value left on the stack is the answer. Time O(n), space O(n).',
+  },
+  'car-fleet': {
+    nudge: 'Sort the cars by how close they are to the target, then compare arrival times from the front of the road backwards.',
+    insight:
+      'A car can never pass the one ahead; it can only catch up and then move at that car\'s pace. So going from the car nearest the target, a car starts a new fleet only if it would arrive later than the fleet ahead.',
+    sketch:
+      '1) Pair each position with its speed and sort by position, nearest to the target first. 2) Compute each car\'s arrival time as (target - position) / speed. 3) Remember the arrival time of the last fleet. 4) A car with a larger time starts a new fleet; otherwise it merges into the one ahead. 5) Return the fleet count. Time O(n log n), space O(n).',
+  },
+  'koko-eating-bananas': {
+    nudge: 'Instead of searching the piles, search over the answer itself: does the eating speed have a clean yes/no threshold?',
+    insight:
+      'If Koko can finish at speed k she can also finish at every faster speed, so feasibility flips exactly once; the hours needed at a given speed are the sum of ceil(pile / k) over the piles.',
+    sketch:
+      '1) The speed lies between 1 and the largest pile. 2) Binary search that range. 3) For a candidate k, add up ceil(pile / k) for all piles. 4) If the total is within h hours, k works so try a smaller one; otherwise try a larger one. 5) Return the smallest working k. Time O(n log m) for largest pile m, space O(1).',
+  },
+  'search-in-rotated-sorted-array': {
+    nudge: 'A rotated sorted array is still partly ordered everywhere: a binary search that first works out which half is in order.',
+    insight:
+      'Whatever the pivot position, at least one side of the middle is a normally sorted run. You can test whether the target lies inside that run, and if it does not, it can only be in the other half.',
+    sketch:
+      '1) Keep lo and hi. 2) Take mid and return it if it holds the target. 3) If nums[lo] <= nums[mid] the left half is sorted: keep it when the target is in [nums[lo], nums[mid]), otherwise go right. 4) Else the right half is sorted: apply the mirrored check. 5) Return -1 once the range is empty. Time O(log n), space O(1).',
+  },
+  'diameter-of-binary-tree': {
+    nudge: 'A post-order recursion where each call hands one value to its parent while a separate variable collects the real answer.',
+    insight:
+      'The longest path that bends at a node is its left height plus its right height, and the best path overall bends at some node, so looking at every node once is enough.',
+    sketch:
+      '1) Write a recursive height function; an empty node has height 0. 2) For a node, get the heights of both children. 3) Update the best diameter with left + right, which counts edges. 4) Return 1 + max(left, right) to the parent. 5) Return the best value at the end. Time O(n), space O(h) for tree height h.',
+  },
+  'validate-binary-search-tree': {
+    nudge: 'Comparing a node only with its children is not enough; think about passing limits down the recursion, or about an ordered traversal.',
+    insight:
+      'Every node must lie strictly between the bounds set by all of its ancestors. Equivalently, an inorder walk of a valid search tree produces strictly increasing values.',
+    sketch:
+      '1) Recurse with an open interval (low, high), starting with no limits. 2) A node outside the interval makes the tree invalid. 3) Go left with high set to the node value and right with low set to it. 4) An empty subtree is valid. 5) Alternatively walk inorder and compare each value with the previous one. Time O(n), space O(h).',
+  },
+  'kth-smallest-element-in-a-bst': {
+    nudge: 'A search tree already stores its values in order: which traversal reads them from smallest to largest?',
+    insight:
+      'An inorder traversal visits the values of a search tree in sorted order, so the k-th node visited is the answer and you can stop right there.',
+    sketch:
+      '1) Walk inorder with an explicit stack: go left as far as possible, pushing nodes. 2) Pop a node and count it. 3) When the count reaches k, return its value. 4) Otherwise continue with the right child. Time O(h + k), space O(h).',
+  },
+  'kth-largest-element-in-an-array': {
+    nudge: 'A full sort does more work than needed: think of a heap that only keeps a few elements, or a partition-based selection.',
+    insight:
+      'Only the k largest values seen so far matter, and the smallest of those k is the k-th largest overall, so a min-heap capped at size k has the answer on top at all times.',
+    sketch:
+      '1) Start with an empty min-heap. 2) Push each number and pop the smallest whenever the size exceeds k. 3) After the scan the top of the heap is the k-th largest. 4) Quickselect is the alternative, with average linear time. Time O(n log k), space O(k).',
+  },
+  'task-scheduler': {
+    nudge: 'The most frequent task decides how much waiting is forced: count frequencies, then think greedy with a heap or a counting formula.',
+    insight:
+      'The most frequent task creates frames of length n + 1 between its repeats, and the other tasks fill the gaps. Idle slots appear only when the gaps stay unfilled, and the answer is never smaller than the number of tasks.',
+    sketch:
+      '1) Count the tasks and find the highest frequency f and how many tasks share it, c. 2) The frames give (f - 1) * (n + 1) + c slots. 3) Return the larger of that value and the total number of tasks. 4) Alternatively simulate with a max-heap and a cooldown queue. Time O(n), space O(1) for 26 letters.',
+  },
+  'subsets-ii': {
+    nudge: 'The same take-or-skip backtracking as for plain subsets, plus a way to avoid building an identical subset twice: sort first.',
+    insight:
+      'After sorting, equal values sit side by side. At one level of the recursion, trying a value equal to the one just tried there would repeat a subset, so each distinct value is chosen once per level.',
+    sketch:
+      '1) Sort the numbers. 2) Recurse with a start index and the current path, recording a copy of the path at every call. 3) Loop i from start and skip i when i > start and nums[i] equals nums[i - 1]. 4) Push nums[i], recurse with i + 1, then pop. Time O(n * 2^n), space O(n) besides the output.',
+  },
+  'implement-trie-prefix-tree': {
+    nudge: 'A tree in which each edge is a letter and a path from the root spells a prefix: nodes with children keyed by character.',
+    insight:
+      'Words that share a prefix share a path, so every operation walks one node per character. Only a flag on the last node tells a complete word apart from a mere prefix.',
+    sketch:
+      '1) A node holds a map of children and an end-of-word flag. 2) insert walks the word, creating missing children, and sets the flag on the last node. 3) search walks the word and requires the flag. 4) startsWith walks the prefix and only requires that the path exists. Time O(L) per call for length L, space O(total characters).',
+  },
+  'design-add-and-search-words-data-structure': {
+    nudge: 'A prefix tree again, but one search symbol matches any letter: how should the search branch when it meets it?',
+    insight:
+      'Insertion is identical to an ordinary trie. At a wildcard any child could continue the match, so the search tries all of them recursively, while a normal letter follows exactly one edge.',
+    sketch:
+      '1) Build a trie with an end-of-word flag. 2) addWord inserts as usual. 3) search uses a recursive helper over a node and a position. 4) A letter moves to that child or fails if it is missing. 5) A dot tries every child. 6) At the end of the pattern require the flag. Time O(L) to add; search is O(L) without dots and can branch heavily with many of them. Space O(total characters).',
+  },
+  'word-search-ii': {
+    nudge: 'Searching for each word separately repeats work; store the words in a prefix structure and explore the grid once with backtracking.',
+    insight:
+      'A path in the grid can be abandoned as soon as it is not a prefix of any word, and a trie of all the words answers that question at each step. Clearing found words keeps results unique and later searches quick.',
+    sketch:
+      '1) Insert every word into a trie and store the whole word at its final node. 2) Start a DFS from each cell, following the trie child for each letter. 3) Mark the cell as visited while exploring and restore it afterwards. 4) When a node holds a word, add it to the results and clear it. 5) Optionally prune exhausted branches. Time about O(m * n * 4^L) worst case, space O(total word characters).',
+  },
+  'rotting-oranges': {
+    nudge: 'Something spreads outward one step per minute from several starting points at once: a multi-source breadth-first search.',
+    insight:
+      'All rotten oranges spread during the same minute, so put every initial rotten cell in the queue together and process it level by level; each level is one minute. Fresh oranges that are never reached stay fresh.',
+    sketch:
+      '1) Scan the grid: enqueue all rotten cells and count the fresh ones. 2) Process the queue level by level; each level rots the fresh neighbours in four directions, lowers the fresh count and enqueues them. 3) Add a minute after each level that rotted something. 4) If fresh oranges remain return -1, otherwise return the minutes. Time O(m * n), space O(m * n).',
+  },
+  'course-schedule-ii': {
+    nudge: 'Prerequisites form a directed graph, and an order where every edge points forward is a topological sort.',
+    insight:
+      'A course with no unmet prerequisites can be taken now, and taking it frees the courses that depend on it. If nothing is available while courses remain, there is a cycle and no valid order exists.',
+    sketch:
+      '1) Build an adjacency list and the in-degree of each course. 2) Queue all courses with in-degree 0. 3) Pop a course, append it to the order and decrement the in-degree of its dependents, queueing those that reach 0. 4) If the order holds every course return it, otherwise return an empty list. Time O(V + E), space O(V + E).',
+  },
+  'unique-paths': {
+    nudge: 'Counting routes on a grid where you may only go right or down: build each cell from cells you have already computed.',
+    insight:
+      'A cell can only be entered from above or from the left, so its number of routes is the sum of those two neighbours. The first row and the first column each have exactly one route.',
+    sketch:
+      '1) Start with a row of n ones (the first row). 2) For every further row update each column j >= 1 with dp[j] += dp[j - 1]. 3) After the last row, dp[n - 1] is the answer. 4) The formula C(m + n - 2, m - 1) gives the same count. Time O(m * n), space O(n).',
+  },
+  'longest-common-subsequence': {
+    nudge: 'Two strings and a question about their best alignment: a table indexed by a prefix of each string.',
+    insight:
+      'Compare the last characters of two prefixes. If they match, they extend the best result of the shorter prefixes by one; if not, at least one of them is unused, so take the better of dropping either.',
+    sketch:
+      '1) Let dp[i][j] be the answer for the first i characters of a and the first j of b, with row and column 0 equal to 0. 2) If a[i - 1] equals b[j - 1], dp[i][j] = dp[i - 1][j - 1] + 1. 3) Otherwise dp[i][j] = max(dp[i - 1][j], dp[i][j - 1]). 4) Return dp[m][n]. Time O(m * n), space O(m * n), or O(min(m, n)) with two rows.',
+  },
+  'partition-labels': {
+    nudge: 'A greedy scan driven by where each letter appears last: how far must the current piece stretch?',
+    insight:
+      'If a letter appears in the current piece, the piece must reach that letter\'s last occurrence. While scanning, the required end can only move right, and once the scan position catches up with it the piece can be closed safely.',
+    sketch:
+      '1) Record the last index of every letter. 2) Scan with index i, tracking the start of the piece and its end. 3) For each character set end = max(end, last[char]). 4) When i equals end, record a piece of size end - start + 1 and start the next one at i + 1. Time O(n), space O(1) for a fixed alphabet.',
+  },
+  'meeting-rooms': {
+    nudge: 'Can one person attend every meeting? Put the intervals in order and only neighbours need to be compared.',
+    insight:
+      'After sorting by start time, any overlap must show up between two consecutive meetings: if a meeting overlapped a later one, it would also overlap the one in between.',
+    sketch:
+      '1) Sort the intervals by start time. 2) Walk through them pair by pair. 3) If a meeting starts before the previous one ends, return false. 4) If no pair overlaps, return true. Time O(n log n), space O(1) beyond sorting.',
+  },
+  'rotate-image': {
+    nudge: 'Rotating in place can be split into simpler in-place moves of the whole matrix, such as mirroring it.',
+    insight:
+      'A clockwise quarter turn equals a transpose followed by reversing every row. Both steps only swap elements inside the same matrix, so no second matrix is needed.',
+    sketch:
+      '1) Transpose: for i < j swap matrix[i][j] and matrix[j][i]. 2) Reverse each row. 3) The matrix is now rotated 90 degrees clockwise. 4) Alternatively rotate four cells at a time, layer by layer. Time O(n^2), space O(1).',
+  },
+  'single-number': {
+    nudge: 'Every value but one comes in pairs: look for an operation that makes equal values cancel each other.',
+    insight:
+      'XOR of a number with itself is 0 and XOR with 0 changes nothing. XOR is also order-independent, so every pair vanishes and only the single value is left.',
+    sketch:
+      '1) Start with result 0. 2) XOR it with every element. 3) Return the result. Time O(n), space O(1).',
   },
 };
 

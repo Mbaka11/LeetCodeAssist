@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BONUS_POOL } from '../data/bonus';
 import { planDay } from './planner';
 import { projectDay } from './projection';
 import { day, newState, simulateDay } from './testing';
@@ -52,5 +53,24 @@ describe('projectDay', () => {
 
   it('is empty before the program starts', () => {
     expect(projectDay(newState(), day(0), day(-3)).items).toEqual([]);
+  });
+});
+
+describe('projectDay and the bonus pool', () => {
+  it('does not list the optional bonus and keeps projecting reviews and queue problems', () => {
+    const state = newState();
+    const projection = projectDay(state, day(3), day(1));
+    expect(projection.items.some((i) => BONUS_POOL.includes(i.slug))).toBe(false);
+    const queued = projection.items.filter((i) => i.type === 'new').map((i) => i.slug);
+    expect(queued).toEqual(planDay(simulateDay(simulateDay(state, day(1)).state, day(2)).state, day(3))
+      .items.filter((i) => i.activity.type === 'new').map((i) => i.activity.slug));
+  });
+
+  it('projects a day after day 30 without bonus items and within the cap', () => {
+    const state = newState();
+    const projection = projectDay(state, day(40), day(1));
+    expect(projection.items.some((i) => i.type === 'new')).toBe(false);
+    expect(projection.items.some((i) => BONUS_POOL.includes(i.slug))).toBe(false);
+    expect(projection.totalMinutes).toBeLessThanOrEqual(state.settings.dailyCapMin);
   });
 });

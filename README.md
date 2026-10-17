@@ -37,8 +37,12 @@ measure progress. Benchmark problems are reserved and never appear in the learni
 - Default target **150 min**, hard planning cap **180 min** (both configurable in Settings).
 - **Consolidation days 7, 14, 21 and 28**: no new problems, target **90 min** (reviews, failed
   items and "blind" mixed practice).
-- A normal day has **2 new problems**; a 3rd is offered as an optional **bonus** only if the plan
-  stays under the cap. A bonus never becomes debt.
+- A normal day has **2 new problems**. After them (also on consolidation days and after day 30) an
+  optional **bonus** is offered if the plan stays under the cap. It never becomes debt.
+- The bonus comes from a separate **bonus pool** of about 20 extra NeetCode 150 problems outside the
+  53-problem program (Tries, Math & Geometry, 2-D DP, Bit Manipulation and more), in a fixed order with
+  hints. Finishing one starts the normal review cycle and counts as worked in the roadmap, but it does
+  **not** count toward your pace or the program counter, and it never uses up the program queue.
 - New problems come from an ordered queue (about 50 problems in NeetCode roadmap order), not
   from fixed dates, so a missed day never produces an impossible day. Reviews are never dropped:
   what does not fit under the cap is carried over to the next days.
@@ -72,7 +76,7 @@ you really need them.
   today up to 60 days ahead. Only the due date changes; the history stays.
 - **Postpone** replaces *Skip* for new problems: the problem moves back in the queue behind the next
   two and comes back later. It is never removed from the program.
-- **Hints**: every program problem has three progressive hints (nudge, insight, sketch). Reveal them one
+- **Hints**: every program, benchmark and bonus problem has three progressive hints (nudge, insight, sketch). Reveal them one
   at a time in the side panel or on the problem sheet; they are recorded on the attempt, shown in the
   attempt history, and pre-select **Hint** in the outcome form (you can still change it).
 
@@ -138,7 +142,7 @@ are covered by unit tests; storage and the background worker are tested against 
 - `src/core/` – pure TypeScript (no browser APIs): types, dates, timer, review cycle, planner,
   projection, queue, calendar, roadmap tree layout, state.
 - `src/data/` – static NeetCode 150 list, roadmap categories, the 30-day program (queue,
-  benchmarks) and the three-level hints.
+  benchmarks), the bonus pool and the three-level hints.
 - `src/lib/` – storage, commands and actions, reminders and background tasks, URL and side panel
   helpers.
 - `src/components/` – shared React components.

@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { BONUS_POOL } from '../data/bonus';
 import { BENCHMARKS, PROGRAM_QUEUE } from '../data/program';
 import { createActivity, estimatedMinutes } from './activities';
+import { programProgress } from './calendar';
 import { materializePlan, planDay } from './planner';
+import { problemStats } from './state';
 import {
   START,
   activitiesOf,
@@ -9,6 +12,7 @@ import {
   day,
   newState,
   plannedOf,
+  planAndComplete,
   simulateDay,
 } from './testing';
 import type { ActivityType, AppState } from './types';
@@ -47,8 +51,8 @@ describe('planDay: day 1', () => {
     expect(plan.items.every((i) => !i.persisted)).toBe(true);
   });
 
-  it('offers a bonus third problem while it stays within the cap', () => {
-    expect(plan.bonus?.activity.slug).toBe('group-anagrams');
+  it('offers a bonus third problem from the bonus pool while it stays within the cap', () => {
+    expect(plan.bonus?.activity.slug).toBe(BONUS_POOL[0]);
     expect(plan.plannedMinutes + plan.bonus!.minutes).toBeLessThanOrEqual(plan.capMinutes);
     expect(plan.plannedMinutes).toBe(110);
   });
@@ -114,7 +118,7 @@ describe('planDay: materialization and stability', () => {
     expect(news).toEqual(['two-sum', 'valid-anagram']);
     expect(plan.carriedOver).toEqual([]);
     expect(plan.items.every((i) => i.overdue === false)).toBe(true);
-    expect(plan.bonus?.activity.slug).toBe('group-anagrams');
+    expect(plan.bonus?.activity.slug).toBe(BONUS_POOL[0]);
   });
 
   it('keeps an in-progress new problem from an earlier day on the plan', () => {
@@ -289,13 +293,14 @@ describe('planDay: missed days and the cap', () => {
 });
 
 describe('planDay: consolidation days', () => {
-  it.each([7, 14, 21, 28])('day %i has no new problems and no bonus', (n) => {
+  it.each([7, 14, 21, 28])('day %i has no queue problems; a bonus is optional and fits the cap', (n) => {
     let state = newState();
     for (let d = 1; d < n; d += 1) state = simulateDay(state, day(d)).state;
     const plan = planDay(state, day(n));
     expect(plan.isConsolidationDay).toBe(true);
     expect(plan.items.some((i) => i.activity.type === 'new')).toBe(false);
-    expect(plan.bonus).toBeNull();
+    expect(BONUS_POOL).toContain(plan.bonus!.activity.slug);
+    expect(plan.plannedMinutes + plan.bonus!.minutes).toBeLessThanOrEqual(plan.capMinutes);
     expect(plan.targetMinutes).toBe(90);
     expect(plan.plannedMinutes).toBeLessThanOrEqual(plan.capMinutes);
     expect(plan.items.length).toBeGreaterThan(0);
@@ -446,7 +451,9 @@ describe('planDay: the 30-day program with a perfect user', () => {
 
   it('plans about 2 new problems on normal days and finishes the queue', () => {
     const learned = new Set(
-      finalState.activities.filter((a) => a.type === 'new' && a.status === 'done').map((a) => a.slug),
+      finalState.activities
+        .filter((a) => a.type === 'new' && a.status === 'done' && PROGRAM_QUEUE.includes(a.slug))
+        .map((a) => a.slug),
     );
     expect(learned.size).toBe(PROGRAM_QUEUE.length);
     for (const slug of PROGRAM_QUEUE) expect(learned.has(slug)).toBe(true);
@@ -509,5 +516,126 @@ describe('planDay: a struggling user stays within the cap', () => {
       expect(seen.has(key), key).toBe(false);
       seen.add(key);
     }
+  });
+});
+
+describe('planDay: the bonus pool', () => {
+  const newSlugs = (plan: ReturnType<typeof planDay>): string[] =>
+    plan.items.filter((i) => i.activity.type === 'new').map((i) => i.activity.slug);
+
+  it('takes the first pool problem that is not done, started or planned today, in pool order', () => {
+    const first = simulateDay(newState(), day(1), { bonus: true });
+    expect(first.plan.bonus?.activity.slug).toBe(BONUS_POOL[0]);
+    const second = planDay(first.state, day(2));
+    expect(second.bonus?.activity.slug).toBe(BONUS_POOL[1]);
+
+    // A started bonus stays on the plan of a later day as the bonus; it is not offered twice.
+    let state = materializePlan(first.state, second);
+    const started = state.activities.find((a) => a.slug === BONUS_POOL[1] && a.type === 'new')!;
+    state = {
+      ...state,
+      activities: state.activities.map((a) => (a.id === started.id ? { ...a, status: 'in_progress' as const } : a)),
+    };
+    const later = planDay(state, day(3));
+    expect(later.bonus?.activity).toMatchObject({ id: started.id, status: 'in_progress' });
+    expect(later.items.some((i) => i.activity.slug === BONUS_POOL[1])).toBe(false);
+  });
+
+  it('keeps the same bonus all day once it is persisted', () => {
+    const state = materializePlan(newState(), planDay(newState(), day(1)));
+    const bonus = planDay(state, day(1)).bonus!;
+    expect(bonus.persisted).toBe(true);
+    expect(bonus.activity.slug).toBe(BONUS_POOL[0]);
+    expect(planDay(state, day(1)).items.some((i) => i.activity.id === bonus.activity.id)).toBe(false);
+  });
+
+  it('does not consume the program queue', () => {
+    const afterBonus = simulateDay(newState(), day(1), { bonus: true }).state;
+    expect(newSlugs(planDay(afterBonus, day(2)))).toEqual(PROGRAM_QUEUE.slice(2, 4));
+  });
+
+  it('returns a skipped bonus to the pool: tomorrow it comes first again', () => {
+    let state = materializePlan(newState(), planDay(newState(), day(1)));
+    const bonus = planDay(state, day(1)).bonus!;
+    state = {
+      ...state,
+      activities: state.activities.map((a) =>
+        a.id === bonus.activity.id ? { ...a, status: 'skipped' as const } : a,
+      ),
+    };
+    // Today the next pool problem is offered instead of the one just skipped...
+    expect(planDay(state, day(1)).bonus?.activity.slug).toBe(BONUS_POOL[1]);
+    // ...and the skipped one is first in line again tomorrow.
+    expect(planDay(state, day(2)).bonus?.activity.slug).toBe(BONUS_POOL[0]);
+  });
+
+  it('is offered only when planned minutes plus its estimate fit under the cap', () => {
+    const state = newState();
+    const bonusMinutes = estimatedMinutes('new', BONUS_POOL[0]!);
+    const base = planDay(state, day(1)).plannedMinutes;
+    const withCap = (cap: number) => planDay(state, day(1), { ...state.settings, dailyCapMin: cap });
+    expect(withCap(base + bonusMinutes).bonus?.activity.slug).toBe(BONUS_POOL[0]);
+    expect(withCap(base + bonusMinutes - 1).bonus).toBeNull();
+  });
+
+  it('is not offered when the day cannot place its own two problems', () => {
+    // Reviews fill the cap, so the second queue problem does not fit; no bonus either.
+    let state = newState();
+    for (let d = 1; d <= 3; d += 1) state = simulateDay(state, day(d)).state;
+    const tight = planDay(state, day(4), { ...state.settings, dailyTargetMin: 60, dailyCapMin: 70 });
+    expect(tight.items.filter((i) => i.activity.type === 'new').length).toBeLessThan(2);
+    expect(tight.bonus).toBeNull();
+  });
+
+  it('does not count toward pace or the program counter, but starts a review cycle and counts as worked', () => {
+    const slug = BONUS_POOL[0]!;
+    const state = planAndComplete(newState(), day(1), slug, 'new', 'solo', 40);
+    expect(planDay(state, day(2)).pace.actual).toBe(0);
+    expect(planDay(state, day(2)).pace.label).toBe('\u22122 behind');
+    expect(programProgress(state, day(2)).learned).toBe(0);
+
+    expect(plannedOf(state, slug, 'recall').map((a) => a.dueDate)).toEqual([day(2)]);
+    expect(plannedOf(state, slug, 'rebuild').map((a) => a.dueDate)).toEqual([day(4)]);
+    expect(plannedOf(state, slug, 'resolve').map((a) => a.dueDate)).toEqual([day(8)]);
+    expect(plannedOf(state, slug, 'blind').map((a) => a.dueDate)).toEqual([day(22)]);
+    expect(state.problemStatus[slug]).toBe('learning');
+    expect(problemStats(state).overall.worked).toBe(1);
+    expect(planDay(state, day(2)).items.map((i) => `${i.activity.type}:${i.activity.slug}`)).toContain(
+      `recall:${slug}`,
+    );
+  });
+
+  it('is also offered on consolidation days, within the cap', () => {
+    let state = newState();
+    for (let d = 1; d < 7; d += 1) state = simulateDay(state, day(d)).state;
+    const plan = planDay(state, day(7));
+    expect(plan.bonus?.activity.slug).toBe(BONUS_POOL[0]);
+    expect(plan.items.some((i) => i.activity.type === 'new')).toBe(false);
+    const tight = planDay(state, day(7), { ...state.settings, dailyCapMin: plan.plannedMinutes });
+    expect(tight.bonus).toBeNull();
+  });
+
+  it('is still offered after day 30, once the queue is exhausted, until the pool runs out', () => {
+    let state = newState();
+    for (let d = 1; d <= 34; d += 1) state = simulateDay(state, day(d)).state;
+    const learned = state.activities.filter(
+      (a) => a.type === 'new' && a.status === 'done' && PROGRAM_QUEUE.includes(a.slug),
+    );
+    expect(learned).toHaveLength(PROGRAM_QUEUE.length);
+    const plan = planDay(state, day(35));
+    expect(plan.items.some((i) => i.activity.type === 'new')).toBe(false);
+    expect(plan.bonus?.activity.slug).toBe(BONUS_POOL[0]);
+    expect(plan.pace.actual).toBe(PROGRAM_QUEUE.length);
+
+    // Working every bonus empties the pool without touching the planner.
+    for (let d = 35; d < 35 + BONUS_POOL.length; d += 1) {
+      state = simulateDay(state, day(d), { bonus: true }).state;
+    }
+    expect(planDay(state, day(35 + BONUS_POOL.length)).bonus).toBeNull();
+  });
+
+  it('works with a custom pool', () => {
+    const plan = planDay(newState(), day(1), undefined, { bonusPool: ['valid-sudoku'] });
+    expect(plan.bonus?.activity.slug).toBe('valid-sudoku');
   });
 });

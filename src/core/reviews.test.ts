@@ -370,3 +370,19 @@ describe('benchmarks enter the review cycle', () => {
     expect(backfillBenchmarkReviews(fixed)).toBe(fixed);
   });
 });
+
+describe('applyOutcome: a bonus-pool problem', () => {
+  const BONUS = 'koko-eating-bananas';
+
+  it('starts the normal review cycle and sets the status to learning', () => {
+    const state = planAndComplete(newState(), day(1), 'two-sum', 'new', 'solo', 25);
+    const bonus = createActivity(state.activities, { type: 'new', slug: BONUS, dueDate: day(1), createdAt: day(1) });
+    const done = complete({ ...state, activities: [...state.activities, bonus] }, bonus.id, 'solo', day(1), 40);
+    const due = (type: Parameters<typeof plannedOf>[2]): string[] => plannedOf(done, BONUS, type).map((a) => a.dueDate);
+    expect(due('recall')).toEqual([day(2)]);
+    expect(due('rebuild')).toEqual([day(4)]);
+    expect(due('resolve')).toEqual([day(8)]);
+    expect(due('blind')).toEqual([day(22)]);
+    expect(done.problemStatus[BONUS]).toBe('learning');
+  });
+});

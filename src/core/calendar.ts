@@ -1,4 +1,5 @@
 /** Day-by-day view of the program for the Calendar (SPEC §6): planned, done and carried work per day. */
+import { isBonusProblem } from '../data/bonus';
 import {
   BENCHMARKS,
   NEW_PROBLEMS_PER_DAY,
@@ -38,6 +39,8 @@ export interface CalendarEntry {
   movable: boolean;
   /** A new problem from the queue that is not finished and can be postponed (when it is today's). */
   postponable: boolean;
+  /** A bonus-pool problem: optional, not part of the program, not counted in pace. */
+  bonus?: boolean;
 }
 
 export interface CalendarDay {
@@ -95,7 +98,11 @@ function entryOf(a: Activity, state: EntryState): CalendarEntry {
     ...(a.outcome ? { outcome: a.outcome } : {}),
     movable: isReviewType(a.type) && !a.extra && a.status === 'planned',
     postponable:
-      a.type === 'new' && !a.extra && (a.status === 'planned' || a.status === 'in_progress'),
+      a.type === 'new' &&
+      !a.extra &&
+      !isBonusProblem(a.slug) &&
+      (a.status === 'planned' || a.status === 'in_progress'),
+    ...(a.type === 'new' && isBonusProblem(a.slug) ? { bonus: true } : {}),
   };
 }
 
@@ -118,9 +125,14 @@ function stateOnDate(a: Activity, date: string, today: string, carriedIds: Reado
  */
 function bonusIds(state: AppState, date: string): Set<string> {
   const due = state.activities.filter((a) => a.type === 'new' && !a.extra && a.dueDate === date);
-  const committed = due.filter((a) => a.status !== 'planned' && !a.postponed).length;
-  const unstarted = due.filter((a) => a.status === 'planned');
-  return new Set(unstarted.slice(Math.max(0, NEW_PROBLEMS_PER_DAY - committed)).map((a) => a.id));
+  // Bonus-pool problems are always the bonus; a queue problem beyond the daily two is one too (older data).
+  const pool = due.filter((a) => isBonusProblem(a.slug));
+  const queued = due.filter((a) => !isBonusProblem(a.slug));
+  const committed = queued.filter((a) => a.status !== 'planned' && !a.postponed).length;
+  const unstarted = queued.filter((a) => a.status === 'planned');
+  return new Set(
+    [...pool, ...unstarted.slice(Math.max(0, NEW_PROBLEMS_PER_DAY - committed))].map((a) => a.id),
+  );
 }
 
 /** Days up to and including today: the stored history, plus today's not yet persisted plan. */

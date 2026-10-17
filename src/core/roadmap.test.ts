@@ -91,3 +91,10 @@ describe('categoryDifficultyCounts', () => {
     });
   });
 });
+
+describe('categoryDifficultyCounts and the bonus pool', () => {
+  it('counts a started bonus-pool problem as worked in its category', () => {
+    const state = { ...newState(), problemStatus: { 'koko-eating-bananas': 'learning' as const } };
+    expect(categoryDifficultyCounts(state).get('Binary Search')!.Medium.worked).toBe(1);
+  });
+});

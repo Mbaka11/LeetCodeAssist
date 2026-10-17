@@ -20,8 +20,16 @@ Benchmark problems are reserved and never appear in the learning queue.
 - Default target **150 min**, hard planning cap **180 min** (both configurable).
 - Consolidation days **7, 14, 21, 28**: no new problems, target **90 min** (reviews,
   failed items, and "blind" mixed practice).
-- Normal day: 2 new problems; a 3rd is offered as **bonus** only if planned time stays ≤ cap.
+- Normal day: 2 new problems from the queue. An optional **bonus** is offered after them (also on
+  consolidation days and after the queue is exhausted) only if planned time plus its estimate stays ≤ cap.
   A bonus never becomes debt.
+- The bonus comes from the **bonus pool** (`BONUS_POOL`, `src/data/bonus.ts`): ~20 extra NeetCode 150
+  problems that are not in the 53-problem program or the benchmarks, ordered by roadmap category and
+  difficulty, mostly Medium (≤ 2 Hard). It is the first pool problem that is not done, started or already
+  planned today; a skipped one returns to the pool (it is not offered again the same day, first in line
+  tomorrow). A completed bonus starts the normal review cycle (D+1/3/7/21) and counts as worked in the
+  roadmap, but it **does not count toward pace** and not toward the *x*/53 program counter, and it never
+  consumes the program queue.
 
 ## 3. Activity types & review cycle
 
@@ -70,7 +78,7 @@ Plans can be adjusted without losing anything:
 
 ### Hints
 
-Every program and benchmark problem has three progressive hints (`src/data/hints.ts`): **nudge**
+Every program, benchmark and bonus-pool problem has three progressive hints (`src/data/hints.ts`): **nudge**
 (technique family), **insight** (key observation) and **sketch** (algorithm outline with complexity;
 no code). Revealing hint *n* stores `hintsUsed = max(hintsUsed, n)` on the open activity. When the
 outcome form opens for an activity with `hintsUsed > 0` it pre-selects **Hint** and explains why; the
@@ -82,15 +90,18 @@ Problem status: `untouched` → `learning` (new done) → `consolidating` (a rev
 ## 4. Queue-based planner (no fixed dates for new problems)
 
 - New problems come from an **ordered queue** (~50 problems, NeetCode roadmap order,
-  mostly Easy/Medium, ≤ 2 Hard near the end). Queue = `src/data/program.ts`.
+  mostly Easy/Medium, ≤ 2 Hard near the end). Queue = `src/data/program.ts`. The optional bonus is
+  not part of the queue (see §2).
 - Planner for a day (pure function `planDay(state, date, settings)`):
   1. Overdue + due reviews, sorted by priority: `retry`, `recall`, `rebuild`, `resolve`, `blind`;
      overdue first. Reviews never get dropped; if they exceed the cap, the remainder is
      shown as "carried over" and spread forward (max cap per day).
   2. Benchmark if it's day 1/15/30.
   3. Fill remaining budget with the next queue items (2 normally, 0 on consolidation days,
-     fewer if reviews fill the budget). Optional bonus 3rd.
-  4. **Pace indicator**: `actualNewDone - expectedNewDone(dayIndex)` ("+2 ahead" / "−1 behind").
+     fewer if reviews fill the budget). Then the optional bonus from the bonus pool if it fits under
+     the cap.
+  4. **Pace indicator**: `actualNewDone - expectedNewDone(dayIndex)` ("+2 ahead" / "−1 behind"); only
+     program-queue problems count, bonus-pool problems do not.
 - Missing days never produce an impossible day: the cap is always respected.
 - The queue order is `PROGRAM_QUEUE` unless the user postponed problems (`AppState.queue`).
 - History is append-only; past activities are never rewritten.
@@ -155,7 +166,7 @@ key, versioned), JSON export/import from Settings.
    - **Roadmap**: a **Tree | Grid** toggle (stored in `settings.roadmapView`, default Tree). *Tree*
      draws the NeetCode prerequisite graph left to right (one column per tier, SVG arrows, scrollable);
      each node shows worked/total, solo in review, consolidating and Easy/Medium/Hard counters, and
-     selecting a node lists its problems below (checkbox, status pill, program/benchmark badges,
+     selecting a node lists its problems below (checkbox, status pill, program/benchmark/bonus badges,
      LeetCode link). *Grid* is the earlier card layout: per category "worked / solo in review /
      consolidating", Easy/Medium/Hard counters (x/150), check boxes, program items badged.
    - **Problem sheet**: program position, notes (Trigger, Principle, Pitfall, Complexity, Python
@@ -166,7 +177,7 @@ key, versioned), JSON export/import from Settings.
    `setOptions({ path, enabled: true })` once (no per-tab enabling), so the panel stays open while
    the user switches or opens tabs and follows the active tab's URL.
    - On a LeetCode problem page (`/problems/<slug>/`): title, difficulty, category, program position
-     (*n*/53), status, next review, today's activity with its instruction, timer and outcome form (or
+     (*n*/53, or *Bonus problem*), status, next review, today's activity with its instruction, timer and outcome form (or
      an offer to start extra practice), **hints** (three progressive *Reveal hint 1/2/3* buttons),
      notes (hidden during reviews until *Reveal*) and the attempt history including hints used.
    - On any other page: an **Open a LeetCode problem** state with today's checklist; each item has an

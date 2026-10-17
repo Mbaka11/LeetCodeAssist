@@ -4,6 +4,7 @@ import { planDay } from '../core/planner';
 import { POSTPONE_BEHIND, programQueue } from '../core/queue';
 import { StateValidationError } from '../core/state';
 import { START, day, newState } from '../core/testing';
+import { BONUS_POOL } from '../data/bonus';
 import { PROGRAM_QUEUE } from '../data/program';
 import type { AppState } from '../core/types';
 import * as commands from './commands';
@@ -428,5 +429,16 @@ describe('postponeNew', () => {
       for (const item of planDay(skipped, day(d)).items) later.add(item.activity.slug);
     }
     expect(later.has(slug)).toBe(true);
+  });
+});
+
+describe('postponeNew and the bonus pool', () => {
+  it('rejects a bonus-pool problem: it can only be skipped and returns to the pool', () => {
+    const { state, now } = dayOne();
+    const bonus = state.activities.find((a) => a.type === 'new' && BONUS_POOL.includes(a.slug))!;
+    expect(() => commands.postponeNew(state, bonus.id, now)).toThrow(/Only new problems/);
+    const skipped = commands.skipActivity(state, bonus.id, now);
+    expect(findActivity(skipped, bonus.id)?.status).toBe('skipped');
+    expect(skipped.queue).toBeUndefined();
   });
 });

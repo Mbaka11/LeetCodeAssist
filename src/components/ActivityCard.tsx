@@ -3,6 +3,7 @@ import { estimatedMinutes, isReviewType } from '../core/activities';
 import { addDays, localDateFromTimestamp } from '../core/dates';
 import { elapsedMs, formatElapsed } from '../core/timer';
 import type { Activity } from '../core/types';
+import { isBonusProblem } from '../data/bonus';
 import { getProblem, problemUrl } from '../data/neetcode150';
 import type { AppActions } from '../lib/actions';
 import { MAX_MOVE_DAYS } from '../lib/commands';
@@ -44,9 +45,12 @@ export function ActivityCard({
   const running = activity.timer.running;
   const inProgress = activity.status === 'in_progress';
   const open = activity.status === 'planned' || inProgress;
+  // A bonus-pool problem is extra work outside the program: it is labelled and can only be skipped (it
+  // returns to the pool).
+  const bonus = variant === 'bonus' || (activity.type === 'new' && isBonusProblem(activity.slug));
   // New problems are postponed (back in the queue, never dropped); planned reviews are moved to another
-  // day; benchmarks and optional practice can only be skipped.
-  const postponable = activity.type === 'new' && !activity.extra;
+  // day; benchmarks, optional practice and bonus problems can only be skipped.
+  const postponable = activity.type === 'new' && !activity.extra && !isBonusProblem(activity.slug);
   const movable = isReviewType(activity.type) && !activity.extra && activity.status === 'planned';
   const today = localDateFromTimestamp(now);
 
@@ -62,7 +66,7 @@ export function ActivityCard({
     <article className={classes.join(' ')}>
       <div className="activity-head">
         <Badge tone={activity.type}>{ACTIVITY_LABELS[activity.type]}</Badge>
-        {variant === 'bonus' ? <Badge tone="warn">Bonus</Badge> : null}
+        {bonus ? <Badge tone="warn">Bonus</Badge> : null}
         {variant === 'carried' ? (
           <Badge tone="bad">{`Due ${formatDate(activity.dueDate)}`}</Badge>
         ) : null}

@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import { BONUS_POOL } from './bonus';
 import { HINTS, getHints } from './hints';
 import { BENCHMARKS, PROGRAM_QUEUE } from './program';
 
-const EXPECTED_SLUGS = [...PROGRAM_QUEUE, ...BENCHMARKS.flatMap((b) => [b.easy, b.medium])];
+const EXPECTED_SLUGS = [
+  ...PROGRAM_QUEUE,
+  ...BENCHMARKS.flatMap((b) => [b.easy, b.medium]),
+  ...BONUS_POOL,
+];
 
 describe('HINTS', () => {
-  it('covers every program and benchmark slug and nothing else', () => {
+  it('covers every program, benchmark and bonus-pool slug and nothing else', () => {
     expect(Object.keys(HINTS).sort()).toEqual([...new Set(EXPECTED_SLUGS)].sort());
   });
 

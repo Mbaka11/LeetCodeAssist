@@ -13,6 +13,7 @@ import { attemptHistory, isNotesLocked, nextReview } from '../core/problemSheet'
 import { programQueue, queuePosition } from '../core/queue';
 import { getProblemStatus } from '../core/state';
 import type { Activity, AppState } from '../core/types';
+import { isBonusProblem } from '../data/bonus';
 import { getProblem, problemUrl } from '../data/neetcode150';
 import { BENCHMARKS } from '../data/program';
 import type { AppActions } from '../lib/actions';
@@ -284,7 +285,9 @@ export function ProblemPanel({ state, actions, slug, now, openDashboard, openPro
         <p className="muted">
           {position !== null
             ? `Program problem ${position} of ${programQueue(state).length}`
-            : 'Not in the 30-day program'}
+            : isBonusProblem(slug)
+              ? 'Bonus problem (not in the 30-day program)'
+              : 'Not in the 30-day program'}
         </p>
         <p className="muted">
           {review

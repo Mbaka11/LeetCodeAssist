@@ -1,3 +1,4 @@
+import { BONUS_POOL } from '../data/bonus';
 import { getProblem } from '../data/neetcode150';
 import {
   BENCHMARKS,
@@ -32,7 +33,7 @@ export interface PlanItem {
 }
 
 export interface Pace {
-  /** New problems completed so far. */
+  /** Program-queue problems completed so far (bonus-pool problems do not count). */
   actual: number;
   /** New problems expected to be complete by the end of this program day. */
   expected: number;
@@ -49,7 +50,10 @@ export interface DayPlan {
   isBenchmarkDay: boolean;
   /** Ordered list for the day: reviews, benchmark pair, new problems. Excludes the bonus. */
   items: PlanItem[];
-  /** Optional third new problem; never becomes debt. */
+  /**
+   * Optional extra new problem from the bonus pool (`BONUS_POOL`); never becomes debt, and does not
+   * count toward pace or the program queue.
+   */
   bonus: PlanItem | null;
   /** Due reviews that did not fit under the cap today; they stay planned and are re-planned tomorrow. */
   carriedOver: PlanItem[];
@@ -69,6 +73,8 @@ export interface PlanOptions {
   queue?: readonly string[];
   /** Overrides the benchmark pairs (tests). */
   benchmarks?: readonly Benchmark[];
+  /** Overrides the bonus pool (tests). */
+  bonusPool?: readonly string[];
 }
 
 function paceLabel(delta: number): string {
@@ -123,14 +129,19 @@ export function planDay(
 ): DayPlan {
   const queue = options.queue ?? programQueue(state);
   const benchmarks = options.benchmarks ?? BENCHMARKS;
+  const bonusPool = options.bonusPool ?? BONUS_POOL;
   const index = dayIndex(settings.startDate, date);
   const consolidation = isConsolidationDay(index);
   const benchmark = benchmarks.find((b) => b.day === index);
   const capMinutes = settings.dailyCapMin;
   const targetMinutes = consolidation ? CONSOLIDATION_TARGET_MIN : settings.dailyTargetMin;
 
+  // Pace counts program-queue problems only: a finished bonus-pool problem is extra work.
+  const inQueue = new Set(queue);
   const doneNew = new Set(
-    state.activities.filter((a) => a.type === 'new' && a.status === 'done').map((a) => a.slug),
+    state.activities
+      .filter((a) => a.type === 'new' && a.status === 'done' && inQueue.has(a.slug))
+      .map((a) => a.slug),
   );
   const expected = expectedNewDone(index, queue.length);
   // Today's own problems are not "due" yet: being behind means missing what earlier days required, and
@@ -243,10 +254,19 @@ export function planDay(
         (isMandatory(a, date) || (a.status === 'planned' && a.dueDate === date)),
     )
     .sort((a, b) => queueIndex(a.slug) - queueIndex(b.slug) || (a.id < b.id ? -1 : 1));
-  const coreCount = consolidation ? todaysNew.length : NEW_PROBLEMS_PER_DAY;
-  const newItems = todaysNew.slice(0, coreCount).map(toItem);
-  let bonus: PlanItem | null = todaysNew[coreCount] ? toItem(todaysNew[coreCount]!) : null;
-  newItems.push(...todaysNew.slice(coreCount + 1).map(toItem));
+  // A committed bonus-pool problem is today's bonus; the rest are core problems from the queue (a queue
+  // problem beyond the daily two, saved by an older version as the bonus, still counts as the bonus).
+  const poolSlugs = new Set(bonusPool);
+  const todaysPool = todaysNew.filter((a) => poolSlugs.has(a.slug));
+  const todaysQueue = todaysNew.filter((a) => !poolSlugs.has(a.slug));
+  const coreCount = consolidation ? todaysQueue.length : NEW_PROBLEMS_PER_DAY;
+  const overflow = todaysQueue.slice(coreCount);
+  const committedBonus = todaysPool[0] ?? overflow[0];
+  const newItems = todaysQueue.slice(0, coreCount).map(toItem);
+  let bonus: PlanItem | null = committedBonus ? toItem(committedBonus) : null;
+  newItems.push(
+    ...[...todaysPool, ...overflow].filter((a) => a !== committedBonus).map(toItem),
+  );
 
   const sum = (items: readonly PlanItem[]): number => items.reduce((n, i) => n + i.minutes, 0);
   let used = sum(reviewItems) + sum(benchmarkItems) + sum(newItems);
@@ -315,14 +335,18 @@ export function planDay(
     }
   }
 
-  // 4b. New problems from the queue: fill up to 2 (none on consolidation days), then a bonus.
+  // 4b. New problems from the queue: fill up to 2 (none on consolidation days). Then the bonus.
+  const consumed = new Set<string>();
+  const skippedToday = new Set<string>();
+  for (const a of state.activities) {
+    if (a.type !== 'new') continue;
+    if (a.status === 'skipped' && a.dueDate === date) skippedToday.add(a.slug);
+    if (a.postponed) continue; // a postponed problem is still in the queue
+    if (a.status === 'skipped') continue; // a skipped problem goes back to the queue
+    if (a.status !== 'planned' || a.dueDate === date) consumed.add(a.slug);
+  }
+  let queueExhausted = true;
   if (!consolidation) {
-    const consumed = new Set<string>();
-    for (const a of state.activities) {
-      if (a.type !== 'new' || a.postponed) continue; // a postponed problem is still in the queue
-      if (a.status === 'skipped') continue; // a skipped problem goes back to the queue
-      if (a.status !== 'planned' || a.dueDate === date) consumed.add(a.slug);
-    }
     const upcoming = queue.filter((slug) => !consumed.has(slug));
     let next = 0;
     while (newItems.length < NEW_PROBLEMS_PER_DAY && next < upcoming.length) {
@@ -333,13 +357,16 @@ export function planDay(
       used += item.minutes;
       next += 1;
     }
-    if (
-      bonus === null &&
-      newItems.length >= NEW_PROBLEMS_PER_DAY &&
-      next < upcoming.length &&
-      used + estimatedMinutes('new', upcoming[next]!) <= capMinutes
-    ) {
-      bonus = makeVirtual({ type: 'new', slug: upcoming[next]!, dueDate: date, createdAt: date });
+    queueExhausted = next >= upcoming.length;
+  }
+
+  // The bonus comes from the pool, not the queue: the first pool problem that is not worked yet (one
+  // skipped today is offered again tomorrow). Offered once the day's own problems are placed, also on
+  // consolidation days and after the queue is exhausted, and only when it fits under the cap.
+  if (bonus === null && (consolidation || newItems.length >= NEW_PROBLEMS_PER_DAY || queueExhausted)) {
+    const slug = bonusPool.find((s) => !consumed.has(s) && !skippedToday.has(s));
+    if (slug !== undefined && used + estimatedMinutes('new', slug) <= capMinutes) {
+      bonus = makeVirtual({ type: 'new', slug, dueDate: date, createdAt: date });
     }
   }
 

@@ -15,6 +15,7 @@ import {
 import { getProblemStatus, problemStats, type CategoryStats } from '../core/state';
 import type { AppState, Difficulty, RoadmapViewMode } from '../core/types';
 import { CATEGORIES, problemsInCategory, type CategoryName } from '../data/neetcode150';
+import { isBonusProblem } from '../data/bonus';
 import { BENCHMARKS, PROGRAM_QUEUE } from '../data/program';
 import type { AppActions } from '../lib/actions';
 import { STATUS_LABELS, STATUS_TONES, difficultyTone } from '../lib/instructions';
@@ -54,6 +55,7 @@ function ProblemList({ name, state, actions }: { name: CategoryName; state: AppS
               <Badge tone={difficultyTone(problem.difficulty)}>{problem.difficulty}</Badge>
               {PROGRAM_SLUGS.has(problem.slug) ? <Badge>30-day program</Badge> : null}
               {BENCHMARK_SLUGS.has(problem.slug) ? <Badge tone="benchmark">Benchmark</Badge> : null}
+              {isBonusProblem(problem.slug) ? <Badge tone="warn">Bonus</Badge> : null}
               <Badge tone={STATUS_TONES[status]}>{STATUS_LABELS[status]}</Badge>
               <LeetCodeLink href={problem.url} openPanel />
             </span>

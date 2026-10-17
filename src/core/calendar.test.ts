@@ -289,3 +289,20 @@ describe('plan done', () => {
     expect(second.planDone).toBe(false);
   });
 });
+
+describe('bonus-pool problems in the calendar', () => {
+  it('flags the bonus entry, does not plan it or let it be postponed, and keeps the program counter', () => {
+    const base = materializePlan(newState(), planDay(newState(), day(1)));
+    const today = calendarDays(base, day(1))[0]!;
+    const bonus = today.entries.filter((e) => e.bonus);
+    expect(bonus).toHaveLength(1);
+    expect(bonus[0]).toMatchObject({ type: 'new', postponable: false });
+    expect(today.entries.filter((e) => e.type === 'new' && !e.bonus).every((e) => e.postponable)).toBe(true);
+    expect(today.plannedCount).toBe(planDay(base, day(1)).items.length);
+
+    const done = simulateDay(newState(), day(1), { bonus: true }).state;
+    expect(programProgress(done, day(2)).learned).toBe(2);
+    const doneBonus = done.activities.find((a) => a.id === bonus[0]!.id)!;
+    expect(doneBonus.status).toBe('done');
+  });
+});

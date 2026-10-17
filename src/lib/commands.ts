@@ -12,6 +12,7 @@ import {
 } from '../core/activities';
 import { addDays, compareDates, isValidDateString, localDateFromTimestamp } from '../core/dates';
 import { materializePlan, planDay } from '../core/planner';
+import { isBonusProblem } from '../data/bonus';
 import { getProblem } from '../data/neetcode150';
 import { postponeInQueue, programQueue } from '../core/queue';
 import { applyOutcome, backfillBenchmarkReviews, scheduleReview } from '../core/reviews';
@@ -186,7 +187,7 @@ export function rescheduleReview(state: AppState, id: string, newDate: string, n
  */
 export function postponeNew(state: AppState, id: string, now: number): AppState {
   const activity = requireOpen(state, id);
-  if (activity.type !== 'new' || activity.extra) {
+  if (activity.type !== 'new' || activity.extra || isBonusProblem(activity.slug)) {
     throw new Error('Only new problems from the queue can be postponed');
   }
   const finished = new Set(

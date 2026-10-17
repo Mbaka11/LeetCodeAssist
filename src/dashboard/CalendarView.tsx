@@ -151,6 +151,8 @@ export interface PopoverRow {
   status?: string;
   /** Logged minutes of a completed entry. */
   loggedMinutes?: number;
+  /** A bonus-pool problem. */
+  bonus?: boolean;
 }
 
 function titleOfSlug(slug: string | undefined): string {
@@ -166,6 +168,7 @@ export function entryRows(day: CalendarDay): PopoverRow[] {
     minutes: entry.minutes,
     status: ENTRY_LABELS[entry.state],
     ...(entry.loggedMinutes !== undefined ? { loggedMinutes: entry.loggedMinutes } : {}),
+    ...(entry.bonus ? { bonus: true } : {}),
   }));
 }
 
@@ -201,6 +204,7 @@ export function DayPopoverContent({
           {rows.map((row) => (
             <li key={row.key}>
               <Badge tone={row.type}>{ACTIVITY_LABELS[row.type]}</Badge>
+              {row.bonus ? <Badge tone="warn">Bonus</Badge> : null}
               <span className="cal-popover-problem">{row.title}</span>
               <span className="muted">
                 {row.loggedMinutes !== undefined
@@ -396,6 +400,7 @@ function EntryRow({
         ) : (
           <span className="muted">Next problem from the queue</span>
         )}
+        {entry.bonus ? <Badge tone="warn">Bonus</Badge> : null}
       </td>
       <td>
         <Badge tone={ENTRY_TONES[entry.state]}>{ENTRY_LABELS[entry.state]}</Badge>
