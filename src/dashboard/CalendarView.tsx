@@ -23,6 +23,7 @@ import { formatDate, formatMinutes, formatMs } from '../lib/format';
 import { ACTIVITY_LABELS, OUTCOME_LABELS } from '../lib/instructions';
 import { problemHref } from '../lib/route';
 import { useNow } from '../lib/useNow';
+import { LeetCodeStreakCard } from './LeetCodeStreakCard';
 
 const ENTRY_LABELS: Record<EntryState, string> = {
   done: 'Done',
@@ -552,6 +553,8 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
           setMessage={setStartDateMessage}
         />
       </Card>
+
+      <LeetCodeStreakCard now={now} />
 
       <div className="calendar-grid">
         {days.map((day) => (

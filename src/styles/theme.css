@@ -988,3 +988,165 @@ textarea.mono {
 .log-table th {
   white-space: nowrap;
 }
+
+/* Timer colours (TimerBadge): text and icon always accompany the colour */
+:root {
+  --timer-good-fg: #145c33;
+  --timer-good-bg: #dff3e6;
+  --timer-warn-fg: #7a4500;
+  --timer-warn-bg: #fdeccb;
+  --timer-bad-fg: #9c1c2b;
+  --timer-bad-bg: #fbe1e4;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --timer-good-fg: #8be3ae;
+    --timer-good-bg: #17372a;
+    --timer-warn-fg: #f4c26b;
+    --timer-warn-bg: #3a2c10;
+    --timer-bad-fg: #ff9fa9;
+    --timer-bad-bg: #44202a;
+  }
+}
+
+.timer-badge {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.timer-tone {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.timer-tone-good {
+  color: var(--timer-good-fg);
+  background: var(--timer-good-bg);
+}
+
+.timer-tone-warn {
+  color: var(--timer-warn-fg);
+  background: var(--timer-warn-bg);
+}
+
+.timer-tone-bad {
+  color: var(--timer-bad-fg);
+  background: var(--timer-bad-bg);
+}
+
+.timer-cues {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  font-size: 0.78rem;
+}
+
+.timer-cue {
+  color: var(--muted);
+}
+
+.timer-cue-reached {
+  color: var(--text);
+  text-decoration: underline dotted;
+}
+
+/* Accepted prompt (side panel) */
+.accepted-prompt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-left: 4px solid var(--good);
+  background: var(--surface-2);
+  border-radius: 6px;
+}
+
+.accepted-prompt p {
+  margin: 0;
+}
+
+/* Settings: LeetCode detection */
+.check-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.privacy-note {
+  font-size: 0.88rem;
+}
+
+.diagnostics {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 14px;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.diagnostics dt {
+  color: var(--muted);
+}
+
+.diagnostics dd {
+  margin: 0;
+}
+
+/* Calendar: LeetCode streak heat grid (16 weeks, oldest week first, Sunday to Saturday) */
+.heat-grid {
+  display: flex;
+  gap: 3px;
+  overflow-x: auto;
+}
+
+.heat-week {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.heat-cell {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.heat-0 {
+  background: var(--surface-2);
+}
+
+.heat-1 {
+  background: color-mix(in srgb, var(--good) 30%, var(--surface-2));
+}
+
+.heat-2 {
+  background: color-mix(in srgb, var(--good) 55%, var(--surface-2));
+}
+
+.heat-3 {
+  background: color-mix(in srgb, var(--good) 80%, var(--surface-2));
+}
+
+.heat-4 {
+  background: var(--good);
+}
+
+.heat-future {
+  background: transparent;
+  border-style: dashed;
+}
+
+.heat-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+}

@@ -218,9 +218,52 @@ key, versioned), JSON export/import from Settings.
    target is not met; toolbar **badge** = remaining activities today; clicking a
    notification opens the dashboard.
 
-Permissions: `storage`, `alarms`, `notifications`, `sidePanel`, `tabs`; host `https://leetcode.com/*`.
+Permissions: `storage`, `alarms`, `notifications`, `sidePanel`, `tabs`; host `https://leetcode.com/*`. The two content
+scripts of the LeetCode features (section 6a) are declared for `https://leetcode.com/problems/*` only.
+
+## 6a. LeetCode features: accepted detection, submission streak, timer colours
+
+The API contract behind the first two is documented, with its confidence level, in `docs/leetcode-api.md`.
+
+**Accepted detection (passive).** A content script in the page's own (MAIN) world on `leetcode.com/problems/*`
+wraps `fetch` and `XMLHttpRequest` and only *observes*: it never alters a request or response, never submits
+or retries anything. For the submit route (`/problems/<slug>/submit/`) it notes slug and time; for the result
+polling route (`/submissions/detail/<id>/check/`) it reads a bounded clone of the response and keeps only
+`state`, `status_msg`, `lang` (and `status_runtime`/`status_memory` when present). It posts the event with
+`window.postMessage` to an isolated content script, which validates origin and shape and relays it with
+`chrome.runtime.sendMessage`; the background worker validates again, stamps its own receipt time and appends
+it to a capped list (200 events, own storage key `leetcodeAssist.submissionEvents.v1`, written under a lock,
+not part of `AppState`). Pure parsing and validation: `src/lib/leetcodeSubmissions.ts`.
+- Side panel: when the current problem has an **in-progress** activity and an *Accepted* verdict was detected
+  today, the card shows *Accepted at 23:14 (Python3) — finish this activity?* plus the number of failed
+  verdicts before it. *Finish this activity…* opens the usual finish form with the logged time taken from the
+  timer and **Solo** pre-selected only when `hintsUsed` is 0; the user always confirms. Nothing is ever
+  completed automatically. A non-Python language adds a gentle note. (The activity model has no first-start
+  timestamp, so "after the activity started" is approximated by "since local midnight today".)
+- Settings, *LeetCode detection*: on/off (default on; when off, events are dropped by the worker and none are
+  stored), diagnostics (submissions seen, results seen, Accepted count, last `status_msg` values, last event
+  time, no bodies), *Clear detected events* and a plain-language privacy note. With nothing detected, every
+  activity is finished by hand exactly as before.
+
+**LeetCode submission streak.** Optional username (Settings, *LeetCode profile*; letters, digits, `_ - .`,
+up to 40). The background worker POSTs the public GraphQL query `matchedUser(username).userCalendar` to
+`https://leetcode.com/graphql` (credentials omitted, 10 s deadline, 256 KiB limit, one request, no retries;
+429/401/403 pause all requests for 15 minutes, 5xx and network errors are reported once). The result is cached
+in its own key (`leetcodeAssist.leetcodeProfile.v1`, with `fetchedAt`); refresh happens at most once an hour
+automatically or with the *Refresh* button (at most once a minute). The Calendar page shows a *LeetCode streak*
+card computed locally from `submissionCalendar` over **UTC days**: current streak (ending today, or yesterday
+when today is still empty), longest streak in the returned data, active days this year, a 16-week heat grid,
+a link to the profile, *Updated N min ago*, error states and a *Set your username in Settings* empty state.
+Username and detection preference live in the key `leetcodeAssist.leetcodePrefs.v1`, not in `Settings`, so
+the stored `AppState` format and JSON export are unchanged. *Reset all data* also clears the three LeetCode keys.
+
+**Timer colours.** `TimerBadge` shows the elapsed time of an open activity against the estimated minutes
+shown on the card (`timerTone` in `src/lib/timerTone.ts`): green under 75 % (*on pace*), amber from 75 % up to
+the budget (*near limit*), red above it (*over budget*), neutral while paused. Colours meet 4.5:1 contrast in the
+light and dark themes and every state also has an icon and text. For `new` activities two subtle cues show the
+help ladder at 15 min (*consider a hint*) and 35 min (*read the solution, then re-code it*).
 
 ## 7. Out of scope for v1
 
-Auto-detecting "Accepted" on LeetCode, accounts, sync, copying NeetCode/LeetCode
+Automatically completing an activity from a detected "Accepted" (detection only offers a prompt, section 6a), accounts, sync, copying NeetCode/LeetCode
 explanations or solutions (only facts: title, difficulty, category, link).

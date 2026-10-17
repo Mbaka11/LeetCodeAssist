@@ -9,17 +9,23 @@ const OUTCOMES: readonly Outcome[] = ['solo', 'hint', 'solution', 'stuck'];
 export function OutcomeForm({
   initialMinutes,
   hintsUsed,
+  initialOutcome,
+  detectedNote,
   onSubmit,
   onCancel,
 }: {
   initialMinutes: number;
   /** Hints revealed during the attempt; any hint pre-selects "Hint" (the user can still change it). */
   hintsUsed?: number | undefined;
+  /** Pre-selected outcome when no hint was used (e.g. from a detected Accepted verdict); the user can change it. */
+  initialOutcome?: Outcome | undefined;
+  /** Explains why `initialOutcome` is pre-selected. */
+  detectedNote?: string | undefined;
   /** `totalMs` is only set when the user edited the logged time. */
   onSubmit: (outcome: Outcome, totalMs: number | undefined) => void;
   onCancel: () => void;
 }) {
-  const [outcome, setOutcome] = useState<Outcome | null>(suggestedOutcome(hintsUsed));
+  const [outcome, setOutcome] = useState<Outcome | null>(suggestedOutcome(hintsUsed) ?? initialOutcome ?? null);
   const [minutes, setMinutes] = useState(String(initialMinutes));
   const [edited, setEdited] = useState(false);
   const parsed = Number(minutes);
@@ -54,6 +60,11 @@ export function OutcomeForm({
           <p className="muted outcome-note" role="note">
             You revealed {hintsUsed} {hintsUsed === 1 ? 'hint' : 'hints'} during this attempt, so “Hint” is
             pre-selected. Change it if that is not how it went.
+          </p>
+        ) : null}
+        {detectedNote && suggestedOutcome(hintsUsed) === null ? (
+          <p className="muted outcome-note" role="note">
+            {detectedNote}
           </p>
         ) : null}
       </fieldset>

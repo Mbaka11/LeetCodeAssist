@@ -19,6 +19,7 @@ import { BENCHMARKS } from '../data/program';
 import type { AppActions } from '../lib/actions';
 import { formatDate, formatMinutes } from '../lib/format';
 import { ACTIVITY_LABELS, STATUS_LABELS, STATUS_TONES, difficultyTone } from '../lib/instructions';
+import { acceptedPrompt, type SubmissionEvent } from '../lib/leetcodeSubmissions';
 import { problemHref } from '../lib/route';
 
 export interface ProblemPanelProps {
@@ -31,6 +32,8 @@ export interface ProblemPanelProps {
   openDashboard: (hash: string) => void;
   /** Opens a problem on LeetCode: in the active tab when it is a LeetCode or empty page, else in a new tab. */
   openProblem: (slug: string) => void;
+  /** Passively detected submission events (empty when detection is off or nothing was seen). */
+  submissionEvents?: readonly SubmissionEvent[];
 }
 
 interface Match {
@@ -215,7 +218,15 @@ function TodayChecklist({
   );
 }
 
-export function ProblemPanel({ state, actions, slug, now, openDashboard, openProblem }: ProblemPanelProps) {
+export function ProblemPanel({
+  state,
+  actions,
+  slug,
+  now,
+  openDashboard,
+  openProblem,
+  submissionEvents = [],
+}: ProblemPanelProps) {
   const today = localDateFromTimestamp(now);
   const plan = useMemo(() => planDay(state, today), [state, today]);
 
@@ -272,6 +283,12 @@ export function ProblemPanel({ state, actions, slug, now, openDashboard, openPro
     matches.map((m) => m.activity).find((a) => a.status === 'in_progress') ??
     matches.map((m) => m.activity).find((a) => a.status === 'planned');
   const locked = isNotesLocked(state, slug, today);
+  // The activity model stores no first-start time, so "after the activity started" is approximated by
+  // "since local midnight today" (a started activity is always one of today's).
+  const accepted = acceptedPrompt(submissionEvents, {
+    slug,
+    since: new Date(now).setHours(0, 0, 0, 0),
+  });
 
   return (
     <div className="stack" key={slug}>
@@ -315,6 +332,7 @@ export function ProblemPanel({ state, actions, slug, now, openDashboard, openPro
                 variant={m.variant}
                 compact
                 budgets={state.settings.budgets}
+                accepted={accepted ?? undefined}
                 openProblemSheet={(target) => openDashboard(problemHref(target))}
               />
             ))}

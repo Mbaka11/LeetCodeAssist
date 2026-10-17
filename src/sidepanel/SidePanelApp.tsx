@@ -4,6 +4,7 @@ import { problemSlugFromUrl } from '../lib/leetcodeUrl';
 import { openDashboard } from '../lib/openDashboard';
 import { openProblemInBrowser } from '../lib/sidePanel';
 import { useAppState } from '../lib/useAppState';
+import { useLeetCodePrefs, useSubmissionEvents } from '../lib/useLeetCodeData';
 import { useNow } from '../lib/useNow';
 import { ProblemPanel } from './ProblemPanel';
 import { useActiveTabUrl } from './useActiveTabUrl';
@@ -11,6 +12,8 @@ import { useActiveTabUrl } from './useActiveTabUrl';
 export function SidePanelApp() {
   const { snapshot, actions } = useAppState();
   const url = useActiveTabUrl();
+  const prefs = useLeetCodePrefs();
+  const detectedEvents = useSubmissionEvents();
   const anyRunning = snapshot.status === 'ready' && snapshot.state.activities.some((a) => a.timer.running);
   const now = useNow(anyRunning ? 1000 : 30_000);
   const open = (hash: string): void => void openDashboard(hash);
@@ -49,6 +52,7 @@ export function SidePanelApp() {
         now={now}
         openDashboard={open}
         openProblem={openProblem}
+        {...(prefs.detectionEnabled ? { submissionEvents: detectedEvents } : {})}
       />
     </main>
   );

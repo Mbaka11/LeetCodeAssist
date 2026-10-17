@@ -1,4 +1,6 @@
 import { createBackgroundTasks } from '../lib/backgroundTasks';
+import { createLeetCodeBackground } from '../lib/leetcodeBackground';
+import { chromeLeetCodeStorage } from '../lib/leetcodeStorage';
 import { openDashboard } from '../lib/openDashboard';
 import { STORAGE_KEY, chromeStorageBackend, createAppStore } from '../lib/storage';
 
@@ -59,6 +61,24 @@ export default defineBackground(() => {
   });
   // Also on every worker start, for example after it was killed and woken by an event.
   tasks.refresh().catch(report);
+
+  // LeetCode features: relayed submission verdicts (stored only while detection is on) and the optional
+  // streak refresh requested by the dashboard. Messages from any other sender are ignored.
+  const leetcode = createLeetCodeBackground({
+    storage: chromeLeetCodeStorage(),
+    extensionId: chrome.runtime.id,
+    extensionUrlPrefix: chrome.runtime.getURL(''),
+    now: Date.now,
+  });
+  chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse) => {
+    const reply = leetcode.handleMessage(message, { id: sender.id, url: sender.url });
+    if (!reply) return false;
+    reply.then(sendResponse, (error: unknown) => {
+      report(error);
+      sendResponse(undefined);
+    });
+    return true;
+  });
 
   // Side panel: one global panel for the whole window, enabled once. It stays open while the user
   // switches or opens tabs and shows what to do for whichever page is active. The toolbar icon keeps

@@ -8,6 +8,8 @@ import { BUDGET_MAX_MINUTES, BUDGET_MIN_MINUTES } from '../core/state';
 import type { AppState, BudgetOverrides, BudgetedType, Difficulty } from '../core/types';
 import type { AppActions } from '../lib/actions';
 import { ACTIVITY_LABELS } from '../lib/instructions';
+import { chromeLeetCodeStorage } from '../lib/leetcodeStorage';
+import { LeetCodeDetectionCard, LeetCodeProfileCard } from './LeetCodeSettings';
 
 interface Message {
   tone: 'good' | 'error';
@@ -264,7 +266,10 @@ function DataSection({ actions }: { actions: AppActions }) {
         <ConfirmButton
           prompt="Delete all progress, notes and settings?"
           confirmLabel="Yes, reset everything"
-          onConfirm={() => void actions.reset()}
+          onConfirm={() => {
+            void actions.reset();
+            chromeLeetCodeStorage().clearAll().catch(() => undefined);
+          }}
         >
           Reset all data
         </ConfirmButton>
@@ -314,6 +319,8 @@ export function SettingsView({ state, actions }: { state: AppState; actions: App
           setMessage={setBudgetMessage}
         />
       </Card>
+      <LeetCodeDetectionCard />
+      <LeetCodeProfileCard />
       <Card title="Your data">
         <p className="muted">
           Everything is stored locally in this browser. Export a backup, restore one, or start over.

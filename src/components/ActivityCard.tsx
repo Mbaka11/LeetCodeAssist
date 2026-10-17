@@ -9,6 +9,7 @@ import type { AppActions } from '../lib/actions';
 import { MAX_MOVE_DAYS } from '../lib/commands';
 import { formatDate, formatMinutes, formatMs } from '../lib/format';
 import { ACTIVITY_INSTRUCTIONS, ACTIVITY_LABELS, OUTCOME_LABELS, difficultyTone } from '../lib/instructions';
+import { acceptedPromptText, formatClockTime, type AcceptedPrompt } from '../lib/leetcodeSubmissions';
 import { problemHref } from '../lib/route';
 import { Badge } from './Badge';
 import { hintsLabel } from './AttemptHistory';
@@ -16,6 +17,7 @@ import { Button } from './Button';
 import { LeetCodeLink } from './LeetCodeLink';
 import { MoveForm } from './MoveForm';
 import { OutcomeForm } from './OutcomeForm';
+import { TimerBadge } from './TimerBadge';
 
 export type CardVariant = 'planned' | 'bonus' | 'carried';
 
@@ -27,6 +29,7 @@ export function ActivityCard({
   compact = false,
   openProblemSheet,
   budgets,
+  accepted,
 }: {
   activity: Activity;
   now: number;
@@ -38,6 +41,8 @@ export function ActivityCard({
   openProblemSheet?: (slug: string) => void;
   /** `settings.budgets`, so the shown estimate follows the user's overrides. */
   budgets?: BudgetOverrides | undefined;
+  /** A detected Accepted verdict for this problem (side panel): offers to finish, never finishes by itself. */
+  accepted?: AcceptedPrompt | undefined;
 }) {
   const [finishing, setFinishing] = useState(false);
   const [moving, setMoving] = useState(false);
@@ -45,6 +50,7 @@ export function ActivityCard({
   const problem = getProblem(activity.slug);
   const url = problem?.url ?? problemUrl(activity.slug);
   const elapsed = elapsedMs(activity.timer, now);
+  const budgetMin = estimatedMinutes(activity.type, activity.slug, budgets);
   const running = activity.timer.running;
   const inProgress = activity.status === 'in_progress';
   const open = activity.status === 'planned' || inProgress;
@@ -56,6 +62,11 @@ export function ActivityCard({
   const postponable = activity.type === 'new' && !activity.extra && !isBonusProblem(activity.slug);
   const movable = isReviewType(activity.type) && !activity.extra && activity.status === 'planned';
   const today = localDateFromTimestamp(now);
+
+  const startFinishing = (): void => {
+    if (running) run(actions.pause(activity.id));
+    setFinishing(true);
+  };
 
   const run = (task: Promise<void>): void => {
     setError(null);
@@ -94,7 +105,7 @@ export function ActivityCard({
         ) : null}
         {problem && !compact ? <span className="muted">{problem.category}</span> : null}
         <span className="spacer" />
-        <span className="muted">~{formatMinutes(estimatedMinutes(activity.type, activity.slug, budgets))}</span>
+        <span className="muted">~{formatMinutes(budgetMin)}</span>
         {compact ? null : (
           <a className="link-out" href={url} target="_blank" rel="noreferrer">
             LeetCode ↗
@@ -118,9 +129,12 @@ export function ActivityCard({
       {open && !finishing ? (
         <div className="row">
           {inProgress ? (
-            <span className={running ? 'timer timer-running' : 'timer'} aria-label="Elapsed time">
-              {formatElapsed(elapsed)}
-            </span>
+            <TimerBadge
+              elapsedMs={elapsed}
+              budgetMin={budgetMin}
+              running={running}
+              showHelpLadder={activity.type === 'new'}
+            />
           ) : null}
           {!inProgress ? (
             <Button variant="primary" onClick={() => run(actions.startActivity(activity.id))}>
@@ -140,14 +154,7 @@ export function ActivityCard({
             <span className="muted">Approach found at {formatElapsed(activity.approachMs)}</span>
           ) : null}
           {inProgress ? (
-            <Button
-              onClick={() => {
-                if (running) run(actions.pause(activity.id));
-                setFinishing(true);
-              }}
-            >
-              Finish
-            </Button>
+            <Button onClick={startFinishing}>Finish</Button>
           ) : null}
           <span className="spacer" />
           {postponable ? (
@@ -170,6 +177,28 @@ export function ActivityCard({
         </div>
       ) : null}
 
+      {inProgress && accepted && !finishing ? (
+        <div className="accepted-prompt" role="status">
+          <p>
+            <strong>{acceptedPromptText(accepted)}</strong>
+            {accepted.attemptsBefore > 0
+              ? ` After ${accepted.attemptsBefore} other ${accepted.attemptsBefore === 1 ? 'attempt' : 'attempts'}.`
+              : ''}
+          </p>
+          {accepted.python ? null : (
+            <p className="muted">
+              This program is meant to be practised in Python. You may want to re-solve it in Python
+              before you finish, but that is up to you.
+            </p>
+          )}
+          <div className="row">
+            <Button variant="primary" onClick={startFinishing}>
+              Finish this activity…
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       {moving && movable && !finishing ? (
         <MoveForm
           minDate={today}
@@ -184,6 +213,12 @@ export function ActivityCard({
         <OutcomeForm
           initialMinutes={Math.round(elapsed / 60_000)}
           hintsUsed={activity.hintsUsed}
+          {...(accepted && !activity.hintsUsed
+            ? {
+                initialOutcome: 'solo' as const,
+                detectedNote: `Accepted was detected at ${formatClockTime(accepted.acceptedAt)}, and you used no hints, so “Solo” is pre-selected. Change it if that is not how it went.`,
+              }
+            : {})}
           onCancel={() => setFinishing(false)}
           onSubmit={(outcome, totalMs) => {
             setFinishing(false);
