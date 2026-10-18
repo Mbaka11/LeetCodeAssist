@@ -1245,6 +1245,7 @@ textarea.mono {
 @media (min-width: 1000px) {
   .cal-summary {
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    align-items: stretch;
   }
 }
 

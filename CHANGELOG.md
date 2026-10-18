@@ -3,6 +3,12 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.6.1
+
+### Fixed
+- The Calendar overview and LeetCode streak cards now stretch to the same height when side by side.
+  On narrow screens, stacked cards keep their natural heights; no fixed height or clipping is used.
+
 ## 0.6.0
 
 ### Added

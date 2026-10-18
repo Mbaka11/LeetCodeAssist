@@ -29,6 +29,12 @@ describe('calendar summary stylesheet contract', () => {
     );
   });
 
+  it('matches the card heights side by side while keeping stacked cards at their natural heights', () => {
+    expect(rule('.cal-summary')).toContain('align-items: start');
+    const wide = media('(min-width: 1000px)');
+    expect(rule('.cal-summary', `\n${wide}`)).toContain('align-items: stretch');
+  });
+
   it('lets the cards shrink so a narrow screen has no horizontal page overflow', () => {
     expect(rule('.cal-summary > .card')).toContain('min-width: 0');
     expect(rule('.heat-grid')).toContain('overflow-x: auto');
