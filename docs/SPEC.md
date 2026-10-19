@@ -293,6 +293,25 @@ key, versioned), JSON export/import from Settings.
 Permissions: `storage`, `alarms`, `notifications`, `sidePanel`, `tabs`; host `https://leetcode.com/*`. The two content
 scripts of the LeetCode features (section 6a) are declared for `https://leetcode.com/problems/*` only.
 
+### Grouped problem activities
+
+Today renders one problem card per slug **within each activity section**, using a shared `ProblemActivities`
+component. The first appearance preserves the problem's plan priority; rows inside a group follow the stored
+activity order (virtual activities follow persisted ones). The title, category, difficulty and LeetCode link
+appear once. Each independent attempt has a type and sequence number; done rows show outcome, time, approach
+time and hints compactly, while open rows retain instructions, their own timer, Move/Postpone/Skip and Finish.
+Extra attempts are labelled **Extra practice**. The group heading shows activity count and done count.
+
+The side panel groups all matching current activities and keeps the repeat-practice action inside that group
+when there is no open attempt. Fresh Accepted is still passed to the rows, but only the selected attempt may
+auto-open Finish; stable slug/activity keys keep an existing form and its choices intact on rerenders. The
+non-problem-page checklist groups repeats in one row with per-type counts, aggregate minutes and one Open
+button; the header's activity totals stay unchanged.
+
+This is presentation only: no stored activities are merged/deleted, no review rules or budgets change, and
+program/worked counters still use the existing underlying records. Optional bonuses and carried work retain
+separate sections in Today. Full dated history and one-row-per-attempt Logs/CSV remain available.
+
 ## 6a. LeetCode features: accepted detection, submission streak, timer colours
 
 The API contract behind the first two is documented, with its confidence level, in `docs/leetcode-api.md`.

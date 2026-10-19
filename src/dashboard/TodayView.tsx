@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityCard } from '../components/ActivityCard';
+import { ProblemActivities } from '../components/ProblemActivities';
 import { Badge } from '../components/Badge';
 import { BonusOffers } from '../components/BonusOffers';
 import { Button } from '../components/Button';
@@ -157,15 +157,8 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
         ) : (
           <div className="stack-tight">
             {nextItem && !runningItem ? <p className="muted">Next: {titleOf(nextItem)}</p> : null}
-            {plan.items.map((item) => (
-              <ActivityCard
-                key={item.activity.id}
-                activity={item.activity}
-                now={now}
-                actions={actions}
-                budgets={state.settings.budgets}
-              />
-            ))}
+            <ProblemActivities items={plan.items} history={state.activities} now={now}
+              actions={actions} budgets={state.settings.budgets} />
             {remaining === 0 ? <p className="tone-good">All planned activities are done.</p> : null}
           </div>
         )}
@@ -186,16 +179,8 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
             now if you have spare time.
           </p>
           <div className="stack-tight">
-            {plan.carriedOver.map((item) => (
-              <ActivityCard
-                key={item.activity.id}
-                activity={item.activity}
-                now={now}
-                actions={actions}
-                variant="carried"
-                budgets={state.settings.budgets}
-              />
-            ))}
+            <ProblemActivities items={plan.carriedOver.map((item) => ({ ...item, variant: 'carried' as const }))}
+              history={state.activities} now={now} actions={actions} budgets={state.settings.budgets} />
           </div>
         </Card>
       ) : null}

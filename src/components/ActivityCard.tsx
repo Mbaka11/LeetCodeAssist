@@ -27,6 +27,8 @@ export function ActivityCard({
   actions,
   variant = 'planned',
   compact = false,
+  grouped = false,
+  attemptNumber,
   openProblemSheet,
   budgets,
   accepted,
@@ -38,6 +40,9 @@ export function ActivityCard({
   variant?: CardVariant;
   /** Side panel layout: no category and no LeetCode link (the problem is already open). */
   compact?: boolean;
+  /** Render as a borderless attempt row beneath a shared problem heading. */
+  grouped?: boolean;
+  attemptNumber?: number;
   /** Replaces the default in-page link to the problem sheet (the side panel opens the dashboard). */
   openProblemSheet?: (slug: string) => void;
   /** `settings.budgets`, so the shown estimate follows the user's overrides. */
@@ -101,18 +106,21 @@ export function ActivityCard({
   };
 
   const classes = ['activity', `activity-${activity.status}`];
+  if (grouped) classes.push('activity-attempt');
   if (running) classes.push('running');
 
   return (
-    <article className={classes.join(' ')}>
+    <article className={classes.join(' ')} aria-label={grouped ? `Attempt ${attemptNumber}: ${ACTIVITY_LABELS[activity.type]}` : undefined}>
       <div className="activity-head">
+        {grouped ? <span className="muted attempt-number">#{attemptNumber}</span> : null}
         <Badge tone={activity.type}>{ACTIVITY_LABELS[activity.type]}</Badge>
         {bonus ? <Badge tone="warn">Bonus</Badge> : null}
         {bonus && open ? <Badge>Optional</Badge> : null}
+        {activity.extra && !bonus ? <Badge>Extra practice</Badge> : null}
         {variant === 'carried' ? (
           <Badge tone="bad">{`Due ${formatDate(activity.dueDate)}`}</Badge>
         ) : null}
-        <a
+        {!grouped ? <a
           className="activity-title"
           href={problemHref(activity.slug)}
           {...(openProblemSheet
@@ -125,16 +133,22 @@ export function ActivityCard({
             : {})}
         >
           {problem?.title ?? activity.slug}
-        </a>
-        {problem ? (
+        </a> : null}
+        {problem && !grouped ? (
           <Badge tone={difficultyTone(problem.difficulty)}>
             {problem.difficulty}
           </Badge>
         ) : null}
-        {problem && !compact ? <span className="muted">{problem.category}</span> : null}
+        {problem && !compact && !grouped ? <span className="muted">{problem.category}</span> : null}
+        {grouped && activity.status === 'done' ? <span className="attempt-result muted">
+          {`Done · ${activity.outcome ? OUTCOME_LABELS[activity.outcome] : ''} · ${formatMs(activity.totalMs ?? 0)}`}
+          {activity.approachMs !== undefined ? ` · approach at ${formatElapsed(activity.approachMs)}` : ''}
+          {activity.hintsUsed ? ` · ${hintsLabel(activity.hintsUsed)}` : ''}
+        </span> : null}
+        {grouped && activity.status === 'skipped' ? <span className="muted">Skipped</span> : null}
         <span className="spacer" />
-        <span className="muted">~{formatMinutes(budgetMin)}</span>
-        {compact ? null : (
+        {!grouped || open ? <span className="muted">~{formatMinutes(budgetMin)}</span> : null}
+        {compact || grouped ? null : (
           <a className="link-out" href={url} target="_blank" rel="noreferrer">
             LeetCode ↗
           </a>
@@ -143,7 +157,7 @@ export function ActivityCard({
 
       {open ? <p className="instruction">{ACTIVITY_INSTRUCTIONS[activity.type]}</p> : null}
 
-      {activity.status === 'done' ? (
+      {activity.status === 'done' && !grouped ? (
         <p className="muted">
           {`Done · ${activity.outcome ? OUTCOME_LABELS[activity.outcome] : ''} · ${formatMs(activity.totalMs ?? 0)}`}
           {activity.approachMs !== undefined
@@ -152,7 +166,7 @@ export function ActivityCard({
           {activity.hintsUsed ? ` · ${hintsLabel(activity.hintsUsed)}` : ''}
         </p>
       ) : null}
-      {activity.status === 'skipped' ? <p className="muted">Skipped</p> : null}
+      {activity.status === 'skipped' && !grouped ? <p className="muted">Skipped</p> : null}
 
       {open && !finishing ? (
         <div className="row">

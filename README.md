@@ -89,6 +89,18 @@ problem is planned on a day (the strongest wins). Reviews continue after day 30.
 Notes are hidden while a review of the same problem is in progress or due; click **Reveal** if
 you really need them.
 
+### Repeated attempts without repeated cards
+
+Today groups activities **by problem** within each section. A single problem heading contains compact,
+chronological rows such as **Recall → Re-solve → Re-solve**, with each attempt's own outcome, duration and
+hints. An active row keeps its own timer and Finish controls; grouping never combines records, changes
+review scheduling or increases the distinct-problems-worked total.
+
+The side panel uses the same layout and keeps **Start as extra practice** inside the problem group when
+no attempt is open. Its general checklist summarizes repeats in one row (for example **Recall · Re-solve ×2**),
+with one Open button. Bonus offers and carried-over work keep their separate sections, and Logs still has
+one row per activity for detailed inspection or CSV export.
+
 ### Logging after midnight
 
 In **Finish → Completed on**, choose **Today** (default) or **Yesterday**, then **Save result**.

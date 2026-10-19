@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityCard, type CardVariant } from '../components/ActivityCard';
+import type { CardVariant } from '../components/ActivityCard';
+import { ProblemActivities } from '../components/ProblemActivities';
 import { AttemptHistory } from '../components/AttemptHistory';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -18,6 +19,7 @@ import { getProblem, problemUrl } from '../data/neetcode150';
 import { BENCHMARKS } from '../data/program';
 import type { AppActions } from '../lib/actions';
 import { formatDate, formatMinutes } from '../lib/format';
+import { groupActivities } from '../lib/groupActivities';
 import { ACTIVITY_LABELS, STATUS_LABELS, STATUS_TONES, difficultyTone } from '../lib/instructions';
 import { acceptedPrompt, type SubmissionEvent } from '../lib/leetcodeSubmissions';
 import { problemHref } from '../lib/route';
@@ -114,15 +116,17 @@ function ExtraPractice({
   );
   if (BENCHMARK_SLUGS.has(slug)) {
     return (
-      <Card title="Reserved for a benchmark">
+      <div className="problem-practice">
+        <h3>Reserved for a benchmark</h3>
         <p className="muted">
           This problem is kept unseen for a benchmark day (1, 15 or 30), so it is not offered as practice.
         </p>
-      </Card>
+      </div>
     );
   }
   return (
-    <Card title={doneToday ? 'Done today' : "Not in today's plan"}>
+    <div className="problem-practice">
+      <h3>{doneToday ? 'Done today' : "Not in today's plan"}</h3>
       <p className="muted">
         {doneToday
           ? 'You already finished this problem today. You can still start an optional extra attempt.'
@@ -146,38 +150,44 @@ function ExtraPractice({
         </Button>
       </div>
       {error ? <p className="error">{error}</p> : null}
-    </Card>
+    </div>
   );
 }
 
 const OPTIONAL_BONUS_TAG = 'Optional bonus';
 
 function ChecklistRow({
-  item,
-  tag,
+  items,
   openProblem,
 }: {
-  item: PlanItem;
-  tag?: string;
+  items: readonly (PlanItem & { tag?: string })[];
   openProblem: (slug: string) => void;
 }) {
-  const { activity } = item;
+  const activity = items[0]!.activity;
   const problem = getProblem(activity.slug);
   const title = problem?.title ?? activity.slug;
-  const done = activity.status === 'done';
+  const doneCount = items.filter((item) => item.activity.status === 'done').length;
+  const done = doneCount === items.length;
+  const started = items.some((item) => item.activity.status === 'in_progress');
+  const types = new Map<Activity['type'], number>();
+  for (const item of items) types.set(item.activity.type, (types.get(item.activity.type) ?? 0) + 1);
+  const tags = [...new Set(items.flatMap((item) => item.tag ? [item.tag] : []))];
   return (
     <li className={done ? 'check-done' : undefined}>
       <span className="check-mark" aria-hidden="true">
-        {done ? '✓' : activity.status === 'in_progress' ? '▶' : '○'}
+        {done ? '✓' : started ? '▶' : '○'}
       </span>
       <span className="visually-hidden">
-        {done ? 'Done: ' : activity.status === 'in_progress' ? 'In progress: ' : tag === OPTIONAL_BONUS_TAG ? 'Optional: ' : 'To do: '}
+        {done ? 'Done: ' : started ? 'In progress: ' : tags.includes(OPTIONAL_BONUS_TAG) ? 'Optional: ' : 'To do: '}
       </span>
-      <Badge tone={activity.type}>{ACTIVITY_LABELS[activity.type]}</Badge>
-      {tag ? <Badge tone="warn">{tag}</Badge> : null}
+      {[...types].map(([type, count]) => <Badge key={type} tone={type}>
+        {ACTIVITY_LABELS[type]}{count > 1 ? ` ×${count}` : ''}
+      </Badge>)}
+      {tags.map((tag) => <Badge key={tag} tone="warn">{tag}</Badge>)}
       <span className="check-title">{title}</span>
       {problem ? <Badge tone={difficultyTone(problem.difficulty)}>{problem.difficulty}</Badge> : null}
-      <span className="muted">~{formatMinutes(item.minutes)}</span>
+      {items.length > 1 ? <span className="muted">{doneCount}/{items.length} done</span> : null}
+      <span className="muted">~{formatMinutes(items.reduce((sum, item) => sum + item.minutes, 0))}</span>
       <span className="spacer" />
       <Button aria-label={`Open ${title} on LeetCode`} onClick={() => openProblem(activity.slug)}>
         Open
@@ -207,14 +217,12 @@ function TodayChecklist({
       </p>
       {plan.items.length === 0 ? <p className="muted">Nothing is scheduled today.</p> : null}
       <ul className="checklist" aria-label="Today's checklist">
-        {plan.items.map((item) => (
-          <ChecklistRow key={item.activity.id} item={item} openProblem={openProblem} />
-        ))}
-        {plan.bonuses.map((item) => (
-          <ChecklistRow key={item.activity.id} item={item} tag={OPTIONAL_BONUS_TAG} openProblem={openProblem} />
-        ))}
-        {plan.carriedOver.map((item) => (
-          <ChecklistRow key={item.activity.id} item={item} tag="Carried over" openProblem={openProblem} />
+        {groupActivities([
+          ...plan.items,
+          ...plan.bonuses.map((item) => ({ ...item, tag: OPTIONAL_BONUS_TAG })),
+          ...plan.carriedOver.map((item) => ({ ...item, tag: 'Carried over' })),
+        ], state.activities).map((group) => (
+          <ChecklistRow key={group.slug} items={group.items} openProblem={openProblem} />
         ))}
       </ul>
       <DashboardLink hash="#/today" openDashboard={openDashboard}>
@@ -336,28 +344,15 @@ export function ProblemPanel({
         </div>
       </Card>
 
-      {matches.length > 0 ? (
-        <Card title="Today">
-          <div className="stack-tight">
-            {matches.map((m) => (
-              <ActivityCard
-                key={m.activity.id}
-                activity={m.activity}
-                now={now}
-                actions={actions}
-                variant={m.variant}
-                compact
-                budgets={state.settings.budgets}
-                accepted={accepted ?? undefined}
-                autoOpenAccepted={m.activity.id === openActivity?.id}
-                openProblemSheet={(target) => openDashboard(problemHref(target))}
-              />
-            ))}
-          </div>
-        </Card>
-      ) : null}
-
-      {hasOpen ? null : <ExtraPractice state={state} actions={actions} slug={slug} today={today} />}
+      <Card title="Today">
+        {matches.length > 0 ? (
+          <ProblemActivities items={matches} history={state.activities} now={now} actions={actions}
+            compact budgets={state.settings.budgets} accepted={accepted ?? undefined}
+            selectedActivityId={openActivity?.id}
+            openProblemSheet={(target) => openDashboard(problemHref(target))}
+            footer={hasOpen ? null : <ExtraPractice state={state} actions={actions} slug={slug} today={today} />} />
+        ) : <ExtraPractice state={state} actions={actions} slug={slug} today={today} />}
+      </Card>
 
       <HintsSection slug={slug} activity={openActivity} actions={actions} />
 

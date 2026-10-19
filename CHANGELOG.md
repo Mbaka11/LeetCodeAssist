@@ -3,6 +3,24 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.6.4
+
+### Changed
+- **One problem card, several attempts.** Today groups repeated activities by problem within each section:
+  one heading, then compact chronological rows such as Recall → Re-solve → Re-solve. Each row keeps its
+  own outcome, duration and hints, and an open attempt retains its timer, Finish and secondary actions.
+- The side panel shares the same grouped layout, with the repeat-practice action inside the group instead
+  of a separate card. Its general checklist summarizes repeated types (for example Re-solve ×2) with one
+  Open button per problem. Extra attempts are explicitly labelled Extra practice.
+
+### Notes
+- Presentation only: all attempts and IDs remain independent in history/Logs/CSV. Activity counts, logged
+  time, distinct-problem totals, review scheduling, program order and budgets are unchanged. Today still
+  separates optional bonus offers and carried-over work. No storage migration or new permission is needed.
+- Automated DOM tests cover repeated attempts, active timers, Finish dates and fresh Accepted/Cancel behavior.
+  A synthetic Chrome rendering of the shared card was checked at 900px and 360px container widths without
+  horizontal overflow; this is not a live installed-extension or LeetCode-account validation.
+
 ## 0.6.3
 
 ### Added
