@@ -3,9 +3,9 @@
  *
  * Only a handful of fields of LeetCode's submission-result responses are ever looked at (`state`,
  * `status_msg`, `lang`, `status_runtime`, `status_memory`); everything else is ignored. The endpoint
- * contract is inferred from public knowledge and not verified against live traffic, so every parser here
- * fails closed: anything unexpected yields null / "invalid" and the user simply completes the activity by
- * hand.
+ * contract is inferred, with the v2 check route and result fields corroborated by a user report (not an
+ * installed-extension live test). Every parser fails closed: anything unexpected yields null / "invalid"
+ * and the user simply completes the activity by hand.
  */
 
 /** Cap of the stored event list. */
@@ -53,8 +53,9 @@ export function isValidSlug(value: unknown): value is string {
 export type ObservedRequest = { kind: 'submit'; slug: string } | { kind: 'check' };
 
 /**
- * Recognises the two observed routes: `/problems/<slug>/submit/` and `/submissions/detail/<id>/check/`.
- * Anything on another host or path is ignored.
+ * Recognises `/problems/<slug>/submit/` and both result routes:
+ * `/submissions/detail/<id>/check/` and `/submissions/detail/<id>/v2/check/`.
+ * Anything on another host or path is ignored, including Run Code's non-numeric IDs.
  */
 export function classifyRequestUrl(url: string, base: string): ObservedRequest | null {
   let parsed: URL;
@@ -74,7 +75,7 @@ export function classifyRequestUrl(url: string, base: string): ObservedRequest |
     }
     return isValidSlug(slug) ? { kind: 'submit', slug } : null;
   }
-  if (/^\/submissions\/detail\/\d{1,20}\/check\/?$/.test(parsed.pathname)) return { kind: 'check' };
+  if (/^\/submissions\/detail\/\d{1,20}\/(?:v2\/)?check\/?$/.test(parsed.pathname)) return { kind: 'check' };
   return null;
 }
 
@@ -115,7 +116,7 @@ function optionalMetric(value: unknown): string | undefined {
 }
 
 /**
- * Reads a parsed `/submissions/detail/<id>/check/` response. A pending response (`PENDING` / `STARTED`)
+ * Reads a parsed legacy or v2 submission check response. A pending response (`PENDING` / `STARTED`)
  * only means "poll again"; a final one carries the verdict in `status_msg`.
  */
 export function parseCheckResponse(payload: unknown): CheckParse {

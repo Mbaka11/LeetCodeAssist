@@ -1,17 +1,17 @@
 # LeetCode endpoints used by LeetCode Assist (endpoint ledger)
 
-LeetCode has **no documented public API** for any of this. The contracts below are **inferred from public
-knowledge of how leetcode.com behaves, with low confidence, and have NOT been verified against live traffic**:
-no traffic was captured when this was written, and nothing here claims live validation. Every parser fails
-closed (anything unexpected is ignored), so a wrong guess costs a feature, never data or correctness: without
-detection you finish activities by hand, without the profile call the streak card shows an error.
+LeetCode has **no documented public API** for any of this. Most contracts below are inferred, with low
+confidence. During 0.6.2 debugging, a user reported the **v2 check route** and its whitelisted result fields
+from their own browser. That corroborates the route/shape, **not end-to-end live validation of the repaired
+extension**. No authenticated requests were made by the investigation. Parsers fail closed on unexpected
+shapes; manual completion remains available and the profile card reports its own errors.
 
 | | |
 |---|---|
-| Evidence | inferred from public knowledge; no capture, no official documentation |
-| Confidence | low |
-| Live-verified | no |
-| Last reviewed | 0.5.0 development; re-check by the steps at the end |
+| Evidence | inferred contracts; v2 result route/whitelisted shape corroborated by user report during 0.6.2 debugging |
+| Confidence | medium for the reported v2 route/shape; low for other unverified endpoints |
+| Live-verified | route/shape user-reported; repaired extension flow not yet live-verified |
+| Last reviewed | 0.6.2 development; re-check by the steps at the end |
 
 ## Boundaries (what this extension does and does not do)
 
@@ -42,12 +42,13 @@ detection you finish activities by hand, without the profile call the streak car
 
 | | |
 |---|---|
-| Method / route | `GET https://leetcode.com/submissions/detail/<id>/check/` (polled by the page) |
+| Method / route | `GET https://leetcode.com/submissions/detail/<id>/check/` or `GET https://leetcode.com/submissions/detail/<id>/v2/check/` (polled by the page) |
 | Used for | the final verdict of a submission |
 | Whitelisted response fields | `state` (`PENDING` / `STARTED` while running, `SUCCESS` when finished), `status_msg` (`Accepted`, `Wrong Answer`, `Time Limit Exceeded`, `Memory Limit Exceeded`, `Runtime Error`, `Compile Error`, ...), `lang` (`python3`, `cpp`, ...), `status_runtime` and `status_memory` when present. Everything else in the response (code output, expected output, error text) is ignored and dropped |
-| Validation | each field is a short string of letters, digits and a few punctuation characters (`status_msg` <= 64, `lang` <= 32, `state` <= 24, metrics <= 32 chars); the response text is read through a clone, bounded to 256 KiB; pending states are not reported; the `<id>` is only used locally to report a finished check once |
+| Validation | each field is a short string of letters, digits and a few punctuation characters (`status_msg` <= 64, `lang` <= 32, `state` <= 24, metrics <= 32 chars); the response text is read through a clone, bounded to 256 KiB; pending states are not reported; the numeric `<id>` is only used locally to report a finished check once across both route versions; Run Code's non-numeric IDs are excluded |
 | Authentication | the page's own session; not handled by the extension |
-| Evidence / confidence | inferred, low. Notably unverified: the exact route, whether `status_msg` carries `Accepted` for a pass, the `lang` spelling, and whether the site also uses a different route (for example GraphQL `submissionDetails`) in newer UI versions |
+| Evidence / confidence | user-reported v2 route with HTTP 200 and `state: SUCCESS`, `status_msg: Accepted`, `lang: python`, plus runtime/memory strings. Synthetic regression fixtures cover this shape (not raw captured data). Other languages/verdicts and legacy routes remain inferred; GraphQL `submissionDetails` is not observed |
+| Accepted criterion | exact `status_msg: Accepted` on a final check. `SUCCESS` only means judging finished; `status_code` and `run_success` are not used to infer acceptance |
 | Failure mode | if the contract is wrong, no event is recorded and the diagnostics in Settings show "Submissions seen" without "Results seen" |
 
 How it is observed: a content script in the page's MAIN world wraps `window.fetch` and
@@ -59,8 +60,12 @@ the sender is this extension on a `leetcode.com/problems/` page, validates again
 off, stamps its own time, appends to a capped list of 200).
 
 Known limits: the scripts are injected for `https://leetcode.com/problems/*` at document start, so a problem page
-reached by in-page navigation from another LeetCode page may need one reload before it is observed. A script on the
-page could post a fake window message; events are advisory (they only pre-fill a form the user confirms).
+reached by in-page navigation from another LeetCode page may need one reload before it is observed. Reload the
+LeetCode tab after installing/updating the extension too. A script on the page could post a fake window message;
+events never save a result. A fresh matching Accepted while the activity is started and its side panel is open
+pauses the timer and opens a confirmation form. Historical events only offer a manual button; Cancel does not
+reopen the same event. Fetch and text XHR are supported; JSON-mode XHR and alternative result endpoints remain
+unsupported. The repaired route-to-form flow is covered with mocks, not an installed-browser live test.
 
 ### 3. Public profile calendar (requested by the extension)
 
@@ -85,9 +90,10 @@ yet; the longest streak is the longest run in the returned data; the heat grid c
 
 Do this only in a browser profile you own, signed in as yourself, and only for your own submissions:
 
-1. Open DevTools > Network on `leetcode.com/problems/two-sum/`, filter `submit` and `check`, and submit once.
-   Note the **route templates** and the **field names** of the result. Do not copy cookies, tokens, request
-   bodies or full responses anywhere (not into issues, chats or this repository).
+1. During your next normal submission, open DevTools > Network on the problem page and filter `check`.
+   In **Preview** (not Headers), note only `state`, `status_msg` and `lang`, plus the **route template** with
+   the numeric ID replaced by `<id>`. Never share headers, cookies, tokens, request bodies or full responses
+   (not into issues, chats or this repository). No raw captures or identifiers are needed for a fixture.
 2. Compare with the table in section 2. If the route or fields differ, change `classifyRequestUrl` and
    `parseCheckResponse` in `src/lib/leetcodeSubmissions.ts` and their synthetic fixtures in the test file.
 3. For the profile call, open your public profile page and look for the `graphql` request that returns the

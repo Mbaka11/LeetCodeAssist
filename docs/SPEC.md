@@ -276,18 +276,28 @@ The API contract behind the first two is documented, with its confidence level, 
 **Accepted detection (passive).** A content script in the page's own (MAIN) world on `leetcode.com/problems/*`
 wraps `fetch` and `XMLHttpRequest` and only *observes*: it never alters a request or response, never submits
 or retries anything. For the submit route (`/problems/<slug>/submit/`) it notes slug and time; for the result
-polling route (`/submissions/detail/<id>/check/`) it reads a bounded clone of the response and keeps only
-`state`, `status_msg`, `lang` (and `status_runtime`/`status_memory` when present). It posts the event with
+polling routes (`/submissions/detail/<id>/check/` and `/submissions/detail/<id>/v2/check/`) it reads a bounded
+clone of the response and keeps only `state`, `status_msg`, `lang` (and `status_runtime`/`status_memory` when present). It posts the event with
 `window.postMessage` to an isolated content script, which validates origin and shape and relays it with
 `chrome.runtime.sendMessage`; the background worker validates again, stamps its own receipt time and appends
 it to a capped list (200 events, own storage key `leetcodeAssist.submissionEvents.v1`, written under a lock,
 not part of `AppState`). Pure parsing and validation: `src/lib/leetcodeSubmissions.ts`.
-- Side panel: when the current problem has an **in-progress** activity and an *Accepted* verdict was detected
-  today, the card shows *Accepted at 23:14 (Python3) — finish this activity?* (the **latest** Accepted since local
-  midnight) plus the number of failed verdicts since the previous Accepted. *Finish this activity…* opens the usual finish form with the logged time taken from the
-  timer and **Solo** pre-selected only when `hintsUsed` is 0; the user always confirms. Nothing is ever
-  completed automatically. A non-Python language adds a gentle note. (The activity model has no first-start
-  timestamp, so "after the activity started" is approximated by "since local midnight today".)
+- Side panel: a **fresh Accepted** arriving while the matching **in-progress** activity is on screen pauses
+  its timer and opens the usual **Finish** form. The running activity takes precedence if more than one is
+  open for that problem; at most one card auto-opens, and other matching cards mark that event as already
+  observed so a pause cannot trigger a second form. The form still requires **Save result**:
+  **Solo** is pre-selected only when `hintsUsed` is 0, otherwise **Hint**; the user can change the outcome and
+  time. Nothing is ever completed automatically. The notice includes language, timestamp and earlier failed
+  attempts; non-Python results add a gentle note.
+- Auto-opening is limited to events newer than the card's initial observation and the current timer start
+  (if running). Events present on mount, loaded from storage before that boundary, or already handled do not
+  auto-open. Starting/switching activities resets the observation boundary; **Cancel** consumes the event so
+  storage updates and timer ticks do not reopen the form. A later Accepted can open it again. An already-open
+  manual form and its selected outcome are left untouched.
+- Older detected results still offer *Accepted at 23:14 (Python3) — finish this activity?* and a manual
+  *Finish this activity…* button. This advisory uses the latest Accepted since local midnight, not a persisted
+  first-start timestamp (the activity schema is unchanged). A closed side panel cannot automatically open a
+  form or stop a timer; reopening it after a verdict uses the manual button instead.
 - Settings, *LeetCode detection*: on/off (default on; when off, events are dropped by the worker and none are
   stored), diagnostics (submissions seen, results seen, Accepted count, last `status_msg` values, last event
   time, no bodies), *Clear detected events* and a plain-language privacy note. With nothing detected, every
@@ -329,5 +339,5 @@ rests on that one source.
 
 ## 7. Out of scope for v1
 
-Automatically completing an activity from a detected "Accepted" (detection only offers a prompt, section 6a), accounts, sync, copying NeetCode/LeetCode
+Automatically saving/completing an activity from a detected "Accepted" (detection opens a confirmation form, section 6a), accounts, sync, copying NeetCode/LeetCode
 explanations or solutions (only facts: title, difficulty, category, link).

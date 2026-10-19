@@ -135,9 +135,9 @@ export function LeetCodeDetectionPanel({
   return (
     <div className="stack-tight">
       <p className="muted">
-        When you submit a solution on leetcode.com, the extension can notice that LeetCode answered
-        &quot;Accepted&quot; and offer to finish the matching activity in the side panel. It never finishes
-        anything for you: you always choose the outcome.
+        While the side panel is open on a started activity, a newly detected &quot;Accepted&quot; for that
+        problem pauses its timer and opens the Finish form. Review the outcome and time, then choose Save
+        result. Nothing is completed automatically. Older detected results still offer a manual Finish button.
       </p>
       <label className="check-field">
         <input type="checkbox" checked={enabled} onChange={(e) => onToggle(e.target.checked)} />
@@ -155,6 +155,13 @@ export function LeetCodeDetectionPanel({
         <p className="muted">
           Nothing detected yet. If you have submitted on LeetCode and this stays empty, completing activities
           by hand works exactly as before (reload the LeetCode tab once after installing or updating).
+        </p>
+      ) : null}
+      {enabled && events.some((e) => e.type === 'submit') && !events.some((e) => e.type === 'check') ? (
+        <p className="muted">
+          Submissions are being seen, but no final results have been recorded. Reload the LeetCode tab after
+          updating the extension. If this continues, share these counts and the result request&apos;s route
+          template only — never headers, cookies or full responses.
         </p>
       ) : null}
       <div className="row">

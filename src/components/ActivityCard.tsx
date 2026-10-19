@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { estimatedMinutes, isReviewType } from '../core/activities';
 import { addDays, localDateFromTimestamp } from '../core/dates';
 import { elapsedMs, formatElapsed } from '../core/timer';
@@ -9,7 +9,7 @@ import type { AppActions } from '../lib/actions';
 import { MAX_MOVE_DAYS } from '../lib/commands';
 import { formatDate, formatMinutes, formatMs } from '../lib/format';
 import { ACTIVITY_INSTRUCTIONS, ACTIVITY_LABELS, OUTCOME_LABELS, difficultyTone } from '../lib/instructions';
-import { acceptedPromptText, formatClockTime, type AcceptedPrompt } from '../lib/leetcodeSubmissions';
+import { acceptedPromptText, formatClockTime, languageLabel, type AcceptedPrompt } from '../lib/leetcodeSubmissions';
 import { problemHref } from '../lib/route';
 import { Badge } from './Badge';
 import { hintsLabel } from './AttemptHistory';
@@ -30,6 +30,7 @@ export function ActivityCard({
   openProblemSheet,
   budgets,
   accepted,
+  autoOpenAccepted = false,
 }: {
   activity: Activity;
   now: number;
@@ -41,8 +42,10 @@ export function ActivityCard({
   openProblemSheet?: (slug: string) => void;
   /** `settings.budgets`, so the shown estimate follows the user's overrides. */
   budgets?: BudgetOverrides | undefined;
-  /** A detected Accepted verdict for this problem (side panel): offers to finish, never finishes by itself. */
+  /** A detected Accepted verdict for this problem (side panel); never saves a result by itself. */
   accepted?: AcceptedPrompt | undefined;
+  /** Only the selected side-panel activity may auto-open for a fresh verdict. Other cards consume it too. */
+  autoOpenAccepted?: boolean;
 }) {
   const [finishing, setFinishing] = useState(false);
   const [moving, setMoving] = useState(false);
@@ -62,6 +65,29 @@ export function ActivityCard({
   const postponable = activity.type === 'new' && !activity.extra && !isBonusProblem(activity.slug);
   const movable = isReviewType(activity.type) && !activity.extra && activity.status === 'planned';
   const today = localDateFromTimestamp(now);
+  const acceptedAt = accepted?.acceptedAt;
+  // Observe only fresh events while this particular started activity is on screen. Loading saved events,
+  // switching activities or re-opening the panel must not pause a new attempt because of an older Accepted.
+  const detectionCursor = useRef({ id: activity.id, inProgress, since: now, acceptedAt });
+  useEffect(() => {
+    const previous = detectionCursor.current;
+    if (previous.id !== activity.id || previous.inProgress !== inProgress) {
+      detectionCursor.current = { id: activity.id, inProgress, since: now, acceptedAt };
+      return;
+    }
+    if (acceptedAt === undefined || acceptedAt <= (previous.acceptedAt ?? -Infinity)) return;
+    // Consume before opening: pause/storage rerenders and Cancel cannot re-open the same event.
+    previous.acceptedAt = acceptedAt;
+    if (
+      !autoOpenAccepted || !inProgress || finishing || acceptedAt < previous.since ||
+      (activity.timer.startedAt !== null && acceptedAt < activity.timer.startedAt)
+    ) return;
+    setError(null);
+    if (running) {
+      actions.pause(activity.id).catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+    }
+    setFinishing(true);
+  }, [acceptedAt, activity.id, activity.timer.startedAt, autoOpenAccepted, inProgress, running, finishing, actions, now]);
 
   const startFinishing = (): void => {
     if (running) run(actions.pause(activity.id));
@@ -212,6 +238,15 @@ export function ActivityCard({
           onMove={(date) => actions.moveReview(activity.id, date)}
           onCancel={() => setMoving(false)}
         />
+      ) : null}
+
+      {finishing && accepted ? (
+        <p className="muted" role="status">
+          LeetCode reported Accepted at {formatClockTime(accepted.acceptedAt)} ({languageLabel(accepted.lang)}).
+          {accepted.attemptsBefore > 0 ? ` Earlier unsuccessful attempts: ${accepted.attemptsBefore}.` : ''}
+          {!accepted.python ? ' This program is meant to be practised in Python.' : ''}
+          {' Confirm your outcome and time below. Nothing is saved until you choose Save result.'}
+        </p>
       ) : null}
 
       {finishing ? (

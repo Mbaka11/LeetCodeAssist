@@ -39,6 +39,11 @@ function requestUrl(input: unknown): string | null {
   return null;
 }
 
+/** Both route versions and an optional trailing slash identify the same submission check. */
+function checkKey(url: string, base: string): string {
+  return new URL(url, base).pathname.replace(/\/(?:v2\/)?check\/?$/, '/check/');
+}
+
 export function installSubmissionObserver(
   win: ObservedWindow,
   emit: (event: SubmissionEvent) => void,
@@ -87,7 +92,7 @@ export function installSubmissionObserver(
         const request = url === null ? null : classifyRequestUrl(url, win.location.href);
         if (request?.kind === 'submit') noteSubmit(request.slug);
         if (request?.kind === 'check' && url !== null) {
-          const checkUrl = new URL(url, win.location.href).pathname;
+          const checkUrl = checkKey(url, win.location.href);
           Promise.resolve(result)
             .then((response) =>
               response.ok ? readBoundedText(response.clone(), MAX_OBSERVED_BODY_BYTES) : null,
@@ -124,7 +129,7 @@ export function installSubmissionObserver(
         const request = url === undefined ? null : classifyRequestUrl(url, win.location.href);
         if (request?.kind === 'submit') noteSubmit(request.slug);
         if (request?.kind === 'check' && url !== undefined) {
-          const checkUrl = new URL(url, win.location.href).pathname;
+          const checkUrl = checkKey(url, win.location.href);
           this.addEventListener('load', () => {
             try {
               if (this.status < 200 || this.status >= 300) return;

@@ -188,17 +188,22 @@ The choice is stored in the optional `settings.roadmapCatalog`.
 
 ## LeetCode features and privacy
 
-- **Accepted detection (optional, on by default):** when you submit on leetcode.com the side panel can
-  notice "Accepted" and offer to finish the matching activity. You always confirm the outcome. Turn it
-  off or clear the detected events in **Settings → LeetCode detection**. The observer reads only the
-  verdict, language, problem and time of your own submissions: never your code, cookies or headers.
+- **Accepted detection (optional, on by default):** start an activity and keep its side panel open while
+  submitting on leetcode.com. A newly detected **Accepted** for that problem pauses the timer and opens
+  **Finish**. You still confirm Solo / Hint / Solution / Stuck and the time with **Save result**; nothing is
+  completed automatically. Old events loaded when reopening the panel only offer a manual Finish button,
+  and **Cancel** does not reopen the form for the same event. Turn detection off or clear the events in
+  **Settings → LeetCode detection**. Both legacy and `/v2/check/` result routes are supported. **Reload the
+  LeetCode tab after updating the extension.** The observer keeps only whitelisted verdict metadata, never
+  your code, cookies or headers.
 - **LeetCode streak:** add your LeetCode username in **Settings** to see your submission streak and a
   compact 16-week heat grid (with Refresh, your username and the data age) next to the Calendar overview. It makes one anonymous request to leetcode.com per refresh
   (at most hourly) and only reads your public profile calendar.
 - **Coloured timers:** green, amber ("near limit") and red ("over budget") against the budget on the
   card, plus help-ladder cues at 15 and 35 minutes on new problems.
-- Both LeetCode features rely on endpoints that are not publicly documented. They are inferred and
-  **not live-verified**; see [`docs/leetcode-api.md`](docs/leetcode-api.md). If nothing is detected,
+- Both LeetCode features rely on endpoints that are not publicly documented. The v2 result route and its
+  whitelisted fields were corroborated by a user's browser report; the repaired extension is **not yet
+  end-to-end live-verified**, and the profile endpoint remains inferred. See [`docs/leetcode-api.md`](docs/leetcode-api.md). If nothing is detected,
   everything still works manually. No new permissions are used and the content scripts run on
   `https://leetcode.com/problems/*` only. *Reset all data* clears these keys.
 

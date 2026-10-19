@@ -173,6 +173,8 @@ describe('LeetCode settings cards', () => {
     expect(html).toContain('Clear detected events');
     expect(html).toContain('never reads or stores');
     expect(html).toContain('sends nothing');
+    expect(html).toContain('pauses its timer and opens the Finish form');
+    expect(html).toContain('Nothing is completed automatically');
   });
 
   it('degrades gracefully when nothing was detected', () => {
@@ -182,6 +184,14 @@ describe('LeetCode settings cards', () => {
     expect(html).toContain('Nothing detected yet');
     expect(html).toContain('disabled=""'); // nothing to clear
     expect(panel(false, [])).not.toContain('checked=""');
+  });
+
+  it('explains the submissions-without-results failure without requesting private data', () => {
+    const html = panel(true, [events[0]!]);
+    expect(html).toContain('no final results have been recorded');
+    expect(html).toContain('never headers, cookies or full responses');
+    expect(panel(false, [events[0]!])).not.toContain('no final results have been recorded');
+    expect(panel(true, events)).not.toContain('no final results have been recorded');
   });
 
   it('renders the cards without a browser (defaults: detection on)', () => {

@@ -82,6 +82,29 @@ describe('installSubmissionObserver (fetch)', () => {
     expect(events.filter((e) => e.type === 'check')).toHaveLength(1);
   });
 
+  it('observes v2 polls and deduplicates the same final check across both route versions', async () => {
+    const { win, events } = setup((() => Promise.resolve(jsonResponse(acceptedBody))) as typeof fetch);
+    await win.fetch!('/submissions/detail/123/v2/check/');
+    await flush();
+    expect(events).toMatchObject([{ type: 'check', slug: 'two-sum', status_msg: 'Accepted' }]);
+    await win.fetch!('/submissions/detail/123/check/');
+    await win.fetch!('/submissions/detail/123/v2/check');
+    await flush();
+    expect(events).toHaveLength(1);
+  });
+
+  it('ignores pending v2 polls without treating SUCCESS alone as Accepted', async () => {
+    let body = JSON.stringify({ state: 'PENDING' });
+    const { win, events } = setup((() => Promise.resolve(jsonResponse(body))) as typeof fetch);
+    await win.fetch!('/submissions/detail/124/v2/check/');
+    await flush();
+    body = JSON.stringify({ state: 'SUCCESS', status_msg: 'Wrong Answer', lang: 'python' });
+    await win.fetch!('/submissions/detail/124/v2/check/');
+    await flush();
+    expect(events).toHaveLength(1);
+    expect(events[0]?.status_msg).toBe('Wrong Answer');
+  });
+
   it('falls back to the page slug when no recent submit was seen', async () => {
     const { win, events } = setup((() => Promise.resolve(jsonResponse(acceptedBody))) as typeof fetch);
     await win.fetch!('/submissions/detail/5/check/');
@@ -118,11 +141,11 @@ describe('installSubmissionObserver (fetch)', () => {
 });
 
 describe('installSubmissionObserver (XMLHttpRequest)', () => {
-  it('observes a check through the load event and keeps open/send results', () => {
+  it.each(['check', 'v2/check'])('observes %s through the load event and keeps open/send results', (route) => {
     const { win, events, FakeXhr } = setup((() => Promise.reject(new Error('unused'))) as typeof fetch);
     const xhr = new (win.XMLHttpRequest as unknown as typeof FakeXhr)();
-    expect(xhr.open('GET', '/submissions/detail/8/check/')).toBe('open-result');
-    expect(xhr.opened).toEqual(['GET', '/submissions/detail/8/check/']);
+    expect(xhr.open('GET', `/submissions/detail/8/${route}/`)).toBe('open-result');
+    expect(xhr.opened).toEqual(['GET', `/submissions/detail/8/${route}/`]);
     expect(xhr.send('body')).toBe('send-result');
     expect(xhr.sent).toEqual(['body']);
     xhr.finish(acceptedBody);

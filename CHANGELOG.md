@@ -3,6 +3,29 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.6.2
+
+### Fixed
+- Accepted detection now recognizes LeetCode's `/submissions/detail/<id>/v2/check/` route as well as the
+  legacy `/check/` route. The missing `/v2/` match explained submissions being recorded without any results.
+  Both versions of a submission check share the same deduplication key; Run Code requests remain excluded.
+
+### Changed
+- A fresh **Accepted** received while the matching started activity is visible in the side panel now pauses
+  its timer and opens **Finish** automatically. **Save result** still requires your confirmation; the
+  extension never decides your outcome or completes an activity on its own. Hints still pre-select Hint.
+- Historical events, switching/starting an activity and repeated storage updates do not auto-open a form.
+  Cancel does not reopen the same event, and an already-open manual form keeps its selected outcome.
+  Older results still offer the manual Finish button.
+- Settings explains the submissions-without-results diagnostic and how to report a route without private data.
+
+### Notes
+- Reload the extension, then reload the LeetCode tab. Keep the side panel open and start the activity before
+  submitting. No previously missed result is recovered automatically; finish it manually if needed.
+- The v2 route and whitelisted fields were corroborated by a user's browser report. Fetch/XHR and the
+  observer-to-storage-to-Finish flow are tested with synthetic fixtures; the repaired extension has not yet
+  been verified end to end in a live LeetCode session. Permissions and saved-data schemas are unchanged.
+
 ## 0.6.1
 
 ### Fixed

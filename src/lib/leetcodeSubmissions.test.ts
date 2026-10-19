@@ -49,6 +49,8 @@ describe('classifyRequestUrl', () => {
     });
     expect(classifyRequestUrl('/submissions/detail/1234567890/check/', BASE)).toEqual({ kind: 'check' });
     expect(classifyRequestUrl('https://leetcode.com/submissions/detail/9/check/?x=1', BASE)).toEqual({ kind: 'check' });
+    expect(classifyRequestUrl('/submissions/detail/123/v2/check/', BASE)).toEqual({ kind: 'check' });
+    expect(classifyRequestUrl('https://leetcode.com/submissions/detail/9/v2/check?x=1', BASE)).toEqual({ kind: 'check' });
   });
 
   it('ignores other routes, hosts, schemes and malformed input', () => {
@@ -60,6 +62,9 @@ describe('classifyRequestUrl', () => {
     expect(classifyRequestUrl('/problems/Two Sum!/submit/', BASE)).toBeNull();
     expect(classifyRequestUrl('/problems/%/submit/', BASE)).toBeNull();
     expect(classifyRequestUrl('/submissions/detail/abc/check/', BASE)).toBeNull();
+    expect(classifyRequestUrl('/submissions/detail/runcode_123/v2/check/', BASE)).toBeNull();
+    expect(classifyRequestUrl('/submissions/detail/123/v3/check/', BASE)).toBeNull();
+    expect(classifyRequestUrl('https://example.com/submissions/detail/123/v2/check/', BASE)).toBeNull();
     expect(classifyRequestUrl('http://[bad', 'not a url')).toBeNull();
   });
 });
@@ -87,6 +92,20 @@ describe('parseCheckResponse', () => {
   it.each(finals)('reads the %s verdict', (status_msg) => {
     const parsed = parseCheckResponse({ state: 'SUCCESS', status_msg, lang: 'python3' });
     expect(parsed).toEqual({ kind: 'final', state: 'SUCCESS', status_msg, lang: 'python3' });
+  });
+
+  it('reads the reported v2 shape without retaining submission IDs or test outputs', () => {
+    // Synthetic values; only the route and whitelisted field shape were reported by the user.
+    expect(parseCheckResponse({
+      state: 'SUCCESS', status_msg: 'Accepted', status_code: 10, lang: 'python',
+      run_success: true, finished: true, status_runtime: '100 ms', status_memory: '20 MB',
+      submission_id: '123', code_output: 'ignored', expected_output: 'ignored',
+    })).toEqual({
+      kind: 'final', state: 'SUCCESS', status_msg: 'Accepted', lang: 'python',
+      status_runtime: '100 ms', status_memory: '20 MB',
+    });
+    // SUCCESS is a finished judging job, not necessarily an Accepted solution.
+    expect(parseCheckResponse({ state: 'SUCCESS', status_code: 10 })).toEqual({ kind: 'invalid' });
   });
 
   it('reads a non-Python language as is', () => {

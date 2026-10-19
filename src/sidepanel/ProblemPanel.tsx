@@ -293,12 +293,14 @@ export function ProblemPanel({
   const attempts = history.length;
   const position = queuePosition(state, slug);
   const openActivity =
+    matches.map((m) => m.activity).find((a) => a.status === 'in_progress' && a.timer.running) ??
     matches.map((m) => m.activity).find((a) => a.status === 'in_progress') ??
     matches.map((m) => m.activity).find((a) => a.status === 'planned');
   const locked = isNotesLocked(state, slug, today);
   // The activity model stores no first-start time, so "after the activity started" is approximated by
   // "since local midnight today" (a started activity is always one of today's); the latest Accepted
-  // since then is used.
+  // since then is used for the advisory button. ActivityCard auto-opens only for a fresh event observed
+  // while that started activity is on screen; loading older events never auto-opens the form.
   const accepted = acceptedPrompt(submissionEvents, {
     slug,
     since: new Date(now).setHours(0, 0, 0, 0),
@@ -347,6 +349,7 @@ export function ProblemPanel({
                 compact
                 budgets={state.settings.budgets}
                 accepted={accepted ?? undefined}
+                autoOpenAccepted={m.activity.id === openActivity?.id}
                 openProblemSheet={(target) => openDashboard(problemHref(target))}
               />
             ))}
