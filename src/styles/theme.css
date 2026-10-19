@@ -723,6 +723,78 @@ textarea.mono {
   gap: 6px;
 }
 
+/* Shared saved-event status: a setting indicator, not a live connection probe. */
+.detection-status {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 0.85rem;
+}
+
+.detection-status-header {
+  gap: 6px 10px;
+}
+
+.detection-status-header .btn {
+  padding: 4px 6px;
+  font-size: 0.8rem;
+}
+
+.detection-light {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.detection-observations {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 10px;
+  margin: 8px 0;
+  font-size: 0.8rem;
+}
+
+.detection-observations dt {
+  font-weight: 600;
+}
+
+.detection-observations dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.detection-context,
+.detection-feedback {
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+
+.detection-help {
+  margin-top: 8px;
+  font-size: 0.8rem;
+}
+
+.detection-help summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+
+.detection-help summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.detection-help ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
 /* Side panel */
 .panel {
   padding: 12px;

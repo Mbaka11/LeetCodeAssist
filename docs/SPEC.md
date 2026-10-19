@@ -346,6 +346,29 @@ not part of `AppState`). Pure parsing and validation: `src/lib/leetcodeSubmissio
   time, no bodies), *Clear detected events* and a plain-language privacy note. With nothing detected, every
   activity is finished by hand exactly as before.
 
+**Detection status indicator.** `LeetCodeDetectionStatus` appears above the side-panel content (including
+setup/error states) and in Settings. Its labelled on/off badge represents the stored detection preference,
+not observer liveness. Two always-visible rows show the last saved Submit and Accepted across all problems,
+including local date/time and problem title (language when present). None recorded means absent from the
+capped local event list, not no submission in the user's real LeetCode history. Turning detection off keeps
+old observations; Clear detected events removes both timestamps. Existing watched storage drives updates;
+no new keys, request, heartbeat, permissions or timer/completion actions are introduced.
+
+Feedback is scoped to the active problem when one is open: no observations; Submit with no later final
+result for the same slug; the latest unsuccessful verdict; or Accepted with/without an in-progress activity.
+A result for a different problem cannot answer the current problem's Submit, and an old Accepted cannot
+answer a newer Submit. This correlates problem and receipt time, not submission IDs; it cannot prove the
+health of an individual request. Latest observations are selected by timestamp, not array order. Switching
+tabs changes feedback but not the global timestamp rows. A polite live region announces feedback changes,
+not every clock tick; badge text accompanies its decorative dot so colour is not the only status cue.
+
+A collapsed **Why did Finish not open?** section explains that the setting does not verify a connected page,
+judging may still be running, reload is needed after updates (avoid reloading unsaved work), an activity must
+be started with the side panel visible, and only a fresh Accepted opens Finish. Historical Accepted, Cancel,
+and manual Save result requirements remain unchanged. The status never opens/saves a form itself. A Settings
+button in the side panel opens the dashboard's existing Settings route. Dates refresh with the existing
+side-panel clock and a 30-second display clock in Settings; there is no network polling.
+
 **LeetCode submission streak.** Optional username (Settings, *LeetCode profile*; letters, digits, `_ - .`,
 up to 40). The background worker POSTs the public GraphQL query `matchedUser(username).userCalendar` to
 `https://leetcode.com/graphql` (credentials omitted, 10 s deadline, 256 KiB limit, one request, no retries;

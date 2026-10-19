@@ -220,6 +220,13 @@ The choice is stored in the optional `settings.roadmapCatalog`.
   **Settings → LeetCode detection**. Both legacy and `/v2/check/` result routes are supported. **Reload the
   LeetCode tab after updating the extension.** The observer keeps only whitelisted verdict metadata, never
   your code, cookies or headers.
+- **Detection status:** a compact indicator above the side-panel activities (also in Settings) shows
+  **Detection on/off**, **Last Submit** and **Last Accepted**, with local timestamps and problem names.
+  The last observations are global; feedback underneath is scoped to the currently open problem and
+  distinguishes no events, a Submit without a later result, an unsuccessful result, and Accepted with no
+  started activity. **Why did Finish not open?** explains update/reload and confirmation requirements.
+  This is saved-event visibility, **not a live connection check**: on means the preference is enabled, and
+  old Accepted events do not prove that the latest submission succeeded. No extra requests are made.
 - **LeetCode streak:** add your LeetCode username in **Settings** to see your submission streak and a
   compact 16-week heat grid (with Refresh, your username and the data age) next to the Calendar overview. It makes one anonymous request to leetcode.com per refresh
   (at most hourly) and only reads your public profile calendar.

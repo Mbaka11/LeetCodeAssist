@@ -3,6 +3,25 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.6.5
+
+### Added
+- **LeetCode detection status** above the side-panel content and in Settings: on/off, latest recorded Submit
+  and Accepted with local timestamps, problem names and language when available. Existing saved events
+  update the indicator without refreshing the extension page.
+- Contextual feedback for the open problem: no events yet, Submit without a later result, unsuccessful
+  verdict, or Accepted with no activity currently started. An older Accepted or another problem's result
+  never masks the latest Submit's missing result. The global observations stay visible when switching tabs.
+- **Why did Finish not open?** help explains reload/start/panel visibility, historical results, Cancel and
+  manual Save result. A Settings shortcut opens the existing detection controls.
+
+### Notes
+- On means the detection setting is enabled, **not that the observer is connected**. This feature reads
+  the existing capped event list only: no connection probe, extra request, heartbeat, new permission or
+  storage migration. Turning detection off preserves old observations; Clear detected events clears them.
+- Activity grouping, timers, Accepted-triggered Finish, saved history and review scheduling are unchanged.
+  Regression tests cover watched storage updates, disabling/clearing, current-problem scope and Finish.
+
 ## 0.6.4
 
 ### Changed

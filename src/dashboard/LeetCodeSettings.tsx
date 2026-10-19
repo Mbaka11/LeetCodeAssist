@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
+import { LeetCodeDetectionStatus } from '../components/LeetCodeDetectionStatus';
 import { validateUsername } from '../lib/leetcodeProfile';
 import { chromeLeetCodeStorage, type LeetCodePrefs } from '../lib/leetcodeStorage';
 import {
@@ -9,6 +10,7 @@ import {
   type SubmissionEvent,
 } from '../lib/leetcodeSubmissions';
 import { useLeetCodePrefs, useSubmissionEvents } from '../lib/useLeetCodeData';
+import { useNow } from '../lib/useNow';
 
 interface Message {
   tone: 'good' | 'error';
@@ -150,6 +152,7 @@ export function LeetCodeDetectionPanel({
         your code, cookies, passwords or account data, never submits anything for you, and sends nothing
         anywhere. Turn it off to stop recording; clear the list at any time.
       </p>
+      <LeetCodeDetectionStatus enabled={enabled} events={events} now={now} />
       <DetectionDiagnostics events={events} now={now} />
       {events.length === 0 && enabled ? (
         <p className="muted">
@@ -178,12 +181,13 @@ export function LeetCodeDetectionCard() {
   const prefs = useLeetCodePrefs();
   const events = useSubmissionEvents();
   const [message, setMessage] = useState<Message | null>(null);
+  const now = useNow(30_000);
   return (
     <Card title="LeetCode detection">
       <LeetCodeDetectionPanel
         enabled={prefs.detectionEnabled}
         events={events}
-        now={Date.now()}
+        now={now}
         message={message}
         onToggle={(enabled) =>
           chromeLeetCodeStorage()
