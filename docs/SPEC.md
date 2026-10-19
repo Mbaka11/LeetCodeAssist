@@ -296,7 +296,10 @@ scripts of the LeetCode features (section 6a) are declared for `https://leetcode
 ### Grouped problem activities
 
 Today renders one problem card per slug **within each activity section**, using a shared `ProblemActivities`
-component. The first appearance preserves the problem's plan priority; rows inside a group follow the stored
+component. A single activity uses the classic standalone card without numbering or an extra group heading/count;
+only groups of two or more show a shared heading and numbered rows. Wrappers and activity keys stay stable when
+a group grows or shrinks, preserving an open Finish form and its outcome, date and minutes. The first
+appearance preserves the problem's plan priority; rows inside a group follow the stored
 activity order (virtual activities follow persisted ones). The title, category, difficulty and LeetCode link
 appear once. Each independent attempt has a type and sequence number; done rows show outcome, time, approach
 time and hints compactly, while open rows retain instructions, their own timer, Move/Postpone/Skip and Finish.

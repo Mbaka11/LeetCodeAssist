@@ -344,6 +344,11 @@ h2 {
   border-color: var(--accent);
 }
 
+.problem-activity-group.problem-single {
+  border: 0;
+  background: transparent;
+}
+
 .problem-group-head {
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);

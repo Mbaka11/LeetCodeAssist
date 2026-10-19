@@ -91,9 +91,10 @@ you really need them.
 
 ### Repeated attempts without repeated cards
 
-Today groups activities **by problem** within each section. A single problem heading contains compact,
-chronological rows such as **Recall → Re-solve → Re-solve**, with each attempt's own outcome, duration and
-hints. An active row keeps its own timer and Finish controls; grouping never combines records, changes
+Today groups activities **by problem** within each section. A problem with just one activity keeps the
+classic card, without a number or extra group heading. With several activities, one shared heading contains
+numbered chronological rows such as **#1 Recall → #2 Re-solve → #3 Re-solve**, with each attempt's own outcome,
+duration and hints. An active row keeps its own timer and Finish controls; grouping never combines records, changes
 review scheduling or increases the distinct-problems-worked total.
 
 The side panel uses the same layout and keeps **Start as extra practice** inside the problem group when

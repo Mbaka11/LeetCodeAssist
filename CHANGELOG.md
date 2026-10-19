@@ -3,6 +3,14 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.6.6
+
+### Changed
+- A problem with only one activity keeps the original unnumbered card, without the extra group heading or
+  activity counter. The shared heading and #1/#2/#3 rows appear only when that problem has multiple activities.
+- Switching between one and several attempts preserves an open Finish form, including its outcome, date and
+  edited minutes. Compact side-panel problem links still open the dashboard. No activity data or rules change.
+
 ## 0.6.5
 
 ### Added
