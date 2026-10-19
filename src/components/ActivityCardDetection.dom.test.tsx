@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createActivity } from '../core/activities';
@@ -39,7 +39,7 @@ const verdict = (acceptedAt = NOW + 30_000): AcceptedPrompt => ({
 });
 
 describe('fresh Accepted opens Finish without saving', () => {
-  it('pauses once, opens Finish and waits for Save result (including StrictMode)', () => {
+  it('pauses once, opens Finish and waits for Save result (including StrictMode)', async () => {
     const { activity, pause, complete, update } = setup();
     expect(screen.queryByText('How did it go?')).toBeNull();
     update(verdict());
@@ -51,7 +51,8 @@ describe('fresh Accepted opens Finish without saving', () => {
     update(verdict(), { ...activity, timer: { running: false, startedAt: null, accumulatedMs: 630_000 } });
     expect(pause).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: 'Save result' }));
-    expect(complete).toHaveBeenCalledExactlyOnceWith(activity.id, 'solo', undefined);
+    expect(complete).toHaveBeenCalledExactlyOnceWith(activity.id, 'solo', undefined, '2025-01-06');
+    await waitFor(() => expect(screen.queryByText('How did it go?')).toBeNull());
   });
 
   it('keeps Hint pre-selected when hints were used', () => {

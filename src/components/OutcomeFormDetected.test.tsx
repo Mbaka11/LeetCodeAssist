@@ -6,7 +6,7 @@ const noop = (): void => undefined;
 const note = 'Accepted was detected at 23:14, and you used no hints, so “Solo” is pre-selected.';
 
 function render(props: { hintsUsed?: number; initialOutcome?: 'solo'; detectedNote?: string }): string {
-  return renderToStaticMarkup(<OutcomeForm initialMinutes={12} onSubmit={noop} onCancel={noop} {...props} />);
+  return renderToStaticMarkup(<OutcomeForm initialMinutes={12} today="2025-01-06" onSubmit={noop} onCancel={noop} {...props} />);
 }
 
 describe('OutcomeForm with a detected Accepted verdict', () => {

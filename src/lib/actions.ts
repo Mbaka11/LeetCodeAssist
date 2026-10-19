@@ -16,7 +16,8 @@ export interface AppActions {
   pause(id: string): Promise<void>;
   resume(id: string): Promise<void>;
   markApproachFound(id: string): Promise<void>;
-  completeActivity(id: string, outcome: Outcome, totalMs?: number): Promise<void>;
+  /** Saves an open activity on today (default) or an explicit today/yesterday date; timer uses the real clock. */
+  completeActivity(id: string, outcome: Outcome, totalMs?: number, completedDate?: string): Promise<void>;
   skip(id: string): Promise<void>;
   /** Moves a planned review to `newDate` (>= today); see `commands.rescheduleReview`. */
   moveReview(id: string, newDate: string): Promise<void>;
@@ -47,9 +48,13 @@ export function createActions(store: AppStore, now: Clock = Date.now): AppAction
     pause: (id) => store.update((s) => commands.pauseActivity(s, id, now())),
     resume: (id) => store.update((s) => commands.resumeActivity(s, id, now())),
     markApproachFound: (id) => store.update((s) => commands.recordApproachFound(s, id, now())),
-    completeActivity: (id, outcome, totalMs) =>
+    completeActivity: (id, outcome, totalMs, completedDate) =>
       store.update((s) =>
-        commands.completeActivity(s, id, { outcome, ...(totalMs !== undefined ? { totalMs } : {}) }, now()),
+        commands.completeActivity(s, id, {
+          outcome,
+          ...(totalMs !== undefined ? { totalMs } : {}),
+          ...(completedDate !== undefined ? { completedDate } : {}),
+        }, now()),
       ),
     skip: (id) => {
       const t = now();

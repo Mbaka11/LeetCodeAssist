@@ -48,6 +48,7 @@ export function ActivityCard({
   autoOpenAccepted?: boolean;
 }) {
   const [finishing, setFinishing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [moving, setMoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const problem = getProblem(activity.slug);
@@ -252,6 +253,8 @@ export function ActivityCard({
       {finishing ? (
         <OutcomeForm
           initialMinutes={Math.round(elapsed / 60_000)}
+          today={today}
+          submitting={submitting}
           hintsUsed={activity.hintsUsed}
           {...(accepted && !activity.hintsUsed
             ? {
@@ -260,9 +263,15 @@ export function ActivityCard({
               }
             : {})}
           onCancel={() => setFinishing(false)}
-          onSubmit={(outcome, totalMs) => {
-            setFinishing(false);
-            run(actions.completeActivity(activity.id, outcome, totalMs));
+          onSubmit={(outcome, totalMs, completedDate) => {
+            setError(null);
+            setSubmitting(true);
+            actions.completeActivity(activity.id, outcome, totalMs, completedDate)
+              .then(
+                () => setFinishing(false),
+                (e: unknown) => setError(e instanceof Error ? e.message : String(e)),
+              )
+              .finally(() => setSubmitting(false));
           }}
         />
       ) : null}

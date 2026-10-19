@@ -72,6 +72,8 @@ export interface CompletionInput {
   outcome: Outcome;
   /** Overrides the timer-derived time (for example after forgetting to pause). */
   totalMs?: number;
+  /** Local practice date: today or yesterday. Absent keeps the usual current-day completion. */
+  completedDate?: string;
 }
 
 export function completeActivity(
@@ -81,9 +83,14 @@ export function completeActivity(
   now: number,
 ): AppState {
   requireOpen(state, id);
+  const today = localDateFromTimestamp(now);
+  const completedDate = input.completedDate === undefined ? today : input.completedDate;
+  if (!isValidDateString(completedDate) || (completedDate !== today && completedDate !== addDays(today, -1))) {
+    throw new Error('Completion date must be today or yesterday. Choose the date again before saving.');
+  }
   return applyOutcome(state, id, {
     outcome: input.outcome,
-    completedDate: localDateFromTimestamp(now),
+    completedDate,
     now,
     ...(input.totalMs !== undefined ? { totalMs: input.totalMs } : {}),
   });

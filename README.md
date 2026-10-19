@@ -89,6 +89,18 @@ problem is planned on a day (the strongest wins). Reviews continue after day 30.
 Notes are hidden while a review of the same problem is in progress or due; click **Reveal** if
 you really need them.
 
+### Logging after midnight
+
+In **Finish → Completed on**, choose **Today** (default) or **Yesterday**, then **Save result**.
+Use Yesterday when the activity belongs to the previous evening's session: its time and completion go into
+that day's app log/calendar, and its reviews are scheduled from that date. A new problem or benchmark logged
+for yesterday therefore has its **D+1 recall due today**. The original activity is finished, not left as work
+to redo today; bonus totals and program counts remain distinct.
+
+The timer still uses real elapsed time. If you leave Finish open across midnight, its selected calendar date
+stays fixed (the label becomes Yesterday); an older selection must be changed before saving. This does not
+move the program's midnight boundary, edit an already-saved result, or change LeetCode's own submission streak.
+
 ### Moving, postponing and hints
 
 - **Move…** (Today cards and the Calendar day detail) reschedules a planned review to a day from

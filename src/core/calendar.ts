@@ -155,7 +155,25 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
   const carriedIds = new Set(plan?.carriedOver.map((i) => i.activity.id));
   const bonus = overflowBonusIds(state, date);
 
+  // After midnight an unopened queue problem can have a new card. If that card is explicitly finished
+  // for this earlier day, it fulfills the old unopened slot instead of showing both "done" and "missed".
+  // This is presentation only: keep every stored record, and never fold an attempt that was started.
+  const backdatedNew = new Map(state.activities
+    .filter((a) => a.type === 'new' && !a.extra && !isBonusActivity(a) && a.status === 'done' &&
+      a.completedAt === date && a.dueDate > date)
+    .map((a) => [a.slug, a]));
+  const fulfilledPlans = new Set<string>();
+  const fulfillsCore = new Set<string>();
   for (const a of state.activities) {
+    if (a.type !== 'new' || a.status !== 'planned' || a.dueDate !== date || a.extra || a.postponed) continue;
+    const completion = backdatedNew.get(a.slug);
+    if (!completion) continue;
+    fulfilledPlans.add(a.id);
+    if (!bonus.has(a.id)) fulfillsCore.add(completion.id);
+  }
+
+  for (const a of state.activities) {
+    if (fulfilledPlans.has(a.id)) continue;
     if (isBonusActivity(a)) {
       const bonusState = bonusEntryState(a, date, today);
       if (bonusState !== null) {
@@ -171,8 +189,8 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
     const isBonus = bonus.has(a.id);
     drafts.set(a.id, {
       entry: entryOf(a, isBonus && date < today && a.status !== 'done' ? 'skipped' : entryState, budgets),
-      planned: dueHere && !isBonus && !a.postponed,
-      core: dueHere && !isBonus && isCoreActivity(a, date),
+      planned: fulfillsCore.has(a.id) || (dueHere && !isBonus && !a.postponed),
+      core: fulfillsCore.has(a.id) || (dueHere && !isBonus && isCoreActivity(a, date)),
     });
   }
   if (plan) {

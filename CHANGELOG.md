@@ -3,6 +3,26 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.6.3
+
+### Added
+- **Finish → Completed on: Today / Yesterday.** Log a late-night activity for the previous day's session
+  without moving the whole program back. The chosen local date drives the app log, calendar, streak and
+  review schedule; the timer still uses real elapsed time. A D+1 review can consequently be due today.
+  The choice is available in Today and the side panel, including the Accepted-opened Finish form.
+
+### Fixed
+- An open form keeps its selected calendar date across midnight. Dates older than yesterday or in the future
+  are rejected at save time; errors keep the form and its values, and pending saves cannot be submitted twice.
+- Backdated benchmarks no longer appear in their original day's checklist. A regenerated new-problem card
+  logged for yesterday fulfills that day's unopened calendar slot instead of showing both done and missed.
+  No history records are deleted or rewritten by that display reconciliation.
+
+### Notes
+- Only activities not yet completed can use this choice; already-saved results are not edited. The midnight
+  boundary, 50-problem queue, time budgets and review intervals stay unchanged. No storage schema migration
+  is needed. This does not change LeetCode's own submission dates or public streak.
+
 ## 0.6.2
 
 ### Fixed

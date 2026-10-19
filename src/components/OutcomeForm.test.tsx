@@ -6,7 +6,7 @@ const noop = (): void => undefined;
 
 function render(hintsUsed?: number): string {
   return renderToStaticMarkup(
-    <OutcomeForm initialMinutes={20} hintsUsed={hintsUsed} onSubmit={noop} onCancel={noop} />,
+    <OutcomeForm initialMinutes={20} today="2025-01-06" hintsUsed={hintsUsed} onSubmit={noop} onCancel={noop} />,
   );
 }
 

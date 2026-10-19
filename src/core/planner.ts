@@ -266,7 +266,10 @@ export function planDay(
         (a) => a.type === 'benchmark' && a.slug === slug && a.dueDate === date,
       );
       if (existing) {
-        if (existing.status !== 'skipped') benchmarkItems.push(toItem(existing));
+        // An explicitly backdated result belongs to its chosen completion day, not today's checklist.
+        if (existing.status !== 'skipped' && (existing.status !== 'done' || existing.completedAt === date)) {
+          benchmarkItems.push(toItem(existing));
+        }
       } else {
         benchmarkItems.push(
           makeVirtual({ type: 'benchmark', slug, dueDate: date, createdAt: date }),

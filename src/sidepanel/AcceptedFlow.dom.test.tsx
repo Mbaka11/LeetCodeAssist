@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { useSyncExternalStore } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { localDateFromTimestamp } from '../core/dates';
+import { addDays, localDateFromTimestamp } from '../core/dates';
 import { defaultState } from '../core/state';
 import { createActions, type AppActions } from '../lib/actions';
 import { materializeToday, startActivity } from '../lib/commands';
@@ -32,10 +32,10 @@ function Harness({ store, actions, events, slug, now }: {
 }
 
 describe('v2 check → validated storage → side panel Finish (synthetic integration)', () => {
-  it('opens only for a matching Accepted, pauses the timer, and saves only after confirmation', async () => {
+  it.each(['today', 'yesterday'] as const)('opens only for a matching Accepted and saves for %s only after confirmation', async (dateChoice) => {
     let now = new Date(2025, 0, 6, 10).getTime();
     const today = localDateFromTimestamp(now);
-    const planned = materializeToday(defaultState(today), now - 600_000);
+    const planned = materializeToday(defaultState(addDays(today, -1)), now - 600_000);
     const activity = planned.activities.find((a) => a.type === 'new')!;
     const { mock, store } = createTestApp(startActivity(planned, activity.id, now - 600_000));
     const actions = createActions(store, () => now);
@@ -94,12 +94,17 @@ describe('v2 check → validated storage → side panel Finish (synthetic integr
     expect(requests).toHaveLength(6);
     expect(JSON.stringify(await storage.readEvents())).not.toContain('code_output');
 
+    const completedDate = dateChoice === 'yesterday' ? addDays(today, -1) : today;
+    fireEvent.change(screen.getByRole('combobox', { name: 'Completed on' }), { target: { value: completedDate } });
     fireEvent.click(screen.getByRole('button', { name: 'Save result' }));
     await waitFor(async () => {
       const current = (await store.readState()).activities.find((a) => a.id === activity.id)!;
       expect(current.status).toBe('done');
       expect(current.outcome).toBe('solo');
       expect(current.totalMs).toBe(13 * 60_000);
+      expect(current.completedAt).toBe(completedDate);
     });
+    expect((await store.readState()).activities.find((a) => a.slug === activity.slug && a.type === 'recall')?.dueDate)
+      .toBe(addDays(completedDate, 1));
   });
 });

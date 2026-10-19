@@ -93,6 +93,30 @@ Rules:
   keep the strongest (`blind` > `resolve` > `retry` > `rebuild` > `recall`).
 - Reviews continue after day 30 (a problem learned on day 29 gets its resolve on day 36).
 
+### Completion date and late logging
+
+The shared **Finish** form (Today and side panel, including an Accepted-opened form) has **Completed on**:
+**Today** or **Yesterday**, each labelled with its local YYYY-MM-DD date. Today is selected on opening; the
+selected date is an absolute date, not a moving relative offset. If the form crosses midnight, the same date
+becomes Yesterday. If it becomes older than yesterday, Save is disabled until another choice is made.
+
+`commands.completeActivity` accepts optional `completedDate` (default: actual local today), validated at save
+time to be today or yesterday. `AppActions.completeActivity` forwards it. Only open activities can be completed;
+this is not an editor for saved results. The existing `completedAt` stores the chosen practice date, so no
+schema migration is needed. The timer is paused at the actual `now`, never a backdated timestamp, and edited
+minutes still work as before. The form stays open with its values if validation/storage fails; pending saves
+are disabled to prevent double submission.
+
+Logs, calendar completion/time totals and the app streak use that chosen date. Review offsets use it too:
+a new problem or benchmark saved for Yesterday produces a recall due Today (subject to the usual cap/carry
+rules). The completed activity is no longer today's unfinished work. A benchmark finished before its original
+due date is omitted from that day's checklist. When a regenerated `new` card is backdated to an earlier day's
+unopened plan, the calendar presents one completed entry fulfilling that slot, not both done and missed;
+all stored planning records are retained, and genuinely started attempts are never folded away.
+
+The program still changes day at local midnight. The 50-problem order, budgets and review intervals are
+unchanged. This changes only app records, not the public LeetCode submission calendar or its UTC streak.
+
 ### Moving and postponing
 
 Plans can be adjusted without losing anything:
