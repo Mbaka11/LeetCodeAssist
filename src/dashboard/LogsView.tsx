@@ -3,6 +3,8 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Stat } from '../components/Stat';
+import { ResultCorrectionDialog } from '../components/ResultCorrectionDialog';
+import type { AppActions } from '../lib/actions';
 import { DIFFICULTIES } from '../core/activities';
 import { localDateFromTimestamp } from '../core/dates';
 import {
@@ -169,7 +171,7 @@ function SummaryRow({ rows }: { rows: readonly LogRow[] }) {
   );
 }
 
-function LogTable({ rows }: { rows: readonly LogRow[] }) {
+function LogTable({ rows, onEdit }: { rows: readonly LogRow[]; onEdit?: ((id: string) => void) | undefined }) {
   return (
     <div className="table-scroll">
       <table className="table log-table">
@@ -187,6 +189,7 @@ function LogTable({ rows }: { rows: readonly LogRow[] }) {
             <th>Outcome</th>
             <th>Hints</th>
             <th>Status</th>
+            {onEdit ? <th>Actions</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -213,6 +216,8 @@ function LogTable({ rows }: { rows: readonly LogRow[] }) {
               <td>
                 <Badge tone={row.status === 'done' ? 'good' : 'warn'}>{STATUS_LABELS[row.status]}</Badge>
               </td>
+              {onEdit ? <td>{row.status === 'done' ? <Button aria-label={`Correct ${row.title} result on ${row.date}`}
+                onClick={() => onEdit(row.id)}>Correct…</Button> : null}</td> : null}
             </tr>
           ))}
         </tbody>
@@ -221,8 +226,10 @@ function LogTable({ rows }: { rows: readonly LogRow[] }) {
   );
 }
 
-export function LogsView({ state }: { state: AppState }) {
+export function LogsView({ state, actions }: { state: AppState; actions?: AppActions }) {
   const [filters, setFilters] = useState<LogFilters>({});
+  const [editing, setEditing] = useState<string | null>(null);
+  const selected = state.activities.find((a) => a.id === editing && a.status === 'done');
   const allRows = useMemo(() => buildLogRows(state), [state]);
   const rows = useMemo(() => filterLogRows(allRows, filters), [allRows, filters]);
 
@@ -251,9 +258,11 @@ export function LogsView({ state }: { state: AppState }) {
         ) : rows.length === 0 ? (
           <p className="muted">No activity matches these filters.</p>
         ) : (
-          <LogTable rows={rows} />
+          <LogTable rows={rows} onEdit={actions ? setEditing : undefined} />
         )}
       </Card>
+      {selected && actions ? <ResultCorrectionDialog key={selected.id} state={state} activity={selected}
+        actions={actions} onClose={() => setEditing(null)} /> : null}
     </div>
   );
 }

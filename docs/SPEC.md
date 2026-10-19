@@ -117,6 +117,53 @@ all stored planning records are retained, and genuinely started attempts are nev
 The program still changes day at local midnight. The 50-problem order, budgets and review intervals are
 unchanged. This changes only app records, not the public LeetCode submission calendar or its UTC streak.
 
+### Correcting completed results
+
+Logs exposes **Correct…** only for done activities. A native modal edits date, total minutes and outcome,
+then requires **Preview changes → Confirm correction**. Preview is pure; Cancel makes no write. A preview
+fingerprint includes the local date, settings, this problem's status and all its activities. Commit recomputes
+against latest storage under the existing lock and rejects stale fingerprints; unrelated history is preserved.
+
+`prepareResultCorrection` / `confirmResultCorrection` in `src/core/resultCorrection.ts` implement the policy:
+- Duration-only edits preserve all reviews and learning status. The timer and approach timestamp are not
+  rewritten. Duration must be a non-negative integer millisecond value at least the recorded approach time.
+- Dates range from program start (or an original earlier completion) to today, additionally bounded by the
+  previous/next completed attempt of this problem. Same-day ties keep saved activity order; an edit cannot
+  reorder completed attempts. This avoids interpreting an original learning event after a later completed test.
+- Date/outcome edits replay completed attempts for this problem in that order through the existing outcome
+  rules. Completed scheduled reviews consume their replay counterparts; optional repetitions do not. Running
+  scheduled reviews are preserved and their counterpart is not duplicated. Completed attempts other than the
+  target, started work and optional practice retain their fields, IDs and timers.
+- Desired unstarted scheduled reviews are matched by type/date to existing plans. Matches keep their IDs;
+  obsolete plans become skipped history, and missing plans get fresh unique IDs. Manual rescheduling can be
+  superseded, explicitly warned about in preview. Overdue generated reviews remain due; no catch-up is fabricated.
+  Other future work may rebalance under the unchanged cap. Only this problem's derived learning status changes.
+- If another completed attempt lacks an outcome, schedule replay is refused rather than inventing that
+  outcome; duration-only correction remains available. Skipped/manual-move history has no provenance graph:
+  replay derives the new scheduled cycle from completed evidence, not from guessed historical user intent.
+
+Each edit appends `Activity.corrections` with actual edit time and previous date/duration/outcome. JSON
+validation/import/export preserves this optional audit; the state version stays 1. Logs/CSV and weekly metrics
+use corrected current values, not audit snapshots. Repeated confirmation cannot silently overwrite a newer edit.
+
+### Weekly learning evidence
+
+The read-only `#/weekly` route compares `[end-6, end]` with `[end-13, end-7]` in local calendar dates. End
+follows today by default, with previous/next windows and an explicit end-date control (never future). Done
+activities alone contribute time/volume. First-worked counts use the earliest recorded completion per slug;
+repeated attempts never multiply that number. Per-category rows show current activity count, first-worked
+problems, and current/previous distinct problems with independent scheduled reviews (Solo, no recorded hints,
+review type, not optional extra practice). Help means Hint/Solution outcome or a recorded hint; the denominator
+contains rated attempts (known outcome or recorded hints), not unknown legacy outcomes. Categories from either
+period are included, even when the current period is empty. Unknown metadata goes to Other / uncatalogued.
+
+The fragile list is a snapshot as of end, not only the last week's new failures. It uses the latest rated
+non-extra scheduled review; otherwise a rated initial completion, otherwise available rated extra evidence.
+Hint/Solution, recorded hints or Stuck produce a reason and evidence date/type. Optional immediate Solo repeats
+do not erase an earlier scheduled-review signal. Unknown outcomes are not success, future completions are
+excluded, and absence from the list does not imply mastery. Small samples/different difficulty limit comparisons.
+No action, adaptive schedule, budget calibration, mandatory problem or queue change is triggered by this view.
+
 ### Moving and postponing
 
 Plans can be adjusted without losing anything:
@@ -188,7 +235,8 @@ interface Activity { id: string; slug: string; type: ActivityType; dueDate: stri
   approachMs?: number; totalMs?: number; outcome?: Outcome; completedAt?: string; createdAt: string;
   extra?: boolean;      // optional practice, never debt
   hintsUsed?: number;   // 1-3: hints revealed during the attempt (additive, absent = none)
-  postponed?: boolean } // skipped `new` that was moved back in the queue
+  postponed?: boolean; // skipped `new` that was moved back in the queue
+  corrections?: { at: number; previousDate: string; previousTotalMs?: number; previousOutcome?: Outcome }[] }
 interface Note { slug: string; trigger: string /*"Click"*/; principle: string; pitfall: string;
   complexity: string; code?: string; updatedAt: string }
 interface Settings { startDate: string; dailyTargetMin: number; dailyCapMin: number;
@@ -202,7 +250,7 @@ interface AppState { version: 1; settings: Settings; activities: Activity[];
   queue?: string[] }               // saved queue order after postponing; absent = PROGRAM_QUEUE
 ```
 
-`hintsUsed`, `postponed`, `roadmapView`, `roadmapCatalog`, `budgets` and `queue` are optional and additive: data saved by 0.1 stays
+`hintsUsed`, `postponed`, `corrections`, `roadmapView`, `roadmapCatalog`, `budgets` and `queue` are optional and additive: data saved by 0.1 stays
 valid, so `version` remains `1`.
 
 The timer is derived from timestamps (`accumulatedMs + (now - startedAt)`), never from tick counting.
@@ -299,7 +347,9 @@ Today renders one problem card per slug **within each activity section**, using 
 component. A single activity uses the classic standalone card without numbering or an extra group heading/count;
 only groups of two or more show a shared heading and numbered rows. Wrappers and activity keys stay stable when
 a group grows or shrinks, preserving an open Finish form and its outcome, date and minutes. The first
-appearance preserves the problem's plan priority; rows inside a group follow the stored
+appearance preserves the problem's plan priority within each unfinished/finished partition in Today. Groups
+with any open attempt precede fully closed groups, using a stable partition; side-panel behavior is unchanged.
+The LeetCode link has a reserved top-right header area, not a place in the metadata badge flow. Rows inside a group follow the stored
 activity order (virtual activities follow persisted ones). The title, category, difficulty and LeetCode link
 appear once. Each independent attempt has a type and sequence number; done rows show outcome, time, approach
 time and hints compactly, while open rows retain instructions, their own timer, Move/Postpone/Skip and Finish.
@@ -349,8 +399,11 @@ not part of `AppState`). Pure parsing and validation: `src/lib/leetcodeSubmissio
   time, no bodies), *Clear detected events* and a plain-language privacy note. With nothing detected, every
   activity is finished by hand exactly as before.
 
-**Detection status indicator.** `LeetCodeDetectionStatus` appears above the side-panel content (including
-setup/error states) and in Settings. Its labelled on/off badge represents the stored detection preference,
+**Detection status indicator.** `LeetCodeDetectionStatus` can be shown above side-panel content (including
+setup/error states) using **Show detection status in side panel** in Settings. It is hidden by default and
+always available in Settings. Visibility lives in optional `LeetCodePrefs.showDetectionStatus` (absent = false)
+and is independent of `detectionEnabled`: hiding the panel cannot stop observation or automatic Finish opening,
+and toggling it must preserve an already-open form. Its labelled on/off badge represents the stored detection preference,
 not observer liveness. Two always-visible rows show the last saved Submit and Accepted across all problems,
 including local date/time and problem title (language when present). None recorded means absent from the
 capped local event list, not no submission in the user's real LeetCode history. Turning detection off keeps

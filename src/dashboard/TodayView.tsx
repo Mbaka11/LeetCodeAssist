@@ -157,7 +157,7 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
         ) : (
           <div className="stack-tight">
             {nextItem && !runningItem ? <p className="muted">Next: {titleOf(nextItem)}</p> : null}
-            <ProblemActivities items={plan.items} history={state.activities} now={now}
+            <ProblemActivities items={plan.items} history={state.activities} now={now} unfinishedFirst
               actions={actions} budgets={state.settings.budgets} />
             {remaining === 0 ? <p className="tone-good">All planned activities are done.</p> : null}
           </div>
@@ -180,7 +180,7 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
           </p>
           <div className="stack-tight">
             <ProblemActivities items={plan.carriedOver.map((item) => ({ ...item, variant: 'carried' as const }))}
-              history={state.activities} now={now} actions={actions} budgets={state.settings.budgets} />
+              history={state.activities} now={now} actions={actions} budgets={state.settings.budgets} unfinishedFirst />
           </div>
         </Card>
       ) : null}

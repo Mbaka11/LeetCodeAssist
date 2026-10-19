@@ -1,5 +1,6 @@
 import { deserializeState, defaultState } from '../core/state';
 import type { Outcome, Settings } from '../core/types';
+import { confirmResultCorrection, type ResultEdit } from '../core/resultCorrection';
 import * as commands from './commands';
 import type { AppStore } from './storage';
 
@@ -18,6 +19,8 @@ export interface AppActions {
   markApproachFound(id: string): Promise<void>;
   /** Saves an open activity on today (default) or an explicit today/yesterday date; timer uses the real clock. */
   completeActivity(id: string, outcome: Outcome, totalMs?: number, completedDate?: string): Promise<void>;
+  /** Apply only a confirmed, current preview of a saved-result correction. */
+  correctResult(id: string, edit: ResultEdit, fingerprint: string): Promise<void>;
   skip(id: string): Promise<void>;
   /** Moves a planned review to `newDate` (>= today); see `commands.rescheduleReview`. */
   moveReview(id: string, newDate: string): Promise<void>;
@@ -56,6 +59,7 @@ export function createActions(store: AppStore, now: Clock = Date.now): AppAction
           ...(completedDate !== undefined ? { completedDate } : {}),
         }, now()),
       ),
+    correctResult: (id, edit, fingerprint) => store.update((s) => confirmResultCorrection(s, id, edit, fingerprint, now())),
     skip: (id) => {
       const t = now();
       return store.update((s) => commands.skipActivity(commands.materializeToday(s, t), id, t));

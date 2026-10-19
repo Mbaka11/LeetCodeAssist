@@ -28,6 +28,19 @@ describe('LeetCode prefs', () => {
     expect(normalizePrefs('junk')).toEqual(DEFAULT_PREFS);
   });
 
+  it('defaults the side-panel indicator off and changes visibility independently of detection and username', async () => {
+    const mock = createMockChromeStorage();
+    const storage = createLeetCodeStorage(mock.area);
+    expect((await storage.readPrefs()).showDetectionStatus ?? false).toBe(false);
+    expect(normalizePrefs({ detectionEnabled: true }).showDetectionStatus ?? false).toBe(false);
+    await storage.updatePrefs({ username: 'Neo', showDetectionStatus: true });
+    expect(await storage.readPrefs()).toMatchObject({ detectionEnabled: true, username: 'Neo', showDetectionStatus: true });
+    await storage.updatePrefs({ showDetectionStatus: false });
+    expect(await storage.readPrefs()).toEqual({ detectionEnabled: true, username: 'Neo' });
+    await storage.updatePrefs({ detectionEnabled: false, showDetectionStatus: true });
+    expect(await storage.readPrefs()).toMatchObject({ detectionEnabled: false, showDetectionStatus: true });
+  });
+
   it('updates and clears fields, validating the username', async () => {
     const mock = createMockChromeStorage();
     const storage = createLeetCodeStorage(mock.area);

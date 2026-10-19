@@ -88,7 +88,9 @@ h2 {
   align-items: center;
   gap: 24px;
   padding: 0 24px;
-  height: 52px;
+  height: auto;
+  min-height: 52px;
+  flex-wrap: wrap;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -102,6 +104,7 @@ h2 {
 
 .navbar nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
 }
 
@@ -413,6 +416,23 @@ h2 {
 
 .activity-title:hover {
   text-decoration: underline;
+}
+
+.has-leetcode-link {
+  position: relative;
+  padding-right: 88px;
+}
+
+.has-leetcode-link > .activity-leetcode {
+  position: absolute;
+  top: 0;
+  right: 0;
+  white-space: nowrap;
+}
+
+.problem-group-head.has-leetcode-link > .activity-leetcode {
+  top: 10px;
+  right: 14px;
 }
 
 .link-out {
@@ -727,6 +747,39 @@ textarea.mono {
   align-items: center;
   gap: 6px;
 }
+
+/* Saved-result correction uses a native modal dialog with keyboard focus containment. */
+.result-dialog {
+  width: min(760px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.result-dialog::backdrop { background: rgb(0 0 0 / 50%); }
+
+.correction-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+
+.correction-fields legend { margin-bottom: 10px; font-weight: 600; }
+.correction-fields .field { flex: 1 1 150px; min-width: 0; }
+.correction-fields input, .correction-fields select { width: 100%; min-width: 0; }
+.correction-preview { border-top: 1px solid var(--border); padding-top: 12px; }
+.correction-preview h3 { margin: 10px 0; font-size: 1rem; }
+.weekly-fragile { list-style: none; padding: 0; margin: 0; }
+.weekly-fragile li { padding: 10px 0; border-bottom: 1px solid var(--border); }
+.weekly-fragile p { margin: 6px 0 0; font-size: 0.85rem; }
 
 /* Shared saved-event status: a setting indicator, not a live connection probe. */
 .detection-status {

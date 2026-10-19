@@ -217,6 +217,19 @@ function validateActivity(value: unknown, index: number): Activity {
   if (o.totalMs !== undefined) activity.totalMs = asNonNegative(o.totalMs, `${path}.totalMs`);
   if (o.outcome !== undefined) activity.outcome = asOneOf(o.outcome, OUTCOMES, `${path}.outcome`);
   if (o.completedAt !== undefined) activity.completedAt = asDate(o.completedAt, `${path}.completedAt`);
+  if (o.corrections !== undefined) {
+    if (!Array.isArray(o.corrections)) fail(`${path}.corrections`, 'expected an array');
+    activity.corrections = o.corrections.map((raw, i) => {
+      const p = `${path}.corrections[${i}]`;
+      const entry = asObject(raw, p);
+      return {
+        at: asNonNegative(entry.at, `${p}.at`),
+        previousDate: asDate(entry.previousDate, `${p}.previousDate`),
+        ...(entry.previousTotalMs !== undefined ? { previousTotalMs: asNonNegative(entry.previousTotalMs, `${p}.previousTotalMs`) } : {}),
+        ...(entry.previousOutcome !== undefined ? { previousOutcome: asOneOf(entry.previousOutcome, OUTCOMES, `${p}.previousOutcome`) } : {}),
+      };
+    });
+  }
   if (o.extra !== undefined) {
     if (typeof o.extra !== 'boolean') fail(`${path}.extra`, 'expected a boolean');
     activity.extra = o.extra;

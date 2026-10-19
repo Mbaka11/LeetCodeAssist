@@ -126,6 +126,8 @@ export function LeetCodeDetectionPanel({
   onToggle,
   onClear,
   message,
+  showStatus = false,
+  onVisibilityChange,
 }: {
   enabled: boolean;
   events: readonly SubmissionEvent[];
@@ -133,6 +135,8 @@ export function LeetCodeDetectionPanel({
   onToggle: (enabled: boolean) => void;
   onClear: () => void;
   message: Message | null;
+  showStatus?: boolean;
+  onVisibilityChange?: (visible: boolean) => void;
 }) {
   return (
     <div className="stack-tight">
@@ -145,6 +149,11 @@ export function LeetCodeDetectionPanel({
         <input type="checkbox" checked={enabled} onChange={(e) => onToggle(e.target.checked)} />
         <span>Detect accepted submissions</span>
       </label>
+      {onVisibilityChange ? <label className="check-field">
+        <input type="checkbox" checked={showStatus} onChange={(e) => onVisibilityChange(e.target.checked)} />
+        <span>Show detection status in side panel</span>
+      </label> : null}
+      <p className="muted">Hiding the status panel does not disable Accepted detection or automatic Finish opening.</p>
       <p className="muted privacy-note">
         <strong>Privacy.</strong> The extension watches, in your own browser and without changing anything, the
         two responses LeetCode shows you after a submission. It keeps only the problem name, the result text
@@ -189,6 +198,11 @@ export function LeetCodeDetectionCard() {
         events={events}
         now={now}
         message={message}
+        showStatus={prefs.showDetectionStatus ?? false}
+        onVisibilityChange={(visible) => chromeLeetCodeStorage().updatePrefs({ showDetectionStatus: visible }).then(
+          () => setMessage({ tone: 'good', text: visible ? 'Side-panel status shown.' : 'Side-panel status hidden. Detection is unchanged.' }),
+          (e: unknown) => setMessage({ tone: 'error', text: errorText(e) }),
+        )}
         onToggle={(enabled) =>
           chromeLeetCodeStorage()
             .updatePrefs({ detectionEnabled: enabled })

@@ -32,5 +32,18 @@ describe('groupActivities presentation', () => {
     expect(input).toEqual([b, c, a]);
   });
 
+  it('stably puts unfinished problem groups first without reordering attempts inside mixed groups', () => {
+    const a = make('two-sum', 'recall', 'a'); a.activity.status = 'done';
+    const b = make('valid-anagram', 'recall', 'b');
+    const c = make('3sum', 'resolve', 'c'); c.activity.status = 'done';
+    const d = make('valid-palindrome', 'resolve', 'd'); d.activity.status = 'in_progress';
+    const result = groupActivities([a, b, c, d], [], true);
+    expect(result.map((g) => g.slug)).toEqual(['valid-anagram', 'valid-palindrome', 'two-sum', '3sum']);
+    const again = make('two-sum', 'resolve', 'again');
+    const mixed = groupActivities([a, b, c, again], [a.activity, again.activity], true);
+    expect(mixed[0]!.slug).toBe('two-sum');
+    expect(mixed[0]!.items.map((item) => item.activity.id)).toEqual(['a', 'again']);
+  });
+
   it('handles an empty plan', () => expect(groupActivities([])).toEqual([]));
 });

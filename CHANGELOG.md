@@ -3,6 +3,34 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.7.0
+
+### Added
+- **Weekly review:** read-only rolling 7-day vs previous 7-day comparison, with older-window navigation.
+  Shows distinct/first-worked problems, activity/time totals, category help use and independent scheduled
+  review successes. Fragile problems cite the latest eligible evidence; immediate extra repeats do not
+  inflate independent-review progress or erase a help-dependent scheduled review. No automatic plan changes.
+- **Logs → Correct…:** edit a saved duration, completion date or outcome, preview before/after values and
+  review changes, then explicitly confirm. Duration-only edits preserve the schedule. Date/outcome edits
+  reconstruct unstarted scheduled reviews from completed evidence; manual moves may change, visibly in preview.
+  Done/started attempts and optional practice are protected; retired plans remain as skipped records.
+- Correction audits retain original values in JSON backups. Date bounds preserve completed-attempt order;
+  stale previews are rejected if related data/settings or the local date change. Export a backup before
+  major changes. Optional audit fields preserve the existing version-1 schema and old-data compatibility.
+
+### Changed
+- Today shows unfinished problem groups first and finished groups below, preserving order within each
+  partition and chronological attempt rows. LeetCode links stay in a reserved top-right header area.
+- **Show detection status in side panel** is an independent Settings option, **off by default**. Hiding it
+  does not disable submission observation or automatic Accepted → Finish. Diagnostics stay in Settings.
+
+### Notes
+- Existing program order, 50 required problems, budgets and review rules remain unchanged. Only a confirmed
+  correction can alter its problem's scheduled reviews/status; the weekly view never writes data.
+- Native Chrome synthetic-layout checks covered classic/grouped card links, the weekly view and the correction
+  dialog at desktop and 360px-constrained widths without horizontal page/dialog overflow. Functional tests
+  use mocked storage; no real account, authenticated request or installed-extension session was accessed.
+
 ## 0.6.6
 
 ### Changed

@@ -12,6 +12,7 @@ import { RoadmapView } from './RoadmapView';
 import { SettingsView } from './SettingsView';
 import { SetupView } from './SetupView';
 import { TodayView } from './TodayView';
+import { WeeklyView } from './WeeklyView';
 
 /** Logs and the Calendar need more width than the default page column. */
 const PAGE_CLASSES: Partial<Record<Route['view'], string>> = {
@@ -63,7 +64,8 @@ export function App() {
         {route.view === 'today' ? <TodayView state={state} actions={actions} /> : null}
         {route.view === 'calendar' ? <CalendarView state={state} actions={actions} /> : null}
         {route.view === 'roadmap' ? <RoadmapView state={state} actions={actions} /> : null}
-        {route.view === 'logs' ? <LogsView state={state} /> : null}
+        {route.view === 'logs' ? <LogsView state={state} actions={actions} /> : null}
+        {route.view === 'weekly' ? <WeeklyView state={state} /> : null}
         {route.view === 'problem' ? (
           <ProblemView key={route.slug} slug={route.slug} state={state} actions={actions} />
         ) : null}

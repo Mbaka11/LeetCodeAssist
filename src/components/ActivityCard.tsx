@@ -111,7 +111,7 @@ export function ActivityCard({
 
   return (
     <article className={classes.join(' ')} aria-label={grouped ? `Attempt ${attemptNumber}: ${ACTIVITY_LABELS[activity.type]}` : undefined}>
-      <div className="activity-head">
+      <div className={`activity-head${!compact && !grouped ? ' has-leetcode-link' : ''}`}>
         {grouped ? <span className="muted attempt-number">#{attemptNumber}</span> : null}
         <Badge tone={activity.type}>{ACTIVITY_LABELS[activity.type]}</Badge>
         {bonus ? <Badge tone="warn">Bonus</Badge> : null}
@@ -149,7 +149,7 @@ export function ActivityCard({
         <span className="spacer" />
         {!grouped || open ? <span className="muted">~{formatMinutes(budgetMin)}</span> : null}
         {compact || grouped ? null : (
-          <a className="link-out" href={url} target="_blank" rel="noreferrer">
+          <a className="link-out activity-leetcode" href={url} target="_blank" rel="noreferrer">
             LeetCode ↗
           </a>
         )}

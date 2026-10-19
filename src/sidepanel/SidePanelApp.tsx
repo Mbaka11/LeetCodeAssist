@@ -28,8 +28,8 @@ export function SidePanelApp() {
   const panel = (content: ReactNode): ReactNode => (
     <main className="panel">
       <div className="stack">
-        <LeetCodeDetectionStatus enabled={prefs.detectionEnabled} events={detectedEvents} now={now}
-          currentSlug={slug} activityStarted={activityStarted} onOpenSettings={() => open('#/settings')} />
+        {prefs.showDetectionStatus ? <LeetCodeDetectionStatus enabled={prefs.detectionEnabled} events={detectedEvents} now={now}
+          currentSlug={slug} activityStarted={activityStarted} onOpenSettings={() => open('#/settings')} /> : null}
         {content}
       </div>
     </main>

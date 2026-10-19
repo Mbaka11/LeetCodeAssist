@@ -42,6 +42,14 @@ export interface TimerState {
   running: boolean;
 }
 
+export interface ResultCorrection {
+  /** Actual edit timestamp; the original values are retained for audit in JSON backups. */
+  at: number;
+  previousDate: string;
+  previousTotalMs?: number;
+  previousOutcome?: Outcome;
+}
+
 export interface Activity {
   id: string;
   slug: string;
@@ -55,6 +63,8 @@ export interface Activity {
   outcome?: Outcome;
   /** Local calendar date (YYYY-MM-DD) on which the activity was completed. */
   completedAt?: string;
+  /** Optional correction audit; absent on records saved before result editing existed. */
+  corrections?: ResultCorrection[];
   /** Local calendar date (YYYY-MM-DD) on which the activity was created. */
   createdAt: string;
   /**

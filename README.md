@@ -95,7 +95,9 @@ Today groups activities **by problem** within each section. A problem with just 
 classic card, without a number or extra group heading. With several activities, one shared heading contains
 numbered chronological rows such as **#1 Recall → #2 Re-solve → #3 Re-solve**, with each attempt's own outcome,
 duration and hints. An active row keeps its own timer and Finish controls; grouping never combines records, changes
-review scheduling or increases the distinct-problems-worked total.
+review scheduling or increases the distinct-problems-worked total. In Today, groups with unfinished work
+appear first, finished groups follow, and relative order is retained inside each partition. Attempt rows
+stay chronological. The LeetCode link stays at the top-right of classic and grouped cards.
 
 The side panel uses the same layout and keeps **Start as extra practice** inside the problem group when
 no attempt is open. Its general checklist summarizes repeats in one row (for example **Recall · Re-solve ×2**),
@@ -113,6 +115,33 @@ to redo today; bonus totals and program counts remain distinct.
 The timer still uses real elapsed time. If you leave Finish open across midnight, its selected calendar date
 stays fixed (the label becomes Yesterday); an older selection must be changed before saving. This does not
 move the program's midnight boundary, edit an already-saved result, or change LeetCode's own submission streak.
+
+### Correcting a saved result
+
+Open **Logs → Correct…** on a completed activity. Edit its date, logged minutes or outcome, choose
+**Preview changes**, inspect the before/after values and affected reviews, then **Confirm correction**.
+Nothing is written on preview or Cancel. A duration-only edit leaves review dates and learning status alone.
+A date/outcome edit recalculates this problem's **unstarted scheduled reviews** from completed attempts;
+manual review moves may change, and newly overdue reviews remain due. Old plans are kept as skipped records.
+
+Other completed/started attempts and optional extra practice are protected. Dates cannot be in the future
+or reorder this problem's completed attempts, and logged time cannot be less than its recorded approach time.
+The preview is rejected if related data or the local date changes before confirmation. Previous values are
+kept in the activity's optional correction audit, preserved in JSON backups. Export a backup before major
+changes. The daily planner can rebalance later work under the same cap; the 50-problem queue is unchanged.
+
+### Weekly learning review
+
+**Weekly review** compares the latest **7 local days** with the preceding 7, with navigation to older windows.
+It shows completed activities, distinct problems, first-recorded completions, time and per-category evidence:
+unique problems with an independent scheduled review (**Solo, no recorded hints**) and help use (**Hint /
+Solution outcome or recorded hints**, shown over rated attempts). Immediate extra repeats do not inflate the
+independent-review count. Missing outcomes are not treated as independent successes.
+
+**Still fragile** uses the latest rated scheduled review, or initial completion when no rated review exists.
+Help-dependent or Stuck results remain flagged even after an immediate optional Solo repeat; absence from the
+list is not proof of mastery. These are app-history observations, not an automatic evaluation or program
+change. Small samples, difficulty differences and missing history limit comparisons.
 
 ### Moving, postponing and hints
 
@@ -134,7 +163,8 @@ move the program's midnight boundary, edit an already-saved result, or change Le
   a *projected* plan for future days, `Move…`), *Roadmap* (a **NeetCode 150 | Blind 75** selector and a
   prerequisite **tree** or **grid**, with progress counters for both catalogs and checkboxes), *Problem sheet* (notes, hints, attempt history,
   next review), *Logs* (a filterable table of every completed or skipped activity with time against
-  budget, a summary row and CSV export) and *Settings*.
+  budget, a summary row, correction previews and CSV export), *Weekly review* (read-only learning evidence)
+  and *Settings*.
 - **Side panel**: one global panel per window that stays open across tabs. On a leetcode.com problem
   page it shows the problem (difficulty, category, program position), today's activity with its
   instruction and timer, hints, the outcome form, notes, attempt history and the next review date. On
@@ -221,7 +251,9 @@ The choice is stored in the optional `settings.roadmapCatalog`.
   **Settings → LeetCode detection**. Both legacy and `/v2/check/` result routes are supported. **Reload the
   LeetCode tab after updating the extension.** The observer keeps only whitelisted verdict metadata, never
   your code, cookies or headers.
-- **Detection status:** a compact indicator above the side-panel activities (also in Settings) shows
+- **Detection status (optional, hidden in the side panel by default):** enable **Settings → LeetCode
+  detection → Show detection status in side panel** to show the indicator. Hiding it does **not** disable
+  Accepted detection or automatic Finish opening; diagnostics remain available in Settings. The indicator shows
   **Detection on/off**, **Last Submit** and **Last Accepted**, with local timestamps and problem names.
   The last observations are global; feedback underneath is scoped to the currently open problem and
   distinguishes no events, a Submit without a later result, an unsuccessful result, and Accepted with no

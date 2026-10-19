@@ -46,7 +46,7 @@ describe('detection status on real watched chrome.storage values', () => {
     const mock = createMockChromeStorage();
     const messages = installChromeGlobal(mock);
     const storage = createLeetCodeStorage(mock.area);
-    await storage.updatePrefs({ detectionEnabled: true });
+    await storage.updatePrefs({ detectionEnabled: true, showDetectionStatus: true });
     let now = NOW;
     const background = createLeetCodeBackground({ storage, extensionId: 'test', extensionUrlPrefix: 'chrome-extension://test/', now: () => now });
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
@@ -91,7 +91,7 @@ describe('detection status on real watched chrome.storage values', () => {
     const mock = createMockChromeStorage();
     installChromeGlobal(mock);
     const storage = createLeetCodeStorage(mock.area);
-    await storage.updatePrefs({ detectionEnabled: true });
+    await storage.updatePrefs({ detectionEnabled: true, showDetectionStatus: true });
     const base = defaultState('2025-01-07');
     const activity = createActivity([], { slug: 'two-sum', type: 'new', dueDate: '2025-01-07', createdAt: '2025-01-07' });
     context.snapshot = { status: 'ready', state: { ...base, activities: [{ ...activity,
@@ -111,15 +111,39 @@ describe('detection status on real watched chrome.storage values', () => {
     expect(feedback().textContent).toContain('Accepted received');
   });
 
-  it('keeps observations visible if program data is unreadable without asserting that no activity exists', async () => {
+  it('hides status by default but still detects Accepted and keeps an open Finish form when visibility changes', async () => {
     const mock = createMockChromeStorage();
     installChromeGlobal(mock);
     const storage = createLeetCodeStorage(mock.area);
     await storage.updatePrefs({ detectionEnabled: true });
+    const base = defaultState('2025-01-07');
+    const a = createActivity([], { slug: 'two-sum', type: 'new', dueDate: '2025-01-07', createdAt: '2025-01-07' });
+    context.snapshot = { status: 'ready', state: { ...base, activities: [{ ...a, status: 'in_progress',
+      timer: { running: true, startedAt: NOW - 60_000, accumulatedMs: 0 } }] } };
+    render(<SidePanelApp />);
+    await screen.findByRole('button', { name: 'Pause' });
+    await waitFor(() => expect(screen.queryByRole('region', { name: 'LeetCode detection status' })).toBeNull());
+    await act(async () => { await storage.appendEvent(result(NOW + 2000)); });
+    await screen.findByText('How did it go?');
+    fireEvent.click(screen.getByRole('radio', { name: /Hint/ }));
+    await act(async () => { await storage.updatePrefs({ showDetectionStatus: true }); });
+    expect(indicator()).toBeTruthy();
+    await act(async () => { await storage.updatePrefs({ showDetectionStatus: false }); });
+    expect(screen.queryByRole('region', { name: 'LeetCode detection status' })).toBeNull();
+    expect((screen.getByRole('radio', { name: /Hint/ }) as HTMLInputElement).checked).toBe(true);
+    expect((await storage.readPrefs()).detectionEnabled).toBe(true);
+  });
+
+  it('keeps observations visible if program data is unreadable without asserting that no activity exists', async () => {
+    const mock = createMockChromeStorage();
+    installChromeGlobal(mock);
+    const storage = createLeetCodeStorage(mock.area);
+    await storage.updatePrefs({ detectionEnabled: true, showDetectionStatus: true });
     await storage.appendEvent(result(NOW - 60_000));
     context.snapshot = { status: 'error', message: 'Invalid program data' };
     render(<SidePanelApp />);
-    await within(indicator()).findByText('Today 10:04');
+    const statusPanel = await screen.findByRole('region', { name: 'LeetCode detection status' });
+    await within(statusPanel).findByText('Today 10:04');
     expect(screen.getByText('Stored data could not be read')).toBeTruthy();
     expect(feedback().textContent).toContain('Accepted received');
     expect(feedback().textContent).not.toContain('No activity is currently in progress');
@@ -135,6 +159,11 @@ describe('detection status on real watched chrome.storage values', () => {
     render(<LeetCodeDetectionCard />);
     await within(indicator()).findByText('Today 10:04');
     expect(within(indicator()).getByText('Today 10:03')).toBeTruthy();
+    const visibility = screen.getByRole('checkbox', { name: 'Show detection status in side panel' }) as HTMLInputElement;
+    expect(visibility.checked).toBe(false);
+    fireEvent.click(visibility);
+    await waitFor(() => expect(visibility.checked).toBe(true));
+    expect((await storage.readPrefs()).detectionEnabled).toBe(true);
     fireEvent.click(screen.getByRole('checkbox', { name: 'Detect accepted submissions' }));
     await waitFor(() => expect(within(indicator()).getByText('Detection off')).toBeTruthy());
     fireEvent.click(screen.getByRole('button', { name: 'Clear detected events' }));

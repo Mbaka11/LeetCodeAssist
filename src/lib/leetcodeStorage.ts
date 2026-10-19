@@ -14,6 +14,8 @@ export const PROFILE_CACHE_KEY = 'leetcodeAssist.leetcodeProfile.v1';
 export interface LeetCodePrefs {
   /** Passive "Accepted" detection; on by default. */
   detectionEnabled: boolean;
+  /** Visibility only; absent/false hides the side-panel status, not automatic detection. */
+  showDetectionStatus?: boolean;
   /** Optional public LeetCode username for the streak card. */
   username?: string;
 }
@@ -26,7 +28,7 @@ export function normalizePrefs(raw: unknown): LeetCodePrefs {
   const username = typeof r.username === 'string' ? validateUsername(r.username) : null;
   return {
     detectionEnabled: r.detectionEnabled !== false,
-    ...(username?.ok ? { username: username.username } : {}),
+    ...(r.showDetectionStatus === true ? { showDetectionStatus: true } : {}),    ...(username?.ok ? { username: username.username } : {}),
   };
 }
 
@@ -47,7 +49,7 @@ function exclusive<T>(task: () => Promise<T>): Promise<T> {
 export interface LeetCodeStorage {
   readPrefs(): Promise<LeetCodePrefs>;
   /** `username: null` clears the username. */
-  updatePrefs(change: { detectionEnabled?: boolean; username?: string | null }): Promise<LeetCodePrefs>;
+  updatePrefs(change: { detectionEnabled?: boolean; username?: string | null; showDetectionStatus?: boolean }): Promise<LeetCodePrefs>;
   readEvents(): Promise<SubmissionEvent[]>;
   /** Atomically appends to the capped list. */
   appendEvent(event: SubmissionEvent): Promise<void>;
@@ -67,6 +69,7 @@ export function createLeetCodeStorage(area: StorageAreaLike): LeetCodeStorage {
         const current = normalizePrefs(await read(LEETCODE_PREFS_KEY));
         const next = normalizePrefs({
           detectionEnabled: change.detectionEnabled ?? current.detectionEnabled,
+          showDetectionStatus: change.showDetectionStatus ?? current.showDetectionStatus,
           username: change.username === undefined ? current.username : change.username,
         });
         await area.set({ [LEETCODE_PREFS_KEY]: next });
