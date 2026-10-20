@@ -1598,3 +1598,26 @@ textarea.mono {
     flex-wrap: wrap;
   }
 }
+
+/* Roadmap enrichment: local filters and shared metadata, including narrow side panels. */
+.roadmap-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 10px;
+}
+.roadmap-filters label { display: grid; gap: 4px; min-width: 0; }
+.roadmap-filters input, .roadmap-filters select { width: 100%; min-width: 0; }
+.problem-row-details { flex-basis: 100%; display: grid; gap: 6px; }
+.metadata-tags { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.metadata-tags .badge { white-space: normal; }
+.problem-metadata { margin-top: 12px; overflow-wrap: anywhere; }
+.problem-metadata h3 { margin: 8px 0 0; font-size: 1rem; }
+.metadata-similar, .metadata-evidence { margin: 0; padding-left: 20px; }
+.metadata-similar li + li, .metadata-evidence li + li { margin-top: 12px; }
+.problem-metadata p { margin: 6px 0; }
+.inline-heading { display: inline; }
+section[aria-label="Problem metadata"] summary, .company-evidence-disclosure summary { cursor: pointer; }
+.company-evidence-disclosure { min-width: 0; max-width: 100%; }
+section[aria-label="Problem metadata"] summary:focus-visible,
+.company-evidence-disclosure summary:focus-visible,
+.category summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

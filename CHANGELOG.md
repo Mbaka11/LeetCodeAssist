@@ -3,6 +3,32 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.8.0
+
+### Added
+- **Roadmap → All:** browse all 150 or 75 catalog problems in existing category order, with collapsible
+  categories, Compact/Detailed rows and conjunctive local filters. Match counts are separate from catalog
+  progress; catalog/layout changes discard filters. Tree/Grid and shared check/status semantics are retained.
+- Original editorial data-structure/technique tags for all 150 and **437 curated similar-question links**
+  (1–3 per problem), with relation, rationale, difficulty, progress and navigation. These are not official
+  LeetCode recommendations and never schedule practice or expand the fixed 50-problem program.
+- Shared sheet/side-panel metadata disclosure with source-qualified company evidence. Review and side-panel
+  content starts collapsed; closed disclosures do not mount tags/rationales. Hide-hints removes Detailed
+  row tags and clears/disables technique/data-structure filters.
+- Optional schema-1 layout/detail/hide-hints preferences; existing backups remain importable.
+- Detailed company badges include a keyboard/touch-accessible **Source and caveats** disclosure with the
+  qualified association, attribution link, known/unknown dates and self-report limitations.
+
+### Notes
+- Company coverage is **one uncorroborated Amazon LRU Cache variation report**, not an exact canonical
+  attribution; **zero verified exact canonical pairs**. Twelve text company definitions do not imply twelve
+  evidence datasets. Only Amazon is filterable; other pairs remain not documented, not “never asked”.
+  Source qualifications, unknown publication/interview year and integration-snapshot caveats are preserved.
+- No real company logos: text-name fallback is used because logo asset permissions were not established.
+  No new network dependency, copied solutions/editorials, permissions, schema migration or scheduling change.
+  Program/order, budgets, reviews, progress, independent timers, bonuses, Accepted auto-Finish and detection
+  visibility retain their existing behavior. See `docs/roadmap-metadata.md` for provenance and limitations.
+
 ## 0.7.0
 
 ### Added

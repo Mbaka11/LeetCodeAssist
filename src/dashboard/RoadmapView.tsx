@@ -1,8 +1,6 @@
 import { useId, useState } from 'react';
-import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { LeetCodeLink } from '../components/LeetCodeLink';
 import { ProgressBar } from '../components/ProgressBar';
 import { Stat } from '../components/Stat';
 import { CATALOG_IDS, catalogProblems, type CatalogId } from '../core/catalog';
@@ -13,21 +11,17 @@ import {
   layoutRoadmapTree,
   roadmapTiers,
 } from '../core/roadmap';
-import { getProblemStatus, problemStats, type CategoryStats } from '../core/state';
-import type { AppState, Difficulty, Problem, RoadmapViewMode } from '../core/types';
+import { problemStats, type CategoryStats } from '../core/state';
+import type { AppState, Difficulty, Problem, RoadmapViewMode, Settings } from '../core/types';
 import { CATEGORIES, type CategoryName } from '../data/neetcode150';
-import { isBonusProblem } from '../data/bonus';
 import { isPremiumProblem } from '../data/premium';
-import { BENCHMARKS, PROGRAM_QUEUE } from '../data/program';
 import type { AppActions } from '../lib/actions';
-import { STATUS_LABELS, STATUS_TONES, difficultyTone } from '../lib/instructions';
-import { problemHref } from '../lib/route';
+import { RoadmapAllView } from './RoadmapAllView';
+import { RoadmapProblemList } from './RoadmapProblemList';
 
 const DIFFICULTIES: readonly Difficulty[] = ['Easy', 'Medium', 'Hard'];
 const TIERS = roadmapTiers();
 const TREE = layoutRoadmapTree();
-const BENCHMARK_SLUGS: ReadonlySet<string> = new Set(BENCHMARKS.flatMap((b) => [b.easy, b.medium]));
-const PROGRAM_SLUGS: ReadonlySet<string> = new Set(PROGRAM_QUEUE);
 
 const CATALOG_LABELS: Record<CatalogId, string> = { neetcode150: 'NeetCode 150', blind75: 'Blind 75' };
 
@@ -50,54 +44,6 @@ function prerequisitesOf(name: CategoryName): readonly CategoryName[] {
 /** The problems of a category that belong to the chosen catalog, in roadmap order. */
 function categoryProblems(name: CategoryName, catalog: CatalogId): readonly Problem[] {
   return catalogProblems(catalog).filter((problem) => problem.category === name);
-}
-
-/** The problems of one category: checkbox, link, difficulty, program badges, status pill, LeetCode link. */
-function ProblemList({
-  problems,
-  state,
-  actions,
-}: {
-  problems: readonly Problem[];
-  state: AppState;
-  actions: AppActions;
-}) {
-  return (
-    <ul className="problem-list">
-      {problems.map((problem) => {
-        const status = getProblemStatus(state, problem.slug);
-        const worked = status !== 'untouched'; // done in the program or a benchmark: shown as checked
-        return (
-          <li key={problem.slug} className="problem-row">
-            <label className="choice">
-              <input
-                type="checkbox"
-                checked={worked || state.checked[problem.slug] === true}
-                disabled={worked}
-                title={worked ? 'Completed in your plan' : undefined}
-                onChange={() => void actions.toggleChecked(problem.slug)}
-                aria-label={`${problem.title} solved`}
-              />
-              <a href={problemHref(problem.slug)}>{problem.title}</a>
-            </label>
-            <span className="problem-meta">
-              <Badge tone={difficultyTone(problem.difficulty)}>{problem.difficulty}</Badge>
-              {PROGRAM_SLUGS.has(problem.slug) ? <Badge>30-day program</Badge> : null}
-              {BENCHMARK_SLUGS.has(problem.slug) ? <Badge tone="benchmark">Benchmark</Badge> : null}
-              {isBonusProblem(problem.slug) ? <Badge tone="warn">Bonus</Badge> : null}
-              {isPremiumProblem(problem.slug) ? (
-                <span title="Needs LeetCode Premium. It stays in the catalog but is never scheduled.">
-                  <Badge tone="neutral">Premium</Badge>
-                </span>
-              ) : null}
-              <Badge tone={STATUS_TONES[status]}>{STATUS_LABELS[status]}</Badge>
-              <LeetCodeLink href={problem.url} openPanel />
-            </span>
-          </li>
-        );
-      })}
-    </ul>
-  );
 }
 
 function CategoryCard({
@@ -134,7 +80,7 @@ function CategoryCard({
       ) : (
         <details>
           <summary>Problems ({stats.total})</summary>
-          <ProblemList problems={problems} state={state} actions={actions} />
+          <RoadmapProblemList problems={problems} state={state} actions={actions} />
         </details>
       )}
     </section>
@@ -278,14 +224,14 @@ function TreeView({
         {selectedProblems.length === 0 ? (
           <p className="muted">No {CATALOG_LABELS[catalog]} problem is in this category. It stays in the tree as a connector.</p>
         ) : (
-          <ProblemList problems={selectedProblems} state={state} actions={actions} />
+          <RoadmapProblemList problems={selectedProblems} state={state} actions={actions} />
         )}
       </section>
     </>
   );
 }
 
-const VIEW_LABELS: Record<RoadmapViewMode, string> = { tree: 'Tree', grid: 'Grid' };
+const VIEW_LABELS: Record<RoadmapViewMode, string> = { tree: 'Tree', grid: 'Grid', all: 'All' };
 
 /** Both catalog counters side by side, so the overlap is visible whichever catalog is selected. */
 function CatalogCounters({ state, selected }: { state: AppState; selected: CatalogId }) {
@@ -314,7 +260,7 @@ export function RoadmapView({ state, actions }: { state: AppState; actions: AppA
   const [error, setError] = useState<string | null>(null);
   const premiumCount = catalogProblems(catalog).filter((p) => isPremiumProblem(p.slug)).length;
 
-  const change = (patch: { roadmapView?: RoadmapViewMode; roadmapCatalog?: CatalogId }): void => {
+  const change = (patch: Partial<Settings>): void => {
     setError(null);
     actions.updateSettings(patch).catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   };
@@ -338,7 +284,7 @@ export function RoadmapView({ state, actions }: { state: AppState; actions: AppA
               ))}
             </div>
             <div className="view-toggle" role="group" aria-label="Roadmap layout">
-              {(['tree', 'grid'] as const).map((mode) => (
+              {(['tree', 'grid', 'all'] as const).map((mode) => (
                 <Button
                   key={mode}
                   variant={view === mode ? 'primary' : 'secondary'}
@@ -392,7 +338,9 @@ export function RoadmapView({ state, actions }: { state: AppState; actions: AppA
       </Card>
 
       {view === 'tree' ? (
-        <TreeView state={state} actions={actions} byCategory={byCategory} catalog={catalog} />
+        <TreeView key={catalog} state={state} actions={actions} byCategory={byCategory} catalog={catalog} />
+      ) : view === 'all' ? (
+        <RoadmapAllView key={catalog} state={state} actions={actions} catalog={catalog} change={change} />
       ) : (
         <GridView state={state} actions={actions} byCategory={byCategory} catalog={catalog} />
       )}

@@ -241,6 +241,38 @@ which is NeetCode's version of the list. Problems that need LeetCode Premium (6 
 NeetCode 150) are labelled **Premium** and are never scheduled; solving them needs a Premium account.
 The choice is stored in the optional `settings.roadmapCatalog`.
 
+### All layout and problem metadata
+
+**Tree | Grid | All** selects the layout independently of the catalog. All expands every category in the
+existing order; categories can be collapsed. **Compact | Detailed** controls row detail. All supports
+conjunctive title, category, difficulty, learning-status, Free/Premium, program-membership, technique,
+data-structure and company-evidence filters. Program membership includes benchmarks; Outside excludes
+both the program/benchmarks and the bonus pool. **Showing N of 150/75** counts matches, not progress.
+Filters are temporary, reset on catalog/layout changes, and never change either catalog counter, shared
+checks/statuses, scheduled work or the fixed 50-problem program. **Clear filters** restores the catalog.
+
+Detailed rows add original editorial tags and qualified company evidence. **Hide techniques / solution
+hints** removes tags and clears/disables their filters. The layout, row detail and hide-hints preference
+are optional settings; storage remains version **1**, and older backups still import without these fields.
+Problem sheets and the side panel share an **Explore metadata and similar questions** disclosure: technique
+tags and similar-question rationales are not mounted while it is closed. It starts closed for due/in-progress
+reviews, when hide-hints is enabled, and always in the side panel; expansion deliberately reveals hints.
+
+All **150** problems have tags and **1–3 editor-curated similar links** (437 directed links total), with a
+relation, original rationale, difficulty and your own progress. These are not official LeetCode recommendations;
+they may lead outside Blind 75 but stay inside the 150 and never add scheduled practice. No solutions or
+editorials are copied, and browsing this metadata requires no live LeetCode API.
+
+Company coverage is deliberately sparse: **12 text company definitions, one public candidate self-report
+of an Amazon LRU Cache variation, and zero verified exact canonical problem/company pairs**. Only Amazon
+is offered in the evidence filter; other pairs are **not documented**, not “never asked”. In Detailed rows,
+expand **Source and caveats** next to the company badge by keyboard, click or tap. Both this inline disclosure
+and the problem sheet preserve the variant qualification, source URL, unknown publication/interview year and
+self-report caveats.
+The displayed research-integration snapshot is not a fresh source check. **No real logos are included**:
+plain-text names are the fallback because logo asset permissions were not established. Definitions do not
+imply evidence for every company. See [metadata provenance and coverage](docs/roadmap-metadata.md).
+
 ## LeetCode features and privacy
 
 - **Accepted detection (optional, on by default):** start an activity and keep its side panel open while

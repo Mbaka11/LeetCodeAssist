@@ -241,8 +241,10 @@ interface Note { slug: string; trigger: string /*"Click"*/; principle: string; p
   complexity: string; code?: string; updatedAt: string }
 interface Settings { startDate: string; dailyTargetMin: number; dailyCapMin: number;
   morningNotify: string /*"08:30"*/; eveningNotify: string /*"20:00"*/; language: 'python';
-  roadmapView?: 'tree'|'grid';    // absent = 'tree'
+  roadmapView?: 'tree'|'grid'|'all';    // absent = 'tree'
   roadmapCatalog?: 'neetcode150'|'blind75';  // absent = 'neetcode150'
+  roadmapDetail?: 'compact'|'detailed';     // All layout; absent = 'compact'
+  roadmapHideTechniques?: boolean;         // absent = false
   budgets?: BudgetOverrides }     // partial minutes per type and difficulty; absent = defaults
 type BudgetOverrides = { [T in Exclude<ActivityType,'benchmark'>]?: Partial<Record<Difficulty, number>> }
 interface AppState { version: 1; settings: Settings; activities: Activity[];
@@ -250,7 +252,8 @@ interface AppState { version: 1; settings: Settings; activities: Activity[];
   queue?: string[] }               // saved queue order after postponing; absent = PROGRAM_QUEUE
 ```
 
-`hintsUsed`, `postponed`, `corrections`, `roadmapView`, `roadmapCatalog`, `budgets` and `queue` are optional and additive: data saved by 0.1 stays
+`hintsUsed`, `postponed`, `corrections`, `roadmapView`, `roadmapCatalog`, `roadmapDetail`,
+`roadmapHideTechniques`, `budgets` and `queue` are optional and additive: data saved by 0.1 stays
 valid, so `version` remains `1`.
 
 The timer is derived from timestamps (`accumulatedMs + (now - startedAt)`), never from tick counting.
@@ -294,7 +297,7 @@ key, versioned), JSON export/import from Settings.
      badge; an open offer is listed on today only, labelled *Optional*, and unopened offers never become missed
      days.
    - **Roadmap**: a **NeetCode 150 | Blind 75** catalog selector (stored in `settings.roadmapCatalog`, default
-     NeetCode 150) and a **Tree | Grid** toggle (`settings.roadmapView`, default Tree), independent of each other.
+     NeetCode 150) and a **Tree | Grid | All** toggle (`settings.roadmapView`, default Tree), independent of each other.
      The catalog filters the problem lists, the counters and the tree/grid stats (`problemStats(state, catalog)`,
      `categoryDifficultyCounts(state, catalog)`); both catalogs read the same `problemStatus`, `checked` and
      activities, so nothing is duplicated or reset. Both counters (*NeetCode 150 x/150 · Blind 75 y/75*) are
@@ -458,6 +461,51 @@ benchmarks and bonus pool contain none (the Premium-only Easy *Meeting Rooms* is
 
 The provenance is not live-verified by this extension (it ships a static copy); the completeness of the list
 rests on that one source.
+
+## 6c. Roadmap All and editorial enrichment
+
+**All** renders the selected catalog's 150 or 75 problems in existing category/problem order, with all
+category disclosures initially expanded. Categories can be collapsed without changing progress. Tree and
+Grid keep their existing compact row behavior. Catalog changes reset tree selection and All's local
+filters/disclosures. Leaving All also discards local filters; no saved filter or adaptive expansion exists.
+
+All's **Compact | Detailed** control persists `settings.roadmapDetail`; Detailed adds data-structure and
+technique tags and qualified company badges. `settings.roadmapHideTechniques` removes those tags and
+clears/disables both tag filters (including their option values). These settings are optional; missing values
+mean Compact and hints visible. The storage version remains 1. Old schema-1 backups import unchanged;
+this does not promise that old released clients can read a newly exported `roadmapView: 'all'` value.
+
+Filters combine conjunctively: trimmed case-insensitive title substring, category, difficulty, derived learning
+status, Free/Premium, program membership, technique, data structure and sourced company. Program includes
+the fixed queue and benchmarks; Bonus is the existing pool; Outside excludes both groups. The company
+filter only offers companies with evidence (currently Amazon). **Clear filters** resets all local filters.
+**Showing N of 150/75** is the match count; an empty intersection has an explicit empty state. Both catalog
+counters, shared checkbox/status semantics and scheduling remain independent of these presentation filters.
+
+Static registries cover all 150 with individually authored tags and 437 directional similar-question links
+(1–3 per problem). Each link has a supported relation (`same-pattern`, `prerequisite`, `next-challenge`,
+`useful-contrast`) and original rationale; these are editor-curated, **not official LeetCode similar questions**.
+They expose target difficulty, user learning/check progress, and sheet/LeetCode links. Targets can be outside
+Blind 75 but remain within the 150; following a link never schedules work. No mastery score or automatic
+queue/budget/review changes are introduced. Runtime enrichment needs no network/API or new permission.
+
+The shared **Explore metadata and similar questions (contains technique hints)** disclosure on the sheet and
+side panel contains tags, company provenance and similar links. It starts closed for due/overdue/in-progress
+reviews using the existing notes-lock rule, or with hide-hints enabled; the side panel always starts closed.
+Slug/review-lock transitions reset disclosure state. Closed disclosures do not mount tags or recommendation
+rationales; explicit expansion reveals them. Existing hints, notes, forms, timers, Accepted auto-Finish and
+detection visibility are unchanged; browsing metadata is not recorded as an activity hint.
+
+Company definitions cover Google, Amazon, Microsoft, Meta, Apple, Shopify, Stripe, Uber, Bloomberg,
+Datadog, Snowflake and NVIDIA, but **definitions do not imply evidence**. Actual evidence is one
+uncorroborated public candidate report of an **Amazon LRU Cache variation**, not a verified exact canonical
+question. There are **zero verified exact canonical pairs**; every other pair is unknown/not documented,
+never “not asked”. The safe badge is **Reported at Amazon — LRU Cache variation**. The full metadata
+section supplies qualification, public source, self-report disclaimer and honest date fields: publication and
+interview year unknown; the integration snapshot is not a fresh source verification. No frequency/hiring
+claim is made. **No real logos are shipped**: text names are used because logo asset permissions were not
+established. No report bodies, premium-derived datasets, solutions or editorials are copied. Detailed
+provenance, rejected/blocked sources and coverage limitations: [`roadmap-metadata.md`](roadmap-metadata.md).
 
 ## 7. Out of scope for v1
 

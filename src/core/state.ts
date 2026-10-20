@@ -94,7 +94,7 @@ const PROBLEM_STATUSES: readonly ProblemStatus[] = [
   'reviewed',
   'mastered',
 ];
-const ROADMAP_VIEWS: readonly RoadmapViewMode[] = ['tree', 'grid'];
+const ROADMAP_VIEWS: readonly RoadmapViewMode[] = ['tree', 'grid', 'all'];
 const ROADMAP_CATALOGS: readonly RoadmapCatalog[] = ['neetcode150', 'blind75'];
 /** Allowed range of a budget override in minutes. */
 export const BUDGET_MIN_MINUTES = 1;
@@ -178,6 +178,13 @@ function validateSettings(value: unknown): Settings {
   }
   if (o.roadmapCatalog !== undefined) {
     settings.roadmapCatalog = asOneOf(o.roadmapCatalog, ROADMAP_CATALOGS, 'settings.roadmapCatalog');
+  }
+  if (o.roadmapDetail !== undefined) {
+    settings.roadmapDetail = asOneOf(o.roadmapDetail, ['compact', 'detailed'] as const, 'settings.roadmapDetail');
+  }
+  if (o.roadmapHideTechniques !== undefined) {
+    if (typeof o.roadmapHideTechniques !== 'boolean') fail('settings.roadmapHideTechniques', 'expected a boolean');
+    settings.roadmapHideTechniques = o.roadmapHideTechniques;
   }
   if (o.budgets !== undefined) {
     const budgets = validateBudgets(o.budgets);

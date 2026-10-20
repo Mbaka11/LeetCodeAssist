@@ -8,6 +8,7 @@ import { Card } from '../components/Card';
 import { HintsSection } from '../components/HintsSection';
 import { LeetCodeLink } from '../components/LeetCodeLink';
 import { NotesForm } from '../components/NotesForm';
+import { ProblemMetadataSection } from '../components/ProblemMetadata';
 import { localDateFromTimestamp } from '../core/dates';
 import { planDay, type PlanItem } from '../core/planner';
 import { attemptHistory, isNotesLocked, nextReview } from '../core/problemSheet';
@@ -353,6 +354,9 @@ export function ProblemPanel({
             footer={hasOpen ? null : <ExtraPractice state={state} actions={actions} slug={slug} today={today} />} />
         ) : <ExtraPractice state={state} actions={actions} slug={slug} today={today} />}
       </Card>
+
+      <ProblemMetadataSection key={`${slug}-${locked}`} slug={slug} state={state} collapsed protectedReview={locked}
+        openProblemSheet={(target) => openDashboard(problemHref(target))} />
 
       <HintsSection slug={slug} activity={openActivity} actions={actions} />
 

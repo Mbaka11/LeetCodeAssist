@@ -303,6 +303,37 @@ describe('hintsUsed, postponed, roadmapView and queue (additive fields)', () => 
     );
   });
 
+  it('round-trips additive All preferences at schema 1 and preserves legacy defaults', () => {
+    for (const roadmapDetail of ['compact', 'detailed'] as const) {
+      for (const roadmapHideTechniques of [false, true]) {
+        const state: AppState = { ...base, settings: { ...base.settings, roadmapView: 'all', roadmapDetail, roadmapHideTechniques } };
+        expect(deserializeState(serializeState(state))).toEqual(state);
+        expect(deserializeState(serializeState(state)).version).toBe(1);
+      }
+    }
+    const legacy = deserializeState(serializeState(base));
+    expect(legacy.settings.roadmapDetail).toBeUndefined();
+    expect(legacy.settings.roadmapHideTechniques).toBeUndefined();
+  });
+
+  it('imports each enrichment preference independently without inserting the others into old schema-1 data', () => {
+    for (const patch of [{ roadmapView: 'all' }, { roadmapDetail: 'detailed' }, { roadmapHideTechniques: true }]) {
+      const input = { ...base, settings: { ...base.settings, ...patch } };
+      const restored = deserializeState(JSON.stringify(input));
+      expect(restored).toEqual(input);
+      expect(restored.version).toBe(1);
+    }
+  });
+
+  it('rejects invalid All preference values with their settings path', () => {
+    for (const roadmapDetail of ['dense', 1, null]) {
+      expect(() => validateState({ ...base, settings: { ...base.settings, roadmapDetail } })).toThrow(/settings.roadmapDetail/);
+    }
+    for (const roadmapHideTechniques of ['true', 1, null]) {
+      expect(() => validateState({ ...base, settings: { ...base.settings, roadmapHideTechniques } })).toThrow(/settings.roadmapHideTechniques/);
+    }
+  });
+
   it('rejects invalid values with a path', () => {
     expect(() => validateState(withActivity({ hintsUsed: 4 }))).toThrow(/hintsUsed/);
     expect(() => validateState(withActivity({ hintsUsed: 1.5 }))).toThrow(/hintsUsed/);

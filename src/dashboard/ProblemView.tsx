@@ -6,6 +6,7 @@ import { Card } from '../components/Card';
 import { HintsSection } from '../components/HintsSection';
 import { LeetCodeLink } from '../components/LeetCodeLink';
 import { NotesForm } from '../components/NotesForm';
+import { ProblemMetadataSection } from '../components/ProblemMetadata';
 import { localDateFromTimestamp } from '../core/dates';
 import { attemptHistory, isNotesLocked, nextReview, openActivityToday } from '../core/problemSheet';
 import { programQueue, queuePosition } from '../core/queue';
@@ -100,6 +101,8 @@ export function ProblemView({
           I have already solved this problem
         </label>
       </Card>
+
+      <ProblemMetadataSection key={`${slug}-${locked}`} slug={slug} state={state} protectedReview={locked} />
 
       <HintsSection slug={slug} activity={openActivity} actions={actions} />
 
