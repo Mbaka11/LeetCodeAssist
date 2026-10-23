@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { Button } from '../components/Button';
+import { CompanyLogo } from '../components/CompanyLogo';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { catalogProblems, type CatalogId } from '../core/catalog';
 import { COMPANIES, COMPANY_EVIDENCE, DATA_STRUCTURE_TAGS, TECHNIQUE_TAGS, getProblemMetadata } from '../core/problemMetadata';
@@ -36,6 +37,7 @@ export function RoadmapAllView({ state, actions, catalog, change }: {
   const problems = catalogProblems(catalog);
   const detailed = state.settings.roadmapDetail === 'detailed';
   const hideTechniques = state.settings.roadmapHideTechniques === true;
+  const groupBy = state.settings.roadmapGroup === 'company' ? 'company' : 'category';
   const categories = CATEGORY_NAMES.filter((category) => problems.some((p) => p.category === category));
   const filtered = problems.filter((problem) => {
     const metadata = getProblemMetadata(problem.slug);
@@ -51,6 +53,14 @@ export function RoadmapAllView({ state, actions, catalog, change }: {
       (hideTechniques || !filters.structure || metadata?.dataStructures.some((tag) => tag === filters.structure)) &&
       (!filters.company || metadata?.companyEvidence.evidence.some((row) => row.companyId === filters.company));
   });
+  const groups: { key: string; title: string; companyId?: string; rows: typeof filtered }[] = groupBy === 'category'
+    ? categories.map((category) => ({ key: category, title: category, rows: filtered.filter((p) => p.category === category) }))
+    : [...SOURCED_COMPANIES.map((company) => ({ key: company.id, title: company.name, companyId: company.id,
+        rows: filtered.filter((p) => getProblemMetadata(p.slug)?.companyEvidence.evidence.some((row) => row.companyId === company.id)) })),
+      { key: 'undocumented', title: 'No documented company evidence',
+        rows: filtered.filter((p) => (getProblemMetadata(p.slug)?.companyEvidence.evidence.length ?? 0) === 0) }]
+      .sort((a, b) => (a.key === 'undocumented' ? 1 : b.key === 'undocumented' ? -1 : b.rows.length - a.rows.length));
+  const visibleGroups = groups.filter((group) => group.rows.length > 0);
   const select = (key: Exclude<keyof RoadmapFilters, 'search' | 'favoritesOnly'>, label: string, options: readonly { value: string; label: string }[], disabled = false) => (
     <label htmlFor={`${id}-${key}`}>
       {label}
@@ -71,6 +81,12 @@ export function RoadmapAllView({ state, actions, catalog, change }: {
               variant={detailed === (mode === 'detailed') ? 'primary' : 'secondary'}
               aria-pressed={detailed === (mode === 'detailed')}
               onClick={() => change({ roadmapDetail: mode })}>{mode === 'compact' ? 'Compact' : 'Detailed'}</Button>)}
+          </div>
+          <div className="view-toggle" role="group" aria-label="Group problems by">
+            {(['category', 'company'] as const).map((mode) => <Button key={mode}
+              variant={groupBy === mode ? 'primary' : 'secondary'}
+              aria-pressed={groupBy === mode}
+              onClick={() => change({ roadmapGroup: mode })}>{mode === 'category' ? 'Group by category' : 'Group by company'}</Button>)}
           </div>
           <label className="choice"><input type="checkbox" checked={hideTechniques} onChange={(event) => {
             setFilters((current) => ({ ...current, technique: '', structure: '' }));
@@ -134,12 +150,11 @@ export function RoadmapAllView({ state, actions, catalog, change }: {
         <p className="muted">Filters never change catalog counters, progress or scheduled work. Checkmarks are shared with Tree and Grid.</p>
       </div>
       {filtered.length === 0 ? <p className="muted">No problems match these filters. Clear filters to show the catalog.</p> : null}
-      {categories.map((category) => {
-        const rows = filtered.filter((problem) => problem.category === category);
-        if (rows.length === 0) return null;
-        return <section key={category} className="card category">
+      {groupBy === 'company' ? <p className="muted">Grouped by companies with documented public reports. A problem appears under every company that has evidence for it, so group counts can add up to more than {filtered.length}. Not documented means unknown, never "not asked".</p> : null}
+      {visibleGroups.map(({ key, title, companyId, rows }) => {
+        return <section key={key} className="card category">
           <details open>
-            <summary><h2 className="inline-heading">{category}</h2> <span className="muted">({rows.length})</span></summary>
+            <summary><h2 className="inline-heading">{companyId ? <CompanyLogo companyId={companyId} name={title} size={22} /> : null}{companyId ? ' ' : ''}{title}</h2> <span className="muted">({rows.length})</span></summary>
             <RoadmapProblemList problems={rows} state={state} actions={actions} detailed={detailed} hideTechniques={hideTechniques} />
           </details>
         </section>;

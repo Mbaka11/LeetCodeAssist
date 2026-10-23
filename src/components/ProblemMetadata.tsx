@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { COMPANY_EVIDENCE_DISCLAIMER, getProblemMetadata, type CompanyEvidence } from '../core/problemMetadata';
+import { CompanyLogo } from './CompanyLogo';
+import { COMPANIES, COMPANY_EVIDENCE_DISCLAIMER, getProblemMetadata, type CompanyEvidence } from '../core/problemMetadata';
 import { getProblemStatus } from '../core/state';
 import type { AppState } from '../core/types';
 import { getProblem } from '../data/neetcode150';
@@ -24,7 +25,7 @@ export function CompanyBadges({ slug }: { slug: string }) {
     <div className="metadata-tags">
       {evidence.slice(0, 2).map((row) => (
         <details key={`${row.companyId}:${row.source.url}`} className="company-evidence-disclosure">
-          <summary><Badge>{row.label}</Badge> <span>Source and caveats</span></summary>
+          <summary><CompanyLogo companyId={row.companyId} name={COMPANIES.find((c) => c.id === row.companyId)?.name ?? row.companyId} /> <Badge>{row.label}</Badge> <span>Source and caveats</span></summary>
           <div className="problem-metadata">
             <CompanyEvidenceDetails row={row} />
             <p className="muted">{COMPANY_EVIDENCE_DISCLAIMER}</p>

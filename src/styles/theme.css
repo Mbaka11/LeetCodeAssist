@@ -1643,3 +1643,14 @@ label > select,
   max-width: 100%;
   min-width: 0;
 }
+
+/* Activity minutes: program days and the recent weeks side by side, wrapping only when the container is narrow. */
+.activity-heat-ranges { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 32px; }
+.activity-heat-ranges .activity-heat-range { margin-bottom: 0; flex: 0 1 auto; max-width: 100%; }
+
+/* Favorite star: a small icon at the end of the row meta, so titles stay left-aligned. */
+.favorite-star { padding: 0 6px; min-height: 0; line-height: 1.4; background: transparent; border-color: transparent; font-size: 1.1rem; }
+.favorite-star[aria-pressed="true"] { color: var(--warn); }
+
+.company-logo { display: inline-block; vertical-align: -0.2em; flex: none; }
+.company-monogram { display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; font-weight: 700; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); line-height: 1; }

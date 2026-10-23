@@ -231,7 +231,7 @@ function TreeView({
   );
 }
 
-const VIEW_LABELS: Record<RoadmapViewMode, string> = { tree: 'Tree', grid: 'Grid', all: 'All' };
+const VIEW_LABELS: Record<RoadmapViewMode, string> = { tree: 'Tree', grid: 'Grid', all: 'List' };
 
 /** Both catalog counters side by side, so the overlap is visible whichever catalog is selected. */
 function CatalogCounters({ state, selected }: { state: AppState; selected: CatalogId }) {

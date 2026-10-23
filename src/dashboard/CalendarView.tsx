@@ -25,7 +25,6 @@ import { formatDate, formatMinutes, formatMs } from '../lib/format';
 import { ACTIVITY_LABELS, OUTCOME_LABELS } from '../lib/instructions';
 import { problemHref } from '../lib/route';
 import { useNow } from '../lib/useNow';
-import { ActivityHeatmap } from './ActivityHeatmap';
 import { LeetCodeStreakCard } from './LeetCodeStreakCard';
 
 const ENTRY_LABELS: Record<EntryState, string> = {
@@ -587,8 +586,6 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
 
         <LeetCodeStreakCard now={now} compact />
       </div>
-
-      <ActivityHeatmap state={state} today={today} />
 
       <div className="calendar-grid">
         {days.map((day) => (

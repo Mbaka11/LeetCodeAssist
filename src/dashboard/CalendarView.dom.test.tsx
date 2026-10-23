@@ -44,13 +44,12 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('CalendarView compact layout structure (DOM)', () => {
-  it('has the overview and the streak card in one summary row followed by the local activity heatmap, day grid and detail', async () => {
+  it('has the overview and the streak card in one summary row followed by the day grid and detail (activity minutes live in Logs)', async () => {
     const { container } = await renderCalendar(profile());
     const root = container.firstElementChild!;
     const children = [...root.children].map((el) => el.className.split(' ')[0]);
-    expect(children).toEqual(['cal-summary', 'card', 'calendar-grid', 'card']);
-    expect(root.children[1]!.classList.contains('activity-heatmap')).toBe(true);
-    expect(within(root.children[1] as HTMLElement).getByRole('heading', { name: 'Activity minutes' })).toBeTruthy();
+    expect(children).toEqual(['cal-summary', 'calendar-grid', 'card']);
+    expect(container.querySelector('.activity-heatmap')).toBeNull();
     const summary = root.querySelector('.cal-summary')!;
     expect([...summary.children].map((el) => el.className)).toEqual(['card cal-overview', 'card cal-streak']);
     expect(container.querySelectorAll('.calendar-grid .cal-day')).toHaveLength(30);

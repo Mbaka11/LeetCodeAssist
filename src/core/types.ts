@@ -113,6 +113,8 @@ export interface Settings {
   roadmapCatalog?: RoadmapCatalog;
   /** All layout row density; absent means compact. */
   roadmapDetail?: 'compact' | 'detailed';
+  /** How the List layout groups problems; absent means category. */
+  roadmapGroup?: 'category' | 'company';
   /** Hide technique/data-structure hints in All; absent means visible in Detailed. */
   roadmapHideTechniques?: boolean;
   /** Side-panel presentation only; absent means off. */

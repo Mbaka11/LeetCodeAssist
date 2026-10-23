@@ -3,13 +3,13 @@ import type { AppState } from '../core/types';
 import type { AppActions } from '../lib/actions';
 import { Button } from './Button';
 
-export function FavoriteButton({ slug, title, state, actions }: {
-  slug: string; title: string; state: AppState; actions: AppActions;
+export function FavoriteButton({ slug, title, state, actions, compact = false }: {
+  slug: string; title: string; state: AppState; actions: AppActions; compact?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const favorite = state.favorites?.[slug] === true;
   return <>
-    <Button aria-label={`Favorite ${title}`} aria-pressed={favorite}
+    <Button className={compact ? 'favorite-star' : undefined} aria-label={`Favorite ${title}`} aria-pressed={favorite}
       title={favorite ? 'Remove from favorites' : 'Add to favorites'}
       onClick={() => {
         setError(null);

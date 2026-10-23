@@ -198,7 +198,7 @@ describe('Roadmap All presentation and local filters', () => {
     await screen.findByText('Showing 150 of 150');
     fireEvent.click(screen.getByRole('checkbox', { name: 'Two Sum solved' }));
     await waitFor(() => expect(container.querySelector('.catalog-counters')!.textContent).toContain('1/150'));
-    for (const layout of ['Grid', 'Tree', 'All']) {
+    for (const layout of ['Grid', 'Tree', 'List']) {
       fireEvent.click(screen.getByRole('button', { name: layout }));
       await waitFor(() => expect((screen.getByRole('checkbox', { name: 'Two Sum solved' }) as HTMLInputElement).checked).toBe(true));
     }
@@ -216,7 +216,7 @@ describe('Favorites and saved All filters', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: 'Favorites only' }));
     expect(rowSlugs(container)).toEqual(['two-sum']);
     expect(container.querySelector('.catalog-counters')!.textContent).toBe(counters);
-    for (const layout of ['Grid', 'Tree', 'All']) {
+    for (const layout of ['Grid', 'Tree', 'List']) {
       fireEvent.click(screen.getByRole('button', { name: layout }));
       await waitFor(() => expect(screen.getByRole('button', { name: 'Favorite Two Sum' }).getAttribute('aria-pressed')).toBe('true'));
     }
@@ -309,3 +309,36 @@ it('clears unavailable metadata and categories when applying an older preset', a
   }
   expect(screen.getByText('Showing 150 of 150')).toBeTruthy();
 });
+
+describe('List layout: labels, star placement and company grouping', () => {
+  it('labels the third layout List (stored value stays all) and keeps the star at the end of each row, not before the title', async () => {
+    const { container } = setup();
+    await screen.findByText('Showing 150 of 150');
+    const layout = within(screen.getByRole('group', { name: 'Roadmap layout' }));
+    expect(layout.getAllByRole('button').map((b) => b.textContent)).toEqual(['Tree', 'Grid', 'List']);
+    const row = container.querySelector('.problem-row')!;
+    expect(row.firstElementChild!.classList.contains('choice')).toBe(true);
+    const meta = row.querySelector('.problem-meta')!;
+    expect(meta.lastElementChild!.classList.contains('favorite-star')).toBe(true);
+  });
+
+  it('groups by company with logos or monograms, persists the choice, and puts undocumented problems last', async () => {
+    const { container, mock } = setup();
+    await screen.findByText('Showing 150 of 150');
+    fireEvent.click(screen.getByRole('button', { name: 'Group by company' }));
+    await waitFor(() => expect(container.querySelectorAll('.category h2').length).toBeGreaterThan(1));
+    const titles = [...container.querySelectorAll('.category h2')].map((h) => h.textContent!.trim());
+    expect(titles.some((t) => t.endsWith('Amazon'))).toBe(true);
+    expect(titles.at(-1)).toBe('No documented company evidence');
+    expect(titles.some((t) => t.endsWith('Shopify'))).toBe(false); // no evidence, so no group
+    const amazon = [...container.querySelectorAll('.category')].find((c) => c.querySelector('h2')!.textContent!.trim().endsWith('Amazon'))!;
+    expect(amazon.querySelector('.company-monogram')?.textContent).toBe('A'); // Amazon has no bundled brand mark
+    const google = [...container.querySelectorAll('.category')].find((c) => c.querySelector('h2')!.textContent!.trim() === 'Google')!;
+    expect(google.querySelector('svg.company-logo path')).toBeTruthy();
+    expect((mock.data[STORAGE_KEY] as AppState).settings.roadmapGroup).toBe('company');
+    expect((mock.data[STORAGE_KEY] as AppState).activities).toEqual([]);
+    fireEvent.click(screen.getByRole('button', { name: 'Group by category' }));
+    await waitFor(() => expect([...container.querySelectorAll('.category h2')].map((h) => h.textContent!.trim())).toEqual(CATEGORY_NAMES));
+  });
+});
+

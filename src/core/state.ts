@@ -182,6 +182,9 @@ function validateSettings(value: unknown): Settings {
   if (o.roadmapCatalog !== undefined) {
     settings.roadmapCatalog = asOneOf(o.roadmapCatalog, ROADMAP_CATALOGS, 'settings.roadmapCatalog');
   }
+  if (o.roadmapGroup !== undefined) {
+    settings.roadmapGroup = asOneOf(o.roadmapGroup, ['category', 'company'] as const, 'settings.roadmapGroup');
+  }
   if (o.roadmapDetail !== undefined) {
     settings.roadmapDetail = asOneOf(o.roadmapDetail, ['compact', 'detailed'] as const, 'settings.roadmapDetail');
   }

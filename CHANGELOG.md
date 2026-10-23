@@ -3,6 +3,17 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.9.1
+
+### Changed
+- **Activity minutes** moved from Calendar to **Logs**, and its program-days and recent-12-weeks grids now sit side by side (wrapping only when narrow).
+- Roadmap's third layout is labelled **List** instead of **All**, so it no longer reads as a third catalog next to NeetCode 150 / Blind 75 (stored value unchanged).
+- The favorite star moved to the end of each row so problem titles line up.
+
+### Added
+- **Group by company** in List (optional `settings.roadmapGroup`, schema 1 unchanged): one group per company with documented evidence, undocumented problems last.
+- Company logos (bundled Simple Icons CC0 paths for nine companies; monogram for Amazon, Microsoft and Bloomberg). No remote request; trademarks stay with their owners.
+
 ## 0.9.0
 
 > ### ⚠️ One-time migration required: the extension ID changes

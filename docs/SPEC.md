@@ -303,11 +303,11 @@ key, versioned), JSON export/import from Settings.
      (`projectDay` in `src/core/projection.ts`). The day detail has `Move…` for planned reviews and
      `Postpone` for today's new problems. A finished bonus appears on its completion day with a *Bonus*
      badge; an open offer is listed on today only, labelled *Optional*, and unopened offers never become missed
-     days. Below the summary row an **Activity minutes** heatmap shows completed-log minutes per local day for
+     days. (In 0.9.1 the **Activity minutes** heatmap moved to **Logs**, below the summary; the two ranges sit side by side.) It shows completed-log minutes per local day for
      program days 1–30 and a separately labelled recent 12 weeks (`src/core/activityHeatmap.ts`; skipped estimates
      and running timers excluded; it never feeds the streak or Plan done).
    - **Roadmap**: a **NeetCode 150 | Blind 75** catalog selector (stored in `settings.roadmapCatalog`, default
-     NeetCode 150) and a **Tree | Grid | All** toggle (`settings.roadmapView`, default Tree), independent of each other.
+     NeetCode 150) and a **Tree | Grid | List** toggle (stored value `all`; optional `settings.roadmapGroup` = `category`|`company` groups List) (`settings.roadmapView`, default Tree), independent of each other.
      The catalog filters the problem lists, the counters and the tree/grid stats (`problemStats(state, catalog)`,
      `categoryDifficultyCounts(state, catalog)`); both catalogs read the same `problemStatus`, `checked` and
      activities, so nothing is duplicated or reset. Both counters (*NeetCode 150 x/150 · Blind 75 y/75*) are
@@ -530,7 +530,7 @@ Google 6 (1; variant-heavy), Microsoft 6 (5), Uber 5 (4); Shopify, Stripe, Datad
 pair is unknown/not documented, never “not asked”. Rows are typed with qualification, mapping confidence, source
 title/URL, integration snapshot (2026-10-23, not a fresh verification), known publication date with its basis, partial
 interview period and host caveats; unknown dates stay unknown. No frequency, probability or hiring claim is made, no
-logos are shipped (permissions not established), and no report bodies, premium-derived datasets, solutions or
+no remote logo is fetched (bundled CC0 Simple Icons paths for nine companies, monogram for Amazon/Microsoft/Bloomberg; marks remain owners' trademarks), and no report bodies, premium-derived datasets, solutions or
 editorials are copied. Full provenance, rejected sources and limitations: [`roadmap-metadata.md`](roadmap-metadata.md).
 
 ## 6d. Presentation features: favorites, saved filters, heatmap, Markdown export
@@ -543,7 +543,7 @@ All are optional, presentation-only and independent of solved checks, progress, 
   apply, rename, delete. A preset applies to the **currently selected catalog**; unavailable category/tag/company
   values are cleared on apply, and while *Hide techniques* is on technique/structure constraints are neither applied
   nor saved. Switching catalogs still clears the live filters.
-- **Activity heatmap**: Calendar card, see section 6. **Notes export**: Settings → Your data → *Export all notes (.md)*
+- **Activity heatmap**: Logs card, see section 6. **Notes export**: Settings → Your data → *Export all notes (.md)*
   with title, category, difficulty and all note fields (code fenced dynamically so backticks cannot close it); not offered
   when no notes exist.
 - **Side-panel Focus mode**: section 6, surface 2.

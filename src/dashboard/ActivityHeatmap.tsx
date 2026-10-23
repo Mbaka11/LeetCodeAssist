@@ -10,6 +10,7 @@ export function ActivityHeatmap({ state, today }: { state: AppState; today: stri
   ];
   return <Card title="Activity minutes" className="activity-heatmap">
     <p className="muted">Completed activity logs, local dates. Includes optional attempts; this does not change your streak or plan.</p>
+    <div className="activity-heat-ranges">
     {ranges.map(({ label, start, count }) => {
       const days = activityHeatDays(state, start, count, today);
       const weeks = Array.from({ length: Math.ceil(count / 7) }, (_, index) => days.slice(index * 7, index * 7 + 7));
@@ -27,6 +28,7 @@ export function ActivityHeatmap({ state, today }: { state: AppState; today: stri
         </div>
       </section>;
     })}
+    </div>
     <p className="heat-legend activity-heat-legend" aria-label="Minutes legend: 0, under 30, 30 to under 60, 60 to under 120, 120 or more; dashed means future">
       {['0', '<30', '30–59', '60–119', '120+'].map((label, level) => <span key={label}>
         <span className={`heat-cell heat-${level}`} aria-hidden="true" /> {label} min

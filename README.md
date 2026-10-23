@@ -211,8 +211,8 @@ change. Small samples, difficulty differences and missing history limit comparis
   or delete it. Presets apply to the **current catalog**, not the catalog where they were saved.
   Switching catalogs still resets the live filters. Applying a preset clears unavailable filter options (including categories
   absent from the current catalog); hidden technique/data-structure filters are never applied.
-- **Calendar → Activity minutes** displays local completed-log minutes for program days 1–30
-  and the recent 12 weeks (overlapping dates intentionally appear in both ranges). This is separate
+- **Logs → Activity minutes** (moved out of Calendar to keep it compact) displays local completed-log minutes for program days 1–30
+  and the recent 12 weeks side by side (they wrap only on narrow screens; overlapping dates intentionally appear in both ranges). This is separate
   from LeetCode's submission calendar. It includes existing optional attempts, ignores skipped
   estimates and live timers, and does not change the existing streak or plan-done rules.
 - **Settings → Your data → Export all notes (.md)** downloads every saved note with its problem
@@ -313,7 +313,7 @@ The choice is stored in the optional `settings.roadmapCatalog`.
 
 ### All layout and problem metadata
 
-**Tree | Grid | All** selects the layout independently of the catalog. All expands every category in the
+**Tree | Grid | List** selects the layout independently of the catalog (the stored value for List stays `all`). List expands every category in the
 existing order; categories can be collapsed. **Compact | Detailed** controls row detail. All supports
 conjunctive title, category, difficulty, learning-status, Free/Premium, program-membership, technique,
 data-structure and company-evidence filters. Program membership includes benchmarks; Outside excludes
@@ -356,8 +356,12 @@ problem once):
 Roadmap All lists every company that has evidence in its filter. In Detailed rows, expand **Source and
 caveats** next to the company badge by keyboard, click or tap for the qualification, source link, known/unknown
 dates and self-report caveats. The displayed research-integration snapshot (2026-10-23) is not a fresh source
-check. **No real logos are included**: plain-text names are used because logo asset permissions were not
-established. See [metadata provenance and coverage](docs/roadmap-metadata.md).
+check. Company badges show a brand mark for Google, Meta, Apple, Shopify, Stripe, Uber, Datadog, Snowflake and NVIDIA
+(paths from Simple Icons, CC0; the marks stay trademarks of their owners and only identify the company, with no
+endorsement implied) and a neutral monogram for Amazon, Microsoft and Bloomberg, which Simple Icons does not
+distribute. Logos are bundled, with no remote request. In List, **Group by category | company** groups by documented
+company; a problem appears under every company with evidence and undocumented ones are listed last. The favorite
+star sits at the end of each row so titles stay aligned. See [metadata provenance and coverage](docs/roadmap-metadata.md).
 
 ## LeetCode features and privacy
 

@@ -35,7 +35,6 @@ export function RoadmapProblemList({
         const worked = status !== 'untouched'; // done in the program or a benchmark: shown as checked
         return (
           <li key={problem.slug} className="problem-row">
-            <FavoriteButton slug={problem.slug} title={problem.title} state={state} actions={actions} />
             <label className="choice">
               <input
                 type="checkbox"
@@ -59,6 +58,7 @@ export function RoadmapProblemList({
               ) : null}
               <Badge tone={STATUS_TONES[status]}>{STATUS_LABELS[status]}</Badge>
               <LeetCodeLink href={problem.url} openPanel />
+              <FavoriteButton slug={problem.slug} title={problem.title} state={state} actions={actions} compact />
             </span>
             {detailed ? <div className="problem-row-details">
               {!hideTechniques ? <ProblemTags slug={problem.slug} /> : null}

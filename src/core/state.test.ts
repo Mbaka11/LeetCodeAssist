@@ -317,7 +317,7 @@ describe('hintsUsed, postponed, roadmapView and queue (additive fields)', () => 
   });
 
   it('imports each enrichment preference independently without inserting the others into old schema-1 data', () => {
-    for (const patch of [{ roadmapView: 'all' }, { roadmapDetail: 'detailed' }, { roadmapHideTechniques: true }]) {
+    for (const patch of [{ roadmapView: 'all' }, { roadmapDetail: 'detailed' }, { roadmapHideTechniques: true }, { roadmapGroup: 'company' }, { roadmapGroup: 'category' }]) {
       const input = { ...base, settings: { ...base.settings, ...patch } };
       const restored = deserializeState(JSON.stringify(input));
       expect(restored).toEqual(input);
@@ -326,6 +326,9 @@ describe('hintsUsed, postponed, roadmapView and queue (additive fields)', () => 
   });
 
   it('rejects invalid All preference values with their settings path', () => {
+    for (const roadmapGroup of ['team', 1, null]) {
+      expect(() => validateState({ ...base, settings: { ...base.settings, roadmapGroup } })).toThrow(/settings.roadmapGroup/);
+    }
     for (const roadmapDetail of ['dense', 1, null]) {
       expect(() => validateState({ ...base, settings: { ...base.settings, roadmapDetail } })).toThrow(/settings.roadmapDetail/);
     }

@@ -16,5 +16,7 @@ describe('ActivityHeatmap', () => {
     expect(within(recent).getByRole('img', { name: '2025-01-05: 0 minutes logged' })).toBeTruthy();
     expect(screen.getByLabelText(/Minutes legend: 0, under 30/)).toBeTruthy();
     expect(program.classList.contains('heat-grid')).toBe(true); // shares the responsive scrolling grid
+    // Both ranges live in one wrapping row, so they sit side by side when there is room.
+    expect(program.closest('.activity-heat-ranges')).toBe(recent.closest('.activity-heat-ranges'));
   });
 });
