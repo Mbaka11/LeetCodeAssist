@@ -530,7 +530,7 @@ Google 6 (1; variant-heavy), Microsoft 6 (5), Uber 5 (4); Shopify, Stripe, Datad
 pair is unknown/not documented, never “not asked”. Rows are typed with qualification, mapping confidence, source
 title/URL, integration snapshot (2026-10-23, not a fresh verification), known publication date with its basis, partial
 interview period and host caveats; unknown dates stay unknown. No frequency, probability or hiring claim is made, no
-no remote logo is fetched (bundled CC0 Simple Icons paths for nine companies, monogram for Amazon/Microsoft/Bloomberg; marks remain owners' trademarks), and no report bodies, premium-derived datasets, solutions or
+no remote logo is fetched (bundled marks for eleven companies (CC0 Simple Icons/gilbarbara, Amazon CC BY 4.0 credited in third-party.md), monogram for Bloomberg; marks remain owners' trademarks), and no report bodies, premium-derived datasets, solutions or
 editorials are copied. Full provenance, rejected sources and limitations: [`roadmap-metadata.md`](roadmap-metadata.md).
 
 ## 6d. Presentation features: favorites, saved filters, heatmap, Markdown export

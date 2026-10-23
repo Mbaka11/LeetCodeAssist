@@ -3,6 +3,11 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.9.2
+
+### Added
+- Amazon and Microsoft logos (Amazon: Font Awesome Free, CC BY 4.0, credited in `docs/third-party.md`; Microsoft: gilbarbara/logos, CC0). Bloomberg keeps a monogram: no redistributable open icon exists.
+
 ## 0.9.1
 
 ### Changed

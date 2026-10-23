@@ -332,7 +332,8 @@ describe('List layout: labels, star placement and company grouping', () => {
     expect(titles.at(-1)).toBe('No documented company evidence');
     expect(titles.some((t) => t.endsWith('Shopify'))).toBe(false); // no evidence, so no group
     const amazon = [...container.querySelectorAll('.category')].find((c) => c.querySelector('h2')!.textContent!.trim().endsWith('Amazon'))!;
-    expect(amazon.querySelector('.company-monogram')?.textContent).toBe('A'); // Amazon has no bundled brand mark
+    expect(amazon.querySelector('svg.company-logo path')).toBeTruthy();
+    expect(container.querySelector('.category svg.company-logo[viewBox="0 0 256 256"]')?.querySelectorAll('path')).toHaveLength(4); // Microsoft's four squares, when grouped
     const google = [...container.querySelectorAll('.category')].find((c) => c.querySelector('h2')!.textContent!.trim() === 'Google')!;
     expect(google.querySelector('svg.company-logo path')).toBeTruthy();
     expect((mock.data[STORAGE_KEY] as AppState).settings.roadmapGroup).toBe('company');

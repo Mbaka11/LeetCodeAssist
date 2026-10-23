@@ -358,8 +358,8 @@ caveats** next to the company badge by keyboard, click or tap for the qualificat
 dates and self-report caveats. The displayed research-integration snapshot (2026-10-23) is not a fresh source
 check. Company badges show a brand mark for Google, Meta, Apple, Shopify, Stripe, Uber, Datadog, Snowflake and NVIDIA
 (paths from Simple Icons, CC0; the marks stay trademarks of their owners and only identify the company, with no
-endorsement implied) and a neutral monogram for Amazon, Microsoft and Bloomberg, which Simple Icons does not
-distribute. Logos are bundled, with no remote request. In List, **Group by category | company** groups by documented
+endorsement implied) plus Microsoft (CC0) and Amazon (Font Awesome Free, CC BY 4.0; credit in `docs/third-party.md`). Bloomberg has no
+redistributable open icon and keeps a neutral monogram. Logos are bundled, with no remote request. In List, **Group by category | company** groups by documented
 company; a problem appears under every company with evidence and undocumented ones are listed last. The favorite
 star sits at the end of each row so titles stay aligned. See [metadata provenance and coverage](docs/roadmap-metadata.md).
 
