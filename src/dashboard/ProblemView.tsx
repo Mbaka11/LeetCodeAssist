@@ -1,3 +1,4 @@
+import { FavoriteButton } from '../components/FavoriteButton';
 import { useState } from 'react';
 import { AttemptHistory } from '../components/AttemptHistory';
 import { Badge } from '../components/Badge';
@@ -56,6 +57,7 @@ export function ProblemView({
     <div className="stack">
       <div className="day-header">
         <h1>{problem.title}</h1>
+        <FavoriteButton slug={slug} title={problem.title} state={state} actions={actions} />
         <Badge tone={difficultyTone(problem.difficulty)}>
           {problem.difficulty}
         </Badge>

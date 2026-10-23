@@ -1,4 +1,4 @@
-# LeetCode Assist — Product & Technical Spec (v1, extension 0.6)
+# LeetCode Assist — Product & Technical Spec (v1; current as of the unreleased post-0.8.0 work)
 
 A Chrome extension (Manifest V3) that runs a **30-day LeetCode bootcamp** built on the
 **NeetCode 150** roadmap. You open it and it tells you exactly what to do today:
@@ -245,16 +245,24 @@ interface Settings { startDate: string; dailyTargetMin: number; dailyCapMin: num
   roadmapCatalog?: 'neetcode150'|'blind75';  // absent = 'neetcode150'
   roadmapDetail?: 'compact'|'detailed';     // All layout; absent = 'compact'
   roadmapHideTechniques?: boolean;         // absent = false
+  sidePanelFocus?: boolean;                // side-panel Focus mode; absent = false
   budgets?: BudgetOverrides }     // partial minutes per type and difficulty; absent = defaults
 type BudgetOverrides = { [T in Exclude<ActivityType,'benchmark'>]?: Partial<Record<Difficulty, number>> }
 interface AppState { version: 1; settings: Settings; activities: Activity[];
   notes: Record<string, Note>; problemStatus: Record<string, ProblemStatus>; checked: Record<string, boolean>;
-  queue?: string[] }               // saved queue order after postponing; absent = PROGRAM_QUEUE
+  queue?: string[];                // saved queue order after postponing; absent = PROGRAM_QUEUE
+  favorites?: Record<string, boolean>;                  // by slug; false = explicit unstar (kept for sync)
+  savedRoadmapFilters?: Record<string, { name: string; filters: RoadmapFilters }>; // by UUID
+  simulations?: Record<string, SimulationRecord>;       // immutable, by id (section 6e)
+  drillSessions?: Record<string, DrillSessionRecord> }  // immutable, by id (section 6e)
 ```
 
 `hintsUsed`, `postponed`, `corrections`, `roadmapView`, `roadmapCatalog`, `roadmapDetail`,
-`roadmapHideTechniques`, `budgets` and `queue` are optional and additive: data saved by 0.1 stays
-valid, so `version` remains `1`.
+`roadmapHideTechniques`, `sidePanelFocus`, `budgets`, `queue`, `favorites`, `savedRoadmapFilters`, `simulations` and
+`drillSessions` are optional and additive: data saved by 0.1 stays valid and absent fields stay absent, so
+`version` remains `1`. Exact field rules: `presentation-state.md` and `optional-practice.md`. Sync (section 6f) adds no
+fields and keeps its own state (config, status, base snapshot, conflicts, backups) in separate `chrome.storage.local`
+keys that are not part of `AppState` or the JSON backup.
 
 The timer is derived from timestamps (`accumulatedMs + (now - startedAt)`), never from tick counting.
 Dates are local calendar dates (YYYY-MM-DD) computed in the user's timezone.
@@ -295,7 +303,9 @@ key, versioned), JSON export/import from Settings.
      (`projectDay` in `src/core/projection.ts`). The day detail has `Move…` for planned reviews and
      `Postpone` for today's new problems. A finished bonus appears on its completion day with a *Bonus*
      badge; an open offer is listed on today only, labelled *Optional*, and unopened offers never become missed
-     days.
+     days. Below the summary row an **Activity minutes** heatmap shows completed-log minutes per local day for
+     program days 1–30 and a separately labelled recent 12 weeks (`src/core/activityHeatmap.ts`; skipped estimates
+     and running timers excluded; it never feeds the streak or Plan done).
    - **Roadmap**: a **NeetCode 150 | Blind 75** catalog selector (stored in `settings.roadmapCatalog`, default
      NeetCode 150) and a **Tree | Grid | All** toggle (`settings.roadmapView`, default Tree), independent of each other.
      The catalog filters the problem lists, the counters and the tree/grid stats (`problemStats(state, catalog)`,
@@ -320,8 +330,12 @@ key, versioned), JSON export/import from Settings.
    - **Problem sheet**: program position, notes (Trigger, Principle, Pitfall, Complexity, Python
      snippet), hints, attempt history (type, duration, approach time, hints used, outcome), next review.
      During review activities notes are **hidden until the user clicks "Reveal"**.
+   - **Practice** (`#/practice`): optional interview simulations and pattern drills, separate from the program
+     (section 6e).
    - **Settings**: start date, daily target and cap, notification times, a compact **time budgets** table
-     (rows = activity types, columns = Easy / Medium / Hard, *Reset to defaults*), export/import/reset.
+     (rows = activity types, columns = Easy / Medium / Hard, *Reset to defaults*), **Sync** (section 6f), detection and
+     LeetCode profile cards, and *Your data*: JSON export/import/reset, *Export all notes (.md)* (a reading export,
+     not a backup format) and the local pre-merge sync backups.
 2. **Side panel** (`chrome.sidePanel`): one **global** panel per window. The service worker calls
    `setOptions({ path, enabled: true })` once (no per-tab enabling), so the panel stays open while
    the user switches or opens tabs and follows the active tab's URL.
@@ -329,6 +343,13 @@ key, versioned), JSON export/import from Settings.
      (*n*/*N* with *N* the queue length, or *Bonus problem*), status, next review, today's activity with its instruction, timer and outcome form, for either bonus offer too (or
      an offer to start extra practice; for a pool problem that is not on offer it says the practice is optional and outside the core plan time), **hints** (three progressive *Reveal hint 1/2/3* buttons),
      notes (hidden during reviews until *Reveal*) and the attempt history including hints used.
+   - **Focus mode** (toggle, persisted as `settings.sidePanelFocus`): for the current activity (running, then paused
+     in-progress, then planned; the same one hints and Accepted use) only the title/link, instruction, timer controls,
+     hints and Finish form are visible; the toggle keeps one label (*Focus mode*) with `aria-pressed`. Other attempts,
+     metadata, notes, history and the optional-practice footer are hidden, and the detection panel is hidden but
+     mounted and replaced by a one-line detection summary; everything stays mounted where it holds state, so timers
+     and unsaved Finish edits survive toggling; detection and Accepted auto-Finish are unchanged. Without a current
+     activity the toggle explains that and the normal panel stays visible.
    - On any other page: an **Open a LeetCode problem** state with today's checklist (core items, the up-to-two
      optional bonus offers marked *Optional bonus*, carried-over reviews); each item has an
      **Open** button that navigates the active tab (when it is a LeetCode or empty tab) or opens a new
@@ -336,12 +357,13 @@ key, versioned), JSON export/import from Settings.
    - Opening: the dashboard's *Open side panel* button, the shortcut **Alt+Shift+L**, and clicking a
      LeetCode problem link in the dashboard (which also calls `chrome.sidePanel.open({ windowId })`
      in the same click handler, best effort).
-3. **Background service worker**: `chrome.alarms` for the morning summary notification
+3. **Background service worker**: the sync service (section 6f, registered first), `chrome.alarms` for the morning summary notification
    ("Today: 2 new, 2 recalls, 1 rebuild · ~2h20") and the evening reminder if the day's
    target is not met; toolbar **badge** = remaining activities today; clicking a
    notification opens the dashboard.
 
-Permissions: `storage`, `alarms`, `notifications`, `sidePanel`, `tabs`; host `https://leetcode.com/*`. The two content
+Permissions: `storage` (also covers `chrome.storage.sync`), `alarms`, `notifications`, `sidePanel`, `tabs`; host `https://leetcode.com/*`.
+The manifest carries a fixed public `key` (section 6f), so the extension ID is `ghpljfdplcicmcfoemfifmmibbdjcmja`. The two content
 scripts of the LeetCode features (section 6a) are declared for `https://leetcode.com/problems/*` only.
 
 ### Grouped problem activities
@@ -467,7 +489,8 @@ rests on that one source.
 **All** renders the selected catalog's 150 or 75 problems in existing category/problem order, with all
 category disclosures initially expanded. Categories can be collapsed without changing progress. Tree and
 Grid keep their existing compact row behavior. Catalog changes reset tree selection and All's local
-filters/disclosures. Leaving All also discards local filters; no saved filter or adaptive expansion exists.
+filters/disclosures. Leaving All also discards live filters; named **saved filters** (section 6d) are the only persisted filter state and
+no adaptive expansion exists.
 
 All's **Compact | Detailed** control persists `settings.roadmapDetail`; Detailed adds data-structure and
 technique tags and qualified company badges. `settings.roadmapHideTechniques` removes those tags and
@@ -478,7 +501,7 @@ this does not promise that old released clients can read a newly exported `roadm
 Filters combine conjunctively: trimmed case-insensitive title substring, category, difficulty, derived learning
 status, Free/Premium, program membership, technique, data structure and sourced company. Program includes
 the fixed queue and benchmarks; Bonus is the existing pool; Outside excludes both groups. The company
-filter only offers companies with evidence (currently Amazon). **Clear filters** resets all local filters.
+filter offers every company that has evidence (currently eight, see below). **Clear filters** resets all local filters.
 **Showing N of 150/75** is the match count; an empty intersection has an explicit empty state. Both catalog
 counters, shared checkbox/status semantics and scheduling remain independent of these presentation filters.
 
@@ -497,17 +520,102 @@ rationales; explicit expansion reveals them. Existing hints, notes, forms, timer
 detection visibility are unchanged; browsing metadata is not recorded as an activity hint.
 
 Company definitions cover Google, Amazon, Microsoft, Meta, Apple, Shopify, Stripe, Uber, Bloomberg,
-Datadog, Snowflake and NVIDIA, but **definitions do not imply evidence**. Actual evidence is one
-uncorroborated public candidate report of an **Amazon LRU Cache variation**, not a verified exact canonical
-question. There are **zero verified exact canonical pairs**; every other pair is unknown/not documented,
-never “not asked”. The safe badge is **Reported at Amazon — LRU Cache variation**. The full metadata
-section supplies qualification, public source, self-report disclaimer and honest date fields: publication and
-interview year unknown; the integration snapshot is not a fresh source verification. No frequency/hiring
-claim is made. **No real logos are shipped**: text names are used because logo asset permissions were not
-established. No report bodies, premium-derived datasets, solutions or editorials are copied. Detailed
-provenance, rejected/blocked sources and coverage limitations: [`roadmap-metadata.md`](roadmap-metadata.md).
+Datadog, Snowflake and NVIDIA, but **definitions do not imply evidence**. Evidence is a static registry
+(`src/data/companies.ts`) of **66 source-backed rows / 65 distinct company–problem pairs** from public candidate
+self-reports (46 exact-topic mappings, 19 qualified related variants; the earlier Amazon LRU Cache variation is
+retained as its own source). "Exact" means the narrative names or clearly describes the canonical topic, not that the
+employer confirmed it; a variant is expressly not a verified canonical question. Distinct documented problems per
+company: Amazon 14 (10 exact), Meta 9 (7), NVIDIA 9 (6; systems/firmware contexts), Apple 8 (7), Bloomberg 8 (6; one row, an LRU Cache design discussion with no coding reported, is evidence only and is excluded from mock interviews and the threshold, leaving 7),
+Google 6 (1; variant-heavy), Microsoft 6 (5), Uber 5 (4); Shopify, Stripe, Datadog and Snowflake have none. Every other
+pair is unknown/not documented, never “not asked”. Rows are typed with qualification, mapping confidence, source
+title/URL, integration snapshot (2026-10-23, not a fresh verification), known publication date with its basis, partial
+interview period and host caveats; unknown dates stay unknown. No frequency, probability or hiring claim is made, no
+logos are shipped (permissions not established), and no report bodies, premium-derived datasets, solutions or
+editorials are copied. Full provenance, rejected sources and limitations: [`roadmap-metadata.md`](roadmap-metadata.md).
+
+## 6d. Presentation features: favorites, saved filters, heatmap, Markdown export
+
+All are optional, presentation-only and independent of solved checks, progress, scheduling and the fixed program.
+
+- **Favorites** (`favorites[slug]`): a star on every Roadmap row/layout and on the problem sheet, plus *Favorites only*
+  in All. `false` is an explicit unstar retained so sync can propagate it.
+- **Saved All filters** (`savedRoadmapFilters[uuid] = { name, filters }`, name 1–80 characters, duplicates allowed): save,
+  apply, rename, delete. A preset applies to the **currently selected catalog**; unavailable category/tag/company
+  values are cleared on apply, and while *Hide techniques* is on technique/structure constraints are neither applied
+  nor saved. Switching catalogs still clears the live filters.
+- **Activity heatmap**: Calendar card, see section 6. **Notes export**: Settings → Your data → *Export all notes (.md)*
+  with title, category, difficulty and all note fields (code fenced dynamically so backticks cannot close it); not offered
+  when no notes exist.
+- **Side-panel Focus mode**: section 6, surface 2.
+
+## 6e. Optional practice (`#/practice`)
+
+Voluntary and separate from the program and the older extra/bonus Activity flow. Full rules and exact field schemas:
+[`optional-practice.md`](optional-practice.md).
+
+- **Isolation (invariant):** simulations and drills never create or update Activities, scheduled reviews, problem status,
+  solved checks, notes, budgets or timers, and never change program counts, pace, worked totals, logged minutes, heatmaps,
+  calendar, reminders, streak or the weekly review (which does not show them even separately). Records appear only in
+  Practice history and JSON backups. There is no network/API dependency; Accepted detection does not finish or score a
+  simulation.
+- **Interview simulation:** global pool = worked problems (in-progress/done Activity, learned status or solved check) unless
+  unworked problems are explicitly included with a warning; category/difficulty filters; 25/35/45-minute timestamp-derived
+  countdown; eight-step checklist; self-rating (`solved|partial|not`) and a reflection of at most 1000 characters saved
+  together as an immutable `SimulationRecord`. No tags, similar questions, notes, hints or per-problem company evidence
+  are mounted during a session; expiry does not auto-save. Unfinished sessions live in React state only; the UI warns
+  before leaving, and the navigation bar asks for confirmation before leaving with an active session.
+- **Company interviews:** enabled only with ≥ **5 distinct documented slugs** (exact and qualified variants count, each
+  slug once): Google, Amazon, Microsoft, Meta, Apple, Uber, Bloomberg, NVIDIA; the other four show *Not enough documented
+  data*. Draws use documented slugs only (editorial sampling weight 3 for exact, 1 for variant-only; not a frequency),
+  with no similar-pattern fallback. Setup discloses that reports are uncorroborated, may be mirrored, and may not
+  generalize across roles.
+- **Pattern drills:** original prompt, correct pseudo-code outline, two plausible wrong outlines and explanations for all
+  50 program problems (`src/data/drills.ts`); technique/structure questions use the normalized tag vocabularies and never
+  offer a registered, curated also-valid, closely related or generic tag as a wrong answer (`src/data/drillAmbiguity.ts`);
+  unworked problems get only generic tag-level feedback (no outline rationale); outline lengths are balanced. Worked-only
+  by default; unworked technique/structure needs a warning toggle; outline questions always require prior work; *Hide
+  techniques* disables drills until a local checkbox enables them. Sessions ask up to 5/10/20 unique slug/kind questions
+  (shorter for small pools), freeze the first answer and save a `DrillSessionRecord` score.
+- **Storage:** `simulations` and `drillSessions` are ID-keyed whole immutable records; saves append through the serialized
+  store and reject an existing ID; no local edit/delete.
+
+## 6f. Optional sync (`chrome.storage.sync`) and fixed extension ID
+
+Details, quotas and honest limits: [`sync.md`](sync.md).
+
+- **Fixed ID:** `wxt.config.ts` sets the manifest `key` to a public RSA-2048 SPKI key, giving every unpacked install the ID
+  `ghpljfdplcicmcfoemfifmmibbdjcmja`. No private key is stored or committed. This changes the ID of installs made before
+  it; the **one-time migration** is export JSON → update/build → remove the old unpacked extension → Load unpacked →
+  import JSON (README → Install, CHANGELOG).
+- **Requirements:** same Google account, Chrome sync enabled for extensions, same extension ID on every computer. Off by
+  default; manual JSON export/import is unaffected.
+- **Transport:** background-owned (Web Lock shared with store commands). The snapshot is gzip → base64 → 7000-character
+  chunks `lca.sync.chunk.<generation>.<n>` plus manifest `lca.sync.manifest.v1` (generation, count, SHA-256, device, time).
+  A writer stages a whole new generation, re-checks the manifest, switches it and then removes the old one; readers follow
+  the manifest only and reject partial/corrupt/invalid data. Limits honoured: 102400 bytes total (old and new generation
+  during a switch), 8192 per item, 512 items, ≤ 120 writes/minute and 1800/hour (debounce ≈ 20 s, uploads ≥ 30 s apart,
+  1-minute poll alarm). Data that does not fit **pauses** sync with a message.
+- **Merge:** deterministic three-way merge against the last synced snapshot (`src/core/syncMerge.ts`); records are
+  activities (with correction audit) by id, notes by slug, `checked`/`problemStatus`/`favorites` by slug, saved filters,
+  simulations and drill sessions by id, each `settings` field, and `queue` whole. One-side change wins; both sides
+  different = **conflict** (local kept, other copy untouched, others keep merging). Rules: another device's running timer
+  is deferred, a local running timer changed remotely is a conflict, untouched generated activities never conflict with
+  worked ones, an untouched first-run device adopts the cloud copy whole, and invalid merged settings become conflicts.
+- **UI:** Settings → Sync (enable, device name, status, usage, errors, *Sync now*, *Replace cloud copy*), a dashboard banner
+  while conflicts/errors exist, a conflict list with plain-language versions and per-record/keep-all choices.
+- **Backups:** last three pre-merge snapshots (≤ 4 MiB), local only, restorable with confirmation; a merge is not applied
+  if its backup cannot be stored. Import is a local change set; reset clears only this device.
+- **Local-only keys:** detection/LeetCode keys, sync config/status/base/conflicts/backups, device name. Notes and code
+  snippets do go to Chrome sync when enabled.
+- **Concurrent uploads:** a device stores its published generation and the pre-upload base (`lca.sync.own.v1`); a cloud copy
+  that is neither that generation nor a descendant (manifest `lineage`) is merged against the pre-upload base, so an
+  overwritten upload is merged, not deleted. *Replace cloud copy* is limited to an unreadable copy or quota pause, re-reads
+  first and backs up a readable copy; failed uploads remove their staged chunks and each publish removes leaked chunks;
+  JSON import saves a local backup first when sync is on. The JSON export does not contain detection/LeetCode/sync-config
+  data, which must be re-set after the ID migration.
+- **Limits:** last-writer-wins storage; real cross-device behaviour is untested by automation (mock quotas only).
 
 ## 7. Out of scope for v1
 
-Automatically saving/completing an activity from a detected "Accepted" (detection opens a confirmation form, section 6a), accounts, sync, copying NeetCode/LeetCode
+Automatically saving/completing an activity from a detected "Accepted" (detection opens a confirmation form, section 6a), accounts and servers of our own (optional Chrome-managed sync, section 6f, is the only cross-device path), copying NeetCode/LeetCode
 explanations or solutions (only facts: title, difficulty, category, link).

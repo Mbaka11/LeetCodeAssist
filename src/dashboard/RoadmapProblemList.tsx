@@ -1,3 +1,4 @@
+import { FavoriteButton } from '../components/FavoriteButton';
 import { Badge } from '../components/Badge';
 import { LeetCodeLink } from '../components/LeetCodeLink';
 import { CompanyBadges, ProblemTags } from '../components/ProblemMetadata';
@@ -34,6 +35,7 @@ export function RoadmapProblemList({
         const worked = status !== 'untouched'; // done in the program or a benchmark: shown as checked
         return (
           <li key={problem.slug} className="problem-row">
+            <FavoriteButton slug={problem.slug} title={problem.title} state={state} actions={actions} />
             <label className="choice">
               <input
                 type="checkbox"

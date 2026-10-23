@@ -20,35 +20,40 @@ function Observation({ event, now }: { event: SubmissionEvent | null; now: numbe
   </>;
 }
 
-/** Saved observations, not a live connection probe. Stays visible above the side-panel activities. */
-export function LeetCodeDetectionStatus({ enabled, events, now, currentSlug, activityStarted, onOpenSettings }: {
+interface DetectionProps {
   enabled: boolean;
   events: readonly SubmissionEvent[];
   now: number;
   currentSlug?: string | null | undefined;
   activityStarted?: boolean | undefined;
+}
+
+function detectionFeedback({ enabled, events, currentSlug, activityStarted }: DetectionProps): { tone: BadgeTone; message: string } {
+  const global = detectionSnapshot(events);
+  const current = currentSlug ? detectionSnapshot(events, currentSlug) : global;
+  if (!enabled) return { tone: 'neutral', message: 'Detection is off. No new events are recorded; previous observations remain below.' };
+  if (current.waitingForResult) return { tone: 'warn', message: 'Submit received — no later final result received for this problem yet. Judging may still be running.' };
+  if (current.lastResult && isAccepted(current.lastResult)) {
+    return { tone: 'good', message: currentSlug && activityStarted === false
+      ? 'Accepted received. No activity is currently in progress for this problem.'
+      : 'Accepted received. Save result always requires your confirmation.' };
+  }
+  if (current.lastResult) return { tone: 'warn', message: `Last result: ${current.lastResult.status_msg}. Only Accepted opens Finish.` };
+  return { tone: 'neutral', message: currentSlug ? 'No events received for this problem yet.' : 'No events recorded yet.' };
+}
+
+/** One-line version for the side panel's focus mode: the same wording, without the observation list. */
+export function LeetCodeDetectionLine(props: DetectionProps) {
+  const { tone, message } = detectionFeedback(props);
+  return <p className={`detection-line tone-${tone}`} role="status" aria-label="LeetCode detection summary"><strong>Detection {props.enabled ? 'on' : 'off'}:</strong> {message}</p>;
+}
+
+/** Saved observations, not a live connection probe. Stays visible above the side-panel activities. */
+export function LeetCodeDetectionStatus({ enabled, events, now, currentSlug, activityStarted, onOpenSettings }: DetectionProps & {
   onOpenSettings?: (() => void) | undefined;
 }) {
   const global = detectionSnapshot(events);
-  const current = currentSlug ? detectionSnapshot(events, currentSlug) : global;
-  let tone: BadgeTone = 'neutral';
-  let message: string;
-  if (!enabled) {
-    message = 'Detection is off. No new events are recorded; previous observations remain below.';
-  } else if (current.waitingForResult) {
-    tone = 'warn';
-    message = 'Submit received — no later final result received for this problem yet. Judging may still be running.';
-  } else if (current.lastResult && isAccepted(current.lastResult)) {
-    tone = 'good';
-    message = currentSlug && activityStarted === false
-      ? 'Accepted received. No activity is currently in progress for this problem.'
-      : 'Accepted received. Save result always requires your confirmation.';
-  } else if (current.lastResult) {
-    tone = 'warn';
-    message = `Last result: ${current.lastResult.status_msg}. Only Accepted opens Finish.`;
-  } else {
-    message = currentSlug ? 'No events received for this problem yet.' : 'No events recorded yet.';
-  }
+  const { tone, message } = detectionFeedback({ enabled, events, now, currentSlug, activityStarted });
 
   return (
     <section className="detection-status" aria-label="LeetCode detection status">

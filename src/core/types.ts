@@ -1,4 +1,5 @@
 /** Data model shared by the pure core, the background worker and the UI (SPEC §5). */
+import type { DrillSessionRecord, SimulationRecord } from './practiceTypes';
 
 export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
@@ -114,6 +115,8 @@ export interface Settings {
   roadmapDetail?: 'compact' | 'detailed';
   /** Hide technique/data-structure hints in All; absent means visible in Detailed. */
   roadmapHideTechniques?: boolean;
+  /** Side-panel presentation only; absent means off. */
+  sidePanelFocus?: boolean;
   /**
    * Time budget overrides in minutes per activity type and difficulty (partial: a missing entry uses the
    * default, see `DEFAULT_BUDGETS`). Optional so data saved before it existed stays valid.
@@ -131,6 +134,25 @@ export type RoadmapViewMode = 'tree' | 'grid' | 'all';
 /** Catalogs the roadmap can show (see `CatalogId` in catalog.ts); Blind 75 is a subset of the NeetCode 150. */
 export type RoadmapCatalog = 'neetcode150' | 'blind75';
 
+/** Presentation-only All filters. Saved filters apply to the currently selected catalog. */
+export interface RoadmapFilters {
+  search: string;
+  category: string;
+  difficulty: '' | Difficulty;
+  status: '' | ProblemStatus;
+  access: '' | 'free' | 'premium';
+  scope: '' | 'program' | 'bonus' | 'outside';
+  technique: string;
+  structure: string;
+  company: string;
+  favoritesOnly: boolean;
+}
+
+export interface SavedRoadmapFilter {
+  name: string;
+  filters: RoadmapFilters;
+}
+
 export interface AppState {
   version: 1;
   settings: Settings;
@@ -139,6 +161,13 @@ export interface AppState {
   notes: Record<string, Note>;
   problemStatus: Record<string, ProblemStatus>;
   checked: Record<string, boolean>;
+  /** Slug-keyed shortlist; false retains an explicit unstar for record-level sync. */
+  favorites?: Record<string, boolean>;
+  /** Stable ID-keyed named filters, independent of catalog and scheduled work. */
+  savedRoadmapFilters?: Record<string, SavedRoadmapFilter>;
+  /** Immutable completed voluntary sessions, merged by record ID; never scheduled work. */
+  simulations?: Record<string, SimulationRecord>;
+  drillSessions?: Record<string, DrillSessionRecord>;
   /**
    * Order of the new-problem queue after the user postponed problems (slugs, see `programQueue`).
    * Absent means the default `PROGRAM_QUEUE` order.

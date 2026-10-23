@@ -33,6 +33,8 @@ export function ActivityCard({
   budgets,
   accepted,
   autoOpenAccepted = false,
+  hidden = false,
+  focused = false,
 }: {
   activity: Activity;
   now: number;
@@ -51,6 +53,8 @@ export function ActivityCard({
   accepted?: AcceptedPrompt | undefined;
   /** Only the selected side-panel activity may auto-open for a fresh verdict. Other cards consume it too. */
   autoOpenAccepted?: boolean;
+  hidden?: boolean;
+  focused?: boolean;
 }) {
   const [finishing, setFinishing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -110,17 +114,17 @@ export function ActivityCard({
   if (running) classes.push('running');
 
   return (
-    <article className={classes.join(' ')} aria-label={grouped ? `Attempt ${attemptNumber}: ${ACTIVITY_LABELS[activity.type]}` : undefined}>
+    <article hidden={hidden} className={classes.join(' ')} aria-label={grouped ? `Attempt ${attemptNumber}: ${ACTIVITY_LABELS[activity.type]}` : undefined}>
       <div className={`activity-head${!compact && !grouped ? ' has-leetcode-link' : ''}`}>
-        {grouped ? <span className="muted attempt-number">#{attemptNumber}</span> : null}
+        {grouped && !focused ? <span className="muted attempt-number">#{attemptNumber}</span> : null}
         <Badge tone={activity.type}>{ACTIVITY_LABELS[activity.type]}</Badge>
-        {bonus ? <Badge tone="warn">Bonus</Badge> : null}
-        {bonus && open ? <Badge>Optional</Badge> : null}
-        {activity.extra && !bonus ? <Badge>Extra practice</Badge> : null}
-        {variant === 'carried' ? (
+        {!focused && bonus ? <Badge tone="warn">Bonus</Badge> : null}
+        {!focused && bonus && open ? <Badge>Optional</Badge> : null}
+        {!focused && activity.extra && !bonus ? <Badge>Extra practice</Badge> : null}
+        {!focused && variant === 'carried' ? (
           <Badge tone="bad">{`Due ${formatDate(activity.dueDate)}`}</Badge>
         ) : null}
-        {!grouped ? <a
+        {!grouped && !focused ? <a
           className="activity-title"
           href={problemHref(activity.slug)}
           {...(openProblemSheet
@@ -134,7 +138,7 @@ export function ActivityCard({
         >
           {problem?.title ?? activity.slug}
         </a> : null}
-        {problem && !grouped ? (
+        {problem && !grouped && !focused ? (
           <Badge tone={difficultyTone(problem.difficulty)}>
             {problem.difficulty}
           </Badge>
@@ -147,7 +151,7 @@ export function ActivityCard({
         </span> : null}
         {grouped && activity.status === 'skipped' ? <span className="muted">Skipped</span> : null}
         <span className="spacer" />
-        {!grouped || open ? <span className="muted">~{formatMinutes(budgetMin)}</span> : null}
+        {!focused && (!grouped || open) ? <span className="muted">~{formatMinutes(budgetMin)}</span> : null}
         {compact || grouped ? null : (
           <a className="link-out activity-leetcode" href={url} target="_blank" rel="noreferrer">
             LeetCode ↗
@@ -199,7 +203,7 @@ export function ActivityCard({
             <Button onClick={startFinishing}>Finish</Button>
           ) : null}
           <span className="spacer" />
-          {postponable ? (
+          {focused ? null : postponable ? (
             <Button
               variant="ghost"
               title="Moves this problem back in the queue, behind the next two. It stays in the program."

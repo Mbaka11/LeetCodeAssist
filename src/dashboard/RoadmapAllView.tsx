@@ -1,9 +1,10 @@
 import { useId, useState } from 'react';
 import { Button } from '../components/Button';
+import { ConfirmButton } from '../components/ConfirmButton';
 import { catalogProblems, type CatalogId } from '../core/catalog';
 import { COMPANIES, COMPANY_EVIDENCE, DATA_STRUCTURE_TAGS, TECHNIQUE_TAGS, getProblemMetadata } from '../core/problemMetadata';
 import { getProblemStatus } from '../core/state';
-import type { AppState, Settings } from '../core/types';
+import type { AppState, Settings, RoadmapFilters } from '../core/types';
 import { isBonusProblem } from '../data/bonus';
 import { CATEGORY_NAMES } from '../data/neetcode150';
 import { isPremiumProblem } from '../data/premium';
@@ -14,7 +15,7 @@ import { RoadmapProblemList } from './RoadmapProblemList';
 
 const PROGRAM_SLUGS: ReadonlySet<string> = new Set([...PROGRAM_QUEUE, ...BENCHMARKS.flatMap((b) => [b.easy, b.medium])]);
 const SOURCED_COMPANIES = COMPANIES.filter((company) => COMPANY_EVIDENCE.some((row) => row.companyId === company.id));
-const EMPTY_FILTERS = { search: '', category: '', difficulty: '', status: '', access: '', scope: '', technique: '', structure: '', company: '' };
+const EMPTY_FILTERS: RoadmapFilters = { search: '', category: '', difficulty: '', status: '', access: '', scope: '', technique: '', structure: '', company: '', favoritesOnly: false };
 
 /** Local filters change presentation only; catalog totals and persisted progress live in RoadmapView. */
 export function RoadmapAllView({ state, actions, catalog, change }: {
@@ -24,6 +25,13 @@ export function RoadmapAllView({ state, actions, catalog, change }: {
   change: (patch: Partial<Settings>) => void;
 }) {
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  const [filterName, setFilterName] = useState('');
+  const [savedId, setSavedId] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const run = (task: Promise<void>): void => {
+    setError(null);
+    task.catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
+  };
   const id = useId();
   const problems = catalogProblems(catalog);
   const detailed = state.settings.roadmapDetail === 'detailed';
@@ -31,7 +39,8 @@ export function RoadmapAllView({ state, actions, catalog, change }: {
   const categories = CATEGORY_NAMES.filter((category) => problems.some((p) => p.category === category));
   const filtered = problems.filter((problem) => {
     const metadata = getProblemMetadata(problem.slug);
-    return problem.title.toLowerCase().includes(filters.search.trim().toLowerCase()) &&
+    return (!filters.favoritesOnly || state.favorites?.[problem.slug] === true) &&
+      problem.title.toLowerCase().includes(filters.search.trim().toLowerCase()) &&
       (!filters.category || problem.category === filters.category) &&
       (!filters.difficulty || problem.difficulty === filters.difficulty) &&
       (!filters.status || getProblemStatus(state, problem.slug) === filters.status) &&
@@ -42,7 +51,7 @@ export function RoadmapAllView({ state, actions, catalog, change }: {
       (hideTechniques || !filters.structure || metadata?.dataStructures.some((tag) => tag === filters.structure)) &&
       (!filters.company || metadata?.companyEvidence.evidence.some((row) => row.companyId === filters.company));
   });
-  const select = (key: Exclude<keyof typeof EMPTY_FILTERS, 'search'>, label: string, options: readonly { value: string; label: string }[], disabled = false) => (
+  const select = (key: Exclude<keyof RoadmapFilters, 'search' | 'favoritesOnly'>, label: string, options: readonly { value: string; label: string }[], disabled = false) => (
     <label htmlFor={`${id}-${key}`}>
       {label}
       <select id={`${id}-${key}`} value={filters[key]} disabled={disabled}
@@ -81,6 +90,43 @@ export function RoadmapAllView({ state, actions, catalog, change }: {
           {select('structure', 'Data structure', hideTechniques ? [] : options(DATA_STRUCTURE_TAGS), hideTechniques)}
           {select('company', 'Company evidence', SOURCED_COMPANIES.map((company) => ({ value: company.id, label: company.name })))}
         </div>
+        <label className="choice"><input type="checkbox" checked={filters.favoritesOnly}
+          onChange={(event) => setFilters((current) => ({ ...current, favoritesOnly: event.target.checked }))} />Favorites only</label>
+        <div className="row" role="group" aria-label="Saved filters">
+          <label>Saved filter<select value={savedId} onChange={(event) => {
+            const key = event.target.value;
+            setSavedId(key);
+            setFilterName(state.savedRoadmapFilters?.[key]?.name ?? '');
+          }}><option value="">Choose a saved filter</option>
+            {Object.entries(state.savedRoadmapFilters ?? {}).map(([key, entry]) => <option key={key} value={key}>{entry.name}</option>)}
+          </select></label>
+          <Button disabled={!state.savedRoadmapFilters?.[savedId]} onClick={() => {
+            const saved = state.savedRoadmapFilters?.[savedId];
+            if (!saved) return;
+            const known = (value: string, values: readonly string[]) => values.includes(value) ? value : '';
+            setFilters({ ...saved.filters,
+              category: known(saved.filters.category, categories),
+              technique: hideTechniques ? '' : known(saved.filters.technique, TECHNIQUE_TAGS),
+              structure: hideTechniques ? '' : known(saved.filters.structure, DATA_STRUCTURE_TAGS),
+              company: known(saved.filters.company, SOURCED_COMPANIES.map((company) => company.id)),
+            });
+          }}>Apply filter</Button>
+          <label>Filter name<input value={filterName} maxLength={80} onChange={(event) => setFilterName(event.target.value)} /></label>
+          <Button disabled={!filterName.trim()} onClick={() => run(actions.saveRoadmapFilter(crypto.randomUUID(), {
+            name: filterName.trim(), filters: { ...filters, ...(hideTechniques ? { technique: '', structure: '' } : {}) },
+          }))}>Save current filters</Button>
+          <Button disabled={!state.savedRoadmapFilters?.[savedId] || !filterName.trim()} onClick={() => {
+            const saved = state.savedRoadmapFilters?.[savedId];
+            if (saved) run(actions.saveRoadmapFilter(savedId, { ...saved, name: filterName.trim() }));
+          }}>Rename filter</Button>
+          {state.savedRoadmapFilters?.[savedId]
+            ? <ConfirmButton prompt={`Delete the saved filter "${state.savedRoadmapFilters[savedId]!.name}"?`} confirmLabel="Delete filter" onConfirm={() => {
+              run(actions.deleteRoadmapFilter(savedId)); setSavedId(''); setFilterName('');
+            }}>Delete filter</ConfirmButton>
+            : <Button disabled>Delete filter</Button>}
+        </div>
+        <p className="muted">Saved filters apply to the current catalog. Unavailable tags/categories are cleared when applied; hidden technique filters are never applied.</p>
+        {error ? <p className="error" role="alert">{error}</p> : null}
         <div className="row">
           <Button onClick={() => setFilters(EMPTY_FILTERS)}>Clear filters</Button>
           <span role="status">Showing {filtered.length} of {problems.length}</span>

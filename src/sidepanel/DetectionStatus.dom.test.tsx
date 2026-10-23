@@ -171,3 +171,35 @@ describe('detection status on real watched chrome.storage values', () => {
     expect(await storage.readEvents()).toEqual([]);
   });
 });
+
+
+describe('focus mode detection visibility', () => {
+  it('replaces the detection panel by a summary, not hiding Accepted delivery; restores it without resetting Finish', async () => {
+    const mock = createMockChromeStorage();
+    installChromeGlobal(mock);
+    const storage = createLeetCodeStorage(mock.area);
+    await storage.updatePrefs({ detectionEnabled: true, showDetectionStatus: true });
+    const state = defaultState('2025-01-07');
+    state.settings.sidePanelFocus = true;
+    const a = createActivity([], { slug: 'two-sum', type: 'new', dueDate: '2025-01-07', createdAt: '2025-01-07' });
+    state.activities = [{ ...a, status: 'in_progress', timer: { running: true, startedAt: NOW - 60_000, accumulatedMs: 0 } }];
+    context.snapshot = { status: 'ready', state };
+    const page = render(<SidePanelApp />);
+    await screen.findByRole('button', { name: 'Pause' });
+    expect(screen.queryByRole('region', { name: 'LeetCode detection status' })).toBeNull();
+    // A one-line summary replaces the full panel, which stays mounted (hidden) so its state survives.
+    expect(screen.getByRole('status', { name: 'LeetCode detection summary' }).textContent).toContain('Detection on');
+    expect(document.querySelector('.detection-status')!.closest('[hidden]')).not.toBeNull();
+    await act(async () => { await storage.appendEvent(result(NOW + 2000)); });
+    await screen.findByText('How did it go?');
+    expect(screen.getByRole('status', { name: 'LeetCode detection summary' }).textContent).toContain('Accepted received');
+    fireEvent.click(screen.getByRole('radio', { name: /Hint/ }));
+    state.settings.sidePanelFocus = false;
+    context.snapshot = { status: 'ready', state: { ...state } };
+    page.rerender(<SidePanelApp />);
+    await screen.findByRole('region', { name: 'LeetCode detection status' });
+    expect(screen.getByRole('radio', { name: /Hint/ })).toHaveProperty('checked', true);
+    expect((await storage.readPrefs()).detectionEnabled).toBe(true);
+    expect((await storage.readPrefs()).showDetectionStatus).toBe(true);
+  });
+});

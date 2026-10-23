@@ -4,6 +4,7 @@ export type Route =
   | { view: 'roadmap' }
   | { view: 'logs' }
   | { view: 'weekly' }
+  | { view: 'practice' }
   | { view: 'problem'; slug: string }
   | { view: 'settings' };
 
@@ -28,6 +29,8 @@ export function parseRoute(hash: string): Route {
       return { view: 'logs' };
     case 'weekly':
       return { view: 'weekly' };
+    case 'practice':
+      return { view: 'practice' };
     case 'settings':
       return { view: 'settings' };
     case 'problem': {

@@ -1,13 +1,16 @@
 import type { ReactNode } from 'react';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { LeetCodeDetectionStatus } from '../components/LeetCodeDetectionStatus';
+import { LeetCodeDetectionLine, LeetCodeDetectionStatus } from '../components/LeetCodeDetectionStatus';
 import { problemSlugFromUrl } from '../lib/leetcodeUrl';
 import { openDashboard } from '../lib/openDashboard';
 import { openProblemInBrowser } from '../lib/sidePanel';
 import { useAppState } from '../lib/useAppState';
 import { useLeetCodePrefs, useSubmissionEvents } from '../lib/useLeetCodeData';
 import { useNow } from '../lib/useNow';
+import { planDay } from '../core/planner';
+import { localDateFromTimestamp } from '../core/dates';
+import { panelMatches, selectedPanelActivity } from './focusActivity';
 import { ProblemPanel } from './ProblemPanel';
 import { useActiveTabUrl } from './useActiveTabUrl';
 
@@ -25,11 +28,17 @@ export function SidePanelApp() {
   const open = (hash: string): void => void openDashboard(hash);
   const openProblem = (target: string): void =>
     void openProblemInBrowser(target).catch((e: unknown) => console.error('Could not open the problem', e));
+  const focused = snapshot.status === 'ready' && snapshot.state.settings.sidePanelFocus === true && slug !== null &&
+    selectedPanelActivity(panelMatches(planDay(snapshot.state, localDateFromTimestamp(now)), slug)) !== undefined;
   const panel = (content: ReactNode): ReactNode => (
     <main className="panel">
       <div className="stack">
-        {prefs.showDetectionStatus ? <LeetCodeDetectionStatus enabled={prefs.detectionEnabled} events={detectedEvents} now={now}
-          currentSlug={slug} activityStarted={activityStarted} onOpenSettings={() => open('#/settings')} /> : null}
+        {prefs.showDetectionStatus ? <>
+          {/* Stays mounted in focus mode (hidden, so its state survives) and is replaced by a one-line summary. */}
+          <div hidden={focused}><LeetCodeDetectionStatus enabled={prefs.detectionEnabled} events={detectedEvents} now={now}
+            currentSlug={slug} activityStarted={activityStarted} onOpenSettings={() => open('#/settings')} /></div>
+          {focused ? <LeetCodeDetectionLine enabled={prefs.detectionEnabled} events={detectedEvents} now={now} currentSlug={slug} activityStarted={activityStarted} /> : null}
+        </> : null}
         {content}
       </div>
     </main>

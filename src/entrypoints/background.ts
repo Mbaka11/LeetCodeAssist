@@ -1,3 +1,4 @@
+import { registerSyncBackground } from '../lib/syncBackground';
 import { createBackgroundTasks } from '../lib/backgroundTasks';
 import { createLeetCodeBackground } from '../lib/leetcodeBackground';
 import { chromeLeetCodeStorage } from '../lib/leetcodeStorage';
@@ -12,6 +13,7 @@ const SIDE_PANEL_PATH = 'sidepanel.html';
  * rebuild their view from `chrome.storage.local`.
  */
 export default defineBackground(() => {
+  registerSyncBackground();
   const store = createAppStore(chromeStorageBackend());
   const tasks = createBackgroundTasks({
     readState: () => store.readState().catch(() => null),

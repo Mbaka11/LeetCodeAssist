@@ -26,7 +26,8 @@ describe('shared problem metadata', () => {
     expect(screen.getByText(/exact canonical question is not verified/)).toBeTruthy();
     expect(screen.getByText(/not independently confirmed or employer-endorsed/)).toBeTruthy();
     expect(screen.getByText(/Publication date: unknown.*Interview date: 12\/13, year unknown/)).toBeTruthy();
-    expect(screen.getByText(/not a fresh source check/)).toBeTruthy();
+    expect(screen.getAllByText(/not a fresh source check/).length).toBeGreaterThan(1);
+    expect(screen.getAllByText(/may mirror or rewrite other reports/).length).toBeGreaterThan(0);
     const link = screen.getByRole('link', { name: /Amazon India/ });
     expect(link.getAttribute('href')).toBe('https://leetcode.com/discuss/post/6304191/Amazon-India-or-SDE-1-or-University-Grad/');
     expect(link.getAttribute('rel')).toBe('noopener noreferrer');
@@ -35,7 +36,7 @@ describe('shared problem metadata', () => {
   it('shows curated similar questions, difficulty, own progress, rationale and both destinations without scheduling', () => {
     const state = { ...defaultState('2025-01-06'), checked: { '3sum': true }, problemStatus: { 'contains-duplicate': 'mastered' as const } };
     render(<ProblemMetadataSection slug="two-sum" state={state} />);
-    expect(screen.getByText(/Not documented for this problem/)).toBeTruthy();
+    expect(screen.getByText('Reported at Google — canonical topic')).toBeTruthy();
     expect(screen.getByText('Mastered')).toBeTruthy();
     expect(screen.getByText('Checked solved')).toBeTruthy();
     const similar = metadataRegion().querySelector('.metadata-similar')!;
@@ -46,6 +47,12 @@ describe('shared problem metadata', () => {
     expect(similar.querySelector('a[href="https://leetcode.com/problems/3sum/"]')).toBeTruthy();
     expect(state.activities).toEqual([]);
     expect(screen.queryByRole('button', { name: /Start|Schedule/ })).toBeNull();
+  });
+
+  it('keeps absent company associations explicitly unknown', () => {
+    render(<ProblemMetadataSection slug="binary-search" state={defaultState('2025-01-06')} />);
+    expect(screen.getByText(/Not documented for this problem/)).toBeTruthy();
+    expect(screen.getByText(/Missing evidence does not mean/)).toBeTruthy();
   });
 
   it('protects review/hide-hint content until explicit disclosure and resets for a new slug', () => {

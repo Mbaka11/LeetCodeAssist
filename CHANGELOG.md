@@ -3,6 +3,112 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.9.0
+
+> ### ⚠️ One-time migration required: the extension ID changes
+>
+> This release pins a fixed extension ID, **`ghpljfdplcicmcfoemfifmmibbdjcmja`**, on every computer (the
+> manifest now carries a public `key`). Chrome therefore treats the new build as a **different extension**
+> from the one you have loaded, and its data does not move over by itself. Do this once on each computer
+> that already has data, **in this order**:
+>
+> 1. In the **old** install open **Settings → Your data** and click **Export JSON** to save a backup file.
+>    Keep the file; do not skip this step.
+> 2. Update the code and run `npm run build`.
+> 3. Open `chrome://extensions`, **Remove** the old unpacked LeetCode Assist, then click **Load unpacked**
+>    and choose the new `.output/chrome-mv3` folder. Confirm the shown ID is
+>    `ghpljfdplcicmcfoemfifmmibbdjcmja`.
+> 4. In the new install open **Settings → Your data → Import JSON…** and choose the file from step 1.
+> 5. Only if you want sync: do steps 1–4 on **every** computer that has data, then turn on
+>    **Settings → Sync** on each. A computer with only first-run defaults adopts the cloud copy; computers
+>    that both have data merge record by record and ask you to choose where the same record differs (for
+>    example different start dates).
+>
+> **The JSON export contains only program data.** LeetCode detection settings and events, the LeetCode
+> username/preferences and the sync settings (enabled flag, device name) are **not** in the file: after the
+> migration re-enable detection and your LeetCode preferences, re-enter the username if you used it, and
+> turn sync on again.
+>
+> A fresh install with no data needs no migration. Data stored under the old ID stays on disk until that
+> extension is removed. No private key is stored or committed; only the public key is in the manifest.
+> Storage `version: 1` is unchanged and older backups import as before.
+
+### Added
+- **Optional automatic sync** (Settings → Sync, **off by default**) between your own Windows and Mac
+  Chrome through `chrome.storage.sync` (same Google account, Chrome sync on for extensions, same extension
+  ID). The background worker owns uploads: the snapshot is gzip + base64, split into checksummed chunks
+  published as a new generation, inside Chrome's 100 KiB total / 8 KiB per item / 512 item / write-rate
+  quotas (changes batched about 20 s, uploads ≥ 30 s apart). Records merge three-way against the last synced
+  copy: activities by id, notes and checks/statuses/favorites by problem, saved filters/simulations/drill
+  results by id, each setting, and the queue. A record changed differently on both computers becomes a
+  **conflict** you resolve per record (*Keep this device* / *Take other device*, or keep all from this
+  device); everything else keeps merging. A running timer is never silently overwritten (another computer's
+  running timer is applied only once it is paused or finished). A local backup (last three, ≤ 4 MiB) is saved
+  before every merge or choice that changes data and can be restored under **Your data**. If the data does not
+  fit, sync pauses with a message; manual export/import always works. Corrupt or partial cloud data is ignored,
+  with an explicit **Replace cloud copy** recovery. Notes and code snippets are included in Chrome sync when
+  enabled; detection, LeetCode profile/preferences, sync settings and backups stay local. Importing or
+  restoring a backup propagates as a local change, and *Reset* clears only this computer. Real two-computer
+  propagation could not be tested automatically (mocked quotas only). See `docs/sync.md`.
+- **Practice** (dashboard → Practice), voluntary and separate from the program:
+  - **Interview simulation**: 25/35/45-minute countdown, an eight-step checklist, self-rating and a short
+    reflection saved to a history. Default pool is problems you have worked on (or explicitly include unworked
+    ones, with a warning). Tags, similar questions, notes and hints are not shown during a session; Accepted
+    detection does not finish or score a simulation. Unfinished sessions exist only while the page is open.
+  - **Company interviews**: a company pool needs at least **five distinct documented problems** (exact topics
+    and qualified variants both count; one problem from several sources counts once). Enabled from public
+    candidate self-reports: **Amazon 14, Meta 9, NVIDIA 9, Apple 8, Bloomberg 7 (8 documented; its LRU Cache row reports a design discussion with no coding and is excluded), Google 6, Microsoft 6, Uber 5**.
+    **Shopify, Stripe, Datadog and Snowflake have no qualifying reports and show “Not enough documented data”**
+    (absence is not evidence that they never ask coding questions). Draws use documented problems only, with an
+    editorial 3:1 weight for exact over variant-only topics; this is not interview frequency or a hiring
+    prediction. History discloses each topic's source, qualification, known dates and caveats.
+  - **Pattern drills**: original one-line prompts, pseudo-code outlines and explanations for all 50 program
+    problems; multiple-choice technique, data-structure and outline questions with immediate feedback and a
+    saved score history. Worked-only by default; unworked technique/structure questions need a warning toggle,
+    pseudo-code questions never include unworked problems, and *Hide techniques* disables drills until you enable
+    them locally.
+  - Practice never creates scheduled work, reviews, status changes, program counts, pace, worked totals,
+    logged-minutes totals, heatmaps or streak, and the weekly review does not show it. Results appear only in
+    Practice and JSON backups. See `docs/optional-practice.md`.
+- **Company evidence expanded** from one Amazon variation to **66 source-backed rows / 65 distinct
+  company–problem pairs** across eight companies (46 exact-topic mappings, 19 qualified variants; the earlier
+  Amazon LRU Cache variation is retained as a separate source). Roadmap → All offers all eight companies in the
+  evidence filter and renders new source/date/caveat fields. Evidence is uncorroborated public candidate
+  self-reports (many on mirror sites that may be reworded); it is not official company tags or frequency data.
+  Per-company coverage, thresholds and limitations: `docs/roadmap-metadata.md`.
+- **Side-panel Focus mode**: shows only the current activity, instructions, timer, hints and Finish form, with an
+  *Focus mode* toggle (one stable label with a pressed state); the preference persists. The detection panel
+  becomes a one-line summary. Timers and unsaved Finish edits survive toggling, and detection plus Accepted
+  auto-Finish keep working.
+- **Favorites**: independent stars on every Roadmap row and the problem sheet, and a *Favorites only* filter in All.
+  They do not affect solved checks, progress or scheduling.
+- **Saved All filters**: save, apply, rename and delete named filter sets; they apply to the current catalog.
+- **Calendar → Activity minutes** heatmap: logged minutes per day for program days 1–30 and the last 12 weeks,
+  from completed logs only; it does not change the streak or plan-done rules.
+- **Settings → Your data → Export all notes (.md)**: a readable Markdown export of every saved note (JSON stays
+  the restore format).
+
+### Changed
+- The manifest `key` fixes the extension ID (see the migration above). No new permissions (`storage` already
+  covers `chrome.storage.sync`).
+- Long labelled `<select>` options (saved filter names, company pools) now shrink instead of widening a narrow
+  page or side panel.
+- The Settings reset text explains that, with sync on, reset clears only this computer.
+
+### Notes
+- Storage `version: 1` is unchanged. New fields are optional: `settings.sidePanelFocus`, `favorites`,
+  `savedRoadmapFilters`, `simulations`, `drillSessions`. Backups from earlier versions import unchanged.
+- The fixed 50-problem program and order, budgets, review intervals and scheduling, timers, optional bonuses,
+  Accepted auto-Finish, detection visibility, result corrections, the weekly review and Roadmap All behaviour
+  are unchanged.
+- Original content only: no copied editorials or solutions, no premium-derived company data, no live LeetCode
+  API dependency, and no company logos (permissions were not established).
+- Chrome sync is last-writer-wins and the generation check cannot fully exclude two uploads in the same instant.
+  A device whose upload was overwritten unseen merges against its pre-upload base on its next pass, so its changes
+  are kept (the overwriting device's changes are merged in too) and a local backup exists. Chrome may delay or throttle sync.
+- *Replace cloud copy* is offered only for an unreadable cloud copy or a full quota and saves a readable copy as a
+  local backup first; failed uploads clean up their staged chunks; JSON import saves a local backup first when sync is on.
+
 ## 0.8.0
 
 ### Added

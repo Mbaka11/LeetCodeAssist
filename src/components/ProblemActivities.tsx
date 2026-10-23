@@ -16,7 +16,7 @@ export interface ProblemActivityItem {
 
 /** Classic card for one activity, shared heading and numbered rows for repeats. No data is merged. */
 export function ProblemActivities({ items, history, now, actions, budgets, compact = false,
-  openProblemSheet, accepted, selectedActivityId, footer, unfinishedFirst = false,
+  openProblemSheet, accepted, selectedActivityId, footer, unfinishedFirst = false, focused = false,
 }: {
   items: readonly ProblemActivityItem[];
   history: readonly Activity[];
@@ -30,6 +30,7 @@ export function ProblemActivities({ items, history, now, actions, budgets, compa
   /** Used for the single-problem side panel's repeat-practice action. */
   footer?: ReactNode;
   unfinishedFirst?: boolean;
+  focused?: boolean;
 }) {
   return <div className="stack-tight problem-groups">
     {groupActivities(items, history, unfinishedFirst).map((group) => {
@@ -42,7 +43,7 @@ export function ProblemActivities({ items, history, now, actions, budgets, compa
       // form does not lose its outcome, minutes or date when another attempt appears.
       return <section key={group.slug} className={`problem-activity-group${multiple ? '' : ' problem-single'}${running ? ' has-running' : ''}`}
         aria-label={`${title} activities`}>
-        {multiple ? <header className={`activity-head problem-group-head${compact ? '' : ' has-leetcode-link'}`}>
+        {multiple ? <header hidden={focused} className={`activity-head problem-group-head${compact ? '' : ' has-leetcode-link'}`}>
           <a className="activity-title" href={problemHref(group.slug)}
             {...(openProblemSheet ? { onClick: (event: MouseEvent<HTMLAnchorElement>) => {
               event.preventDefault(); openProblemSheet(group.slug);
@@ -54,12 +55,13 @@ export function ProblemActivities({ items, history, now, actions, budgets, compa
         </header> : null}
         <div className="problem-attempts">
           {group.items.map((item, index) => <ActivityCard key={item.activity.id}
+            hidden={focused && item.activity.id !== selectedActivityId} focused={focused}
             activity={item.activity} variant={item.variant ?? 'planned'} now={now} actions={actions}
             budgets={budgets} compact={compact} grouped={multiple} attemptNumber={index + 1}
             openProblemSheet={openProblemSheet}
             accepted={accepted} autoOpenAccepted={item.activity.id === selectedActivityId} />)}
         </div>
-        {footer}
+        <div hidden={focused}>{footer}</div>
       </section>;
     })}
   </div>;

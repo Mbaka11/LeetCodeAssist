@@ -23,7 +23,8 @@ describe('getProblemMetadata', () => {
       }
     }
     expect(getProblemMetadata('lru-cache')?.companyEvidence.status).toBe('reported');
-    expect(getProblemMetadata('two-sum')?.companyEvidence.status).toBe('unknown');
+    expect(getProblemMetadata('two-sum')?.companyEvidence.status).toBe('reported');
+    expect(getProblemMetadata('binary-search')?.companyEvidence.status).toBe('unknown');
   });
 
   it('returns undefined for unknown and inherited object property names', () => {

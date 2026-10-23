@@ -78,3 +78,25 @@ describe('classic display for a single problem activity', () => {
     expect(complete).toHaveBeenCalledExactlyOnceWith(first.id, 'hint', 13 * 60_000, '2025-01-06');
   });
 });
+
+
+describe('focused ProblemActivities', () => {
+  it('keeps every attempt mounted while showing only the selected attempt and preserves an edited Finish form', async () => {
+    const first = activity('recall', { status: 'in_progress', timer: { running: false, startedAt: null, accumulatedMs: 600_000 } });
+    const second = activity('resolve', { id: 'second' });
+    const page = render(cards([first, second], { selectedActivityId: first.id }));
+    fireEvent.click(screen.getByRole('button', { name: 'Finish' }));
+    const minutes = screen.getByRole('spinbutton', { name: 'Time logged (min)' });
+    fireEvent.change(minutes, { target: { value: '14' } });
+    fireEvent.click(screen.getByRole('radio', { name: /Hint/ }));
+    page.rerender(cards([first, second], { selectedActivityId: first.id, focused: true }));
+    expect(page.container.querySelectorAll('article')).toHaveLength(2);
+    expect(screen.getAllByRole('article')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Start' })).toBeNull();
+    expect(screen.getByRole('spinbutton', { name: 'Time logged (min)' })).toBe(minutes);
+    page.rerender(cards([first, second], { selectedActivityId: first.id, focused: false }));
+    expect(screen.getAllByRole('article')).toHaveLength(2);
+    expect(minutes).toHaveProperty('value', '14');
+    expect(screen.getByRole('radio', { name: /Hint/ })).toHaveProperty('checked', true);
+  });
+});

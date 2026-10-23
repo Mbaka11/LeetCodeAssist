@@ -9,10 +9,12 @@ import { LogsView } from './LogsView';
 import { OpenSidePanelButton } from './OpenSidePanelButton';
 import { ProblemView } from './ProblemView';
 import { RoadmapView } from './RoadmapView';
+import { SyncBanner } from './SyncSettings';
 import { SettingsView } from './SettingsView';
 import { SetupView } from './SetupView';
 import { TodayView } from './TodayView';
 import { WeeklyView } from './WeeklyView';
+import { PracticeView } from './PracticeView';
 
 /** Logs and the Calendar need more width than the default page column. */
 const PAGE_CLASSES: Partial<Record<Route['view'], string>> = {
@@ -61,11 +63,13 @@ export function App() {
     <>
       <NavBar route={route} actions={<OpenSidePanelButton />} />
       <main className={PAGE_CLASSES[route.view] ?? 'page'}>
+        <SyncBanner />
         {route.view === 'today' ? <TodayView state={state} actions={actions} /> : null}
         {route.view === 'calendar' ? <CalendarView state={state} actions={actions} /> : null}
         {route.view === 'roadmap' ? <RoadmapView state={state} actions={actions} /> : null}
         {route.view === 'logs' ? <LogsView state={state} actions={actions} /> : null}
         {route.view === 'weekly' ? <WeeklyView state={state} /> : null}
+        {route.view === 'practice' ? <PracticeView state={state} actions={actions} /> : null}
         {route.view === 'problem' ? (
           <ProblemView key={route.slug} slug={route.slug} state={state} actions={actions} />
         ) : null}

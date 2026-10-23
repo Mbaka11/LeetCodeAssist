@@ -62,3 +62,21 @@ describe('calendar summary stylesheet contract', () => {
     expect(rule('.page')).toContain('max-width: 900px');
   });
 });
+
+describe('focused activities and local heatmap stylesheet contract', () => {
+  it('keeps hidden attempts and the group header hidden even though their normal display is flex', () => {
+    expect(rule('.activity[hidden],\n.problem-group-head[hidden]')).toContain('display: none');
+  });
+  it('wraps the activity legend and keeps local heat ranges shrinkable', () => {
+    expect(rule('.activity-heat-legend')).toContain('flex-wrap: wrap');
+    expect(rule('.activity-heat-range')).toContain('min-width: 0');
+  });
+});
+
+describe('long option text stylesheet contract', () => {
+  it('lets labelled selects shrink instead of widening a 360px page or side panel', () => {
+    const declarations = rule('label > select,\n.row > label');
+    expect(declarations).toContain('max-width: 100%');
+    expect(declarations).toContain('min-width: 0');
+  });
+});

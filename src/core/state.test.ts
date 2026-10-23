@@ -346,3 +346,50 @@ describe('hintsUsed, postponed, roadmapView and queue (additive fields)', () => 
     expect(() => validateState({ ...base, queue: [1] })).toThrow(/queue\[0\]/);
   });
 });
+
+describe('optional presentation state', () => {
+  const filters = {
+    search: 'sum', category: 'Arrays & Hashing', difficulty: 'Easy' as const,
+    status: 'untouched' as const, access: 'free' as const, scope: 'program' as const,
+    technique: 'Hashing', structure: 'Array', company: '', favoritesOnly: true,
+  };
+  const rich = () => ({ ...defaultState(START),
+    settings: { ...defaultState(START).settings, sidePanelFocus: true },
+    favorites: { 'two-sum': true, 'valid-anagram': false },
+    savedRoadmapFilters: { shortlist: { name: 'Shortlist', filters } },
+  });
+  it('round-trips focus, explicit unstars and stable-ID saved filters without a version bump', () => {
+    expect(deserializeState(serializeState(rich()))).toEqual(rich());
+    expect(rich().version).toBe(1);
+  });
+  it('retains legacy absence, empty records and false focus', () => {
+    const legacy = deserializeState(serializeState(defaultState(START)));
+    expect(legacy).not.toHaveProperty('favorites');
+    expect(legacy).not.toHaveProperty('savedRoadmapFilters');
+    expect(legacy.settings).not.toHaveProperty('sidePanelFocus');
+    const empty = { ...legacy, settings: { ...legacy.settings, sidePanelFocus: false }, favorites: {}, savedRoadmapFilters: {} };
+    expect(validateState(empty)).toEqual(empty);
+  });
+  it.each([null, [], true, { 'two-sum': 1 }, { 'two-sum': 'true' }])('rejects invalid favorites %j', (favorites) => {
+    expect(() => validateState({ ...rich(), favorites })).toThrow(StateValidationError);
+  });
+  it.each([1, 'true', null])('rejects invalid focus %j', (sidePanelFocus) => {
+    expect(() => validateState({ ...rich(), settings: { ...rich().settings, sidePanelFocus } })).toThrow(StateValidationError);
+  });
+  it.each([null, [], { x: null }, { x: { name: ' ', filters } }, { x: { name: 'x'.repeat(81), filters } },
+    { x: { name: 'Bad', filters: { ...filters, favoritesOnly: 'true' } } },
+    { x: { name: 'Bad', filters: { ...filters, difficulty: 'Expert' } } },
+    { x: { name: 'Bad', filters: { ...filters, status: 'done' } } },
+    { x: { name: 'Bad', filters: { ...filters, access: 'unknown' } } },
+    { x: { name: 'Bad', filters: { ...filters, scope: 'mandatory' } } },
+    { x: { name: 'Bad', filters: { ...filters, technique: [] } } },
+    { '': { name: 'Bad', filters } },
+  ])('rejects invalid saved filters %j', (savedRoadmapFilters) => {
+    expect(() => validateState({ ...rich(), savedRoadmapFilters })).toThrow(StateValidationError);
+  });
+  it('keeps unknown metadata strings importable so a later catalog can clear them when applied', () => {
+    const state = rich();
+    state.savedRoadmapFilters.shortlist.filters.technique = 'Retired tag';
+    expect(deserializeState(serializeState(state))).toEqual(state);
+  });
+});

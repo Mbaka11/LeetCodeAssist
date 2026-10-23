@@ -23,7 +23,7 @@ export function CompanyBadges({ slug }: { slug: string }) {
   return evidence.length ? (
     <div className="metadata-tags">
       {evidence.slice(0, 2).map((row) => (
-        <details key={row.companyId} className="company-evidence-disclosure">
+        <details key={`${row.companyId}:${row.source.url}`} className="company-evidence-disclosure">
           <summary><Badge>{row.label}</Badge> <span>Source and caveats</span></summary>
           <div className="problem-metadata">
             <CompanyEvidenceDetails row={row} />
@@ -43,9 +43,11 @@ function CompanyEvidenceDetails({ row }: { row: CompanyEvidence }) {
     <p className="muted">
       Research integration snapshot: {row.source.snapshotDate} (not a fresh source check).
       {' '}Publication date: {row.source.reportedDate ?? 'unknown'}.
-      {' '}Interview date: {row.source.interviewDate
+      {' '}Interview date: {row.source.interviewPeriod ?? (row.source.interviewDate
         ? `${row.source.interviewDate.month}/${row.source.interviewDate.day}, ${row.source.interviewDate.year ?? 'year unknown'}`
-        : 'unknown'}.
+        : 'unknown')}.
+      {row.source.reportedDateBasis ? ` Publication-date source: ${row.source.reportedDateBasis}.` : ''}
+      {row.source.caveat ? ` ${row.source.caveat}` : ''}
     </p>
   </>;
 }
@@ -67,7 +69,7 @@ function MetadataContent({ slug, state, openProblemSheet }: {
       {metadata.companyEvidence.evidence.length === 0 ? <p className="muted">Not documented for this problem. Missing evidence does not mean it was never asked.</p> : (
         <ul className="metadata-evidence">
           {metadata.companyEvidence.evidence.map((row) => (
-            <li key={row.companyId}>
+            <li key={`${row.companyId}:${row.source.url}`}>
               <strong>{row.label}</strong>
               <CompanyEvidenceDetails row={row} />
             </li>

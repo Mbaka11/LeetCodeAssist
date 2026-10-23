@@ -2,7 +2,7 @@
   "name": "leetcode-assist",
   "description": "30-day LeetCode bootcamp on the NeetCode 150 roadmap with spaced reviews.",
   "private": true,
-  "version": "0.8.0",
+  "version": "0.9.0",
   "type": "module",
   "license": "MIT",
   "scripts": {

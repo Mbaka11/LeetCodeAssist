@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { useSyncExternalStore } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { catalogProblems } from '../core/catalog';
-import { getProblemMetadata } from '../core/problemMetadata';
+import { COMPANIES, COMPANY_EVIDENCE, getProblemMetadata } from '../core/problemMetadata';
 import { defaultState } from '../core/state';
 import type { AppState } from '../core/types';
 import { CATEGORY_NAMES } from '../data/neetcode150';
@@ -86,14 +86,23 @@ describe('Roadmap All presentation and local filters', () => {
       ['Program membership', 'outside', problems.filter((p) => !program.has(p.slug) && !isBonusProblem(p.slug))],
       ['Technique', 'Hashing', problems.filter((p) => getProblemMetadata(p.slug)?.techniques.includes('Hashing'))],
       ['Data structure', 'Array', problems.filter((p) => getProblemMetadata(p.slug)?.dataStructures.includes('Array'))],
-      ['Company evidence', 'amazon', problems.filter((p) => p.slug === 'lru-cache')],
+      ['Company evidence', 'amazon', problems.filter((p) => getProblemMetadata(p.slug)?.companyEvidence.evidence.some((row) => row.companyId === 'amazon'))],
     ] as const;
     for (const [label, value, expected] of checks) {
       fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
       select(label, value);
       expect(rowSlugs(container), `${label} ${value}`).toEqual(expected.map((p) => p.slug));
     }
-    expect(within(screen.getByLabelText('Company evidence', { exact: true })).getAllByRole('option').map((o) => o.textContent)).toEqual(['Any', 'Amazon']);
+    expect(within(screen.getByLabelText('Company evidence', { exact: true })).getAllByRole('option').map((o) => o.textContent)).toEqual(['Any', ...COMPANIES.filter((c) => COMPANY_EVIDENCE.some((row) => row.companyId === c.id)).map((c) => c.name)]);
+  });
+
+  it('filters every company with documented evidence, without premium-derived or unknown options', async () => {
+    const { container } = setup();
+    await screen.findByText('Showing 150 of 150');
+    for (const company of COMPANIES.filter((c) => COMPANY_EVIDENCE.some((row) => row.companyId === c.id))) {
+      select('Company evidence', company.id);
+      expect(rowSlugs(container)).toEqual(catalogProblems('neetcode150').filter((p) => getProblemMetadata(p.slug)?.companyEvidence.evidence.some((row) => row.companyId === company.id)).map((p) => p.slug));
+    }
   });
 
   it('keeps compact badges/links; persists Detailed and hides tags while clearing and disabling tag filters', async () => {
@@ -108,7 +117,7 @@ describe('Roadmap All presentation and local filters', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Detailed' }));
     await waitFor(() => expect(container.querySelectorAll('[aria-label="Data structures and techniques"]')).toHaveLength(150));
     expect(screen.getByText('Reported at Amazon — LRU Cache variation')).toBeTruthy();
-    expect(screen.getAllByText('Company evidence: not documented')).toHaveLength(149);
+    expect(screen.getAllByText('Company evidence: not documented')).toHaveLength(catalogProblems('neetcode150').filter((p) => !getProblemMetadata(p.slug)?.companyEvidence.evidence.length).length);
     select('Technique', 'Hashing');
     expect(rowSlugs(container).length).toBeLessThan(150);
     fireEvent.click(screen.getByRole('checkbox', { name: 'Hide techniques / solution hints' }));
@@ -133,6 +142,7 @@ describe('Roadmap All presentation and local filters', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Detailed' }));
     await screen.findByText('Reported at Amazon — LRU Cache variation');
     select('Company evidence', 'amazon');
+    select('Search titles', 'LRU Cache');
     const before = structuredClone(mock.data[STORAGE_KEY]);
     const disclosure = container.querySelector<HTMLDetailsElement>('.company-evidence-disclosure')!;
     const summary = disclosure.querySelector('summary')!;
@@ -159,6 +169,8 @@ describe('Roadmap All presentation and local filters', () => {
     const { container, mock } = setup({ settings: { ...state.settings, roadmapView: 'all', roadmapCatalog: 'blind75' } });
     await screen.findByText('Showing 75 of 75');
     select('Company evidence', 'amazon');
+    expect(rowSlugs(container)).toEqual(catalogProblems('blind75').filter((p) => getProblemMetadata(p.slug)?.companyEvidence.evidence.some((row) => row.companyId === 'amazon')).map((p) => p.slug));
+    select('Search titles', 'LRU Cache');
     expect(screen.getByText('Showing 0 of 75')).toBeTruthy();
     expect(rowSlugs(container)).toEqual([]); // The qualified LRU variation is not in Blind 75.
     expect(container.querySelector('.catalog-counters')!.textContent).toContain('0/150');
@@ -192,4 +204,108 @@ describe('Roadmap All presentation and local filters', () => {
     }
     expect(screen.getByText('Showing 150 of 150')).toBeTruthy();
   });
+});
+
+describe('Favorites and saved All filters', () => {
+  it('shares stars in every layout and filters favorites without changing checkmarks or progress', async () => {
+    const { container, store } = setup();
+    await screen.findByText('Showing 150 of 150');
+    const counters = container.querySelector('.catalog-counters')!.textContent;
+    fireEvent.click(screen.getByRole('button', { name: 'Favorite Two Sum' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Favorite Two Sum' }).getAttribute('aria-pressed')).toBe('true'));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Favorites only' }));
+    expect(rowSlugs(container)).toEqual(['two-sum']);
+    expect(container.querySelector('.catalog-counters')!.textContent).toBe(counters);
+    for (const layout of ['Grid', 'Tree', 'All']) {
+      fireEvent.click(screen.getByRole('button', { name: layout }));
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Favorite Two Sum' }).getAttribute('aria-pressed')).toBe('true'));
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Favorite Two Sum' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Favorite Two Sum' }).getAttribute('aria-pressed')).toBe('false'));
+    const state = await store.readState();
+    expect(state.favorites).toEqual({ 'two-sum': false });
+    expect(state.activities).toEqual([]);
+    expect(state.checked).toEqual({});
+    expect(state.problemStatus).toEqual({});
+  });
+
+  it('saves, applies across catalogs, renames and deletes named filters by stable record ID', async () => {
+    const { store } = setup();
+    await screen.findByText('Showing 150 of 150');
+    select('Search titles', 'sum');
+    select('Difficulty', 'Easy');
+    select('Filter name', 'Easy sums');
+    fireEvent.click(screen.getByRole('button', { name: 'Save current filters' }));
+    await screen.findByRole('option', { name: 'Easy sums' });
+    const saved = (await store.readState()).savedRoadmapFilters!;
+    const key = Object.keys(saved)[0]!;
+    expect(saved[key]!.filters).toMatchObject({ search: 'sum', difficulty: 'Easy' });
+    fireEvent.click(screen.getByRole('button', { name: 'Blind 75' }));
+    await screen.findByText('Showing 75 of 75');
+    select('Saved filter', key);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply filter' }));
+    expect(screen.getByText('Showing 1 of 75')).toBeTruthy();
+    select('Filter name', 'Renamed');
+    fireEvent.click(screen.getByRole('button', { name: 'Rename filter' }));
+    await screen.findByRole('option', { name: 'Renamed' });
+    expect((await store.readState()).savedRoadmapFilters![key]!.filters).toEqual(saved[key]!.filters);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete filter' }));
+    // Nothing is deleted until the inline confirmation; Cancel keeps the preset.
+    expect(screen.getByText('Delete the saved filter "Renamed"?')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByRole('option', { name: 'Renamed' })).toBeTruthy();
+    expect((await store.readState()).savedRoadmapFilters![key]).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete filter' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete filter' }));
+    await waitFor(() => expect(screen.queryByRole('option', { name: 'Renamed' })).toBeNull());
+    expect((await store.readState()).savedRoadmapFilters).toEqual({});
+    expect((await store.readState()).activities).toEqual([]);
+  });
+
+  it('never restores technique hints from a preset when hints are hidden', async () => {
+    const { store } = setup();
+    await screen.findByText('Showing 150 of 150');
+    select('Technique', 'Hashing');
+    select('Data structure', 'Array');
+    select('Filter name', 'Tags');
+    fireEvent.click(screen.getByRole('button', { name: 'Save current filters' }));
+    await screen.findByRole('option', { name: 'Tags' });
+    const key = Object.keys((await store.readState()).savedRoadmapFilters!)[0]!;
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Hide techniques / solution hints' }));
+    await screen.findByText('Showing 150 of 150');
+    select('Saved filter', key);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply filter' }));
+    expect((screen.getByLabelText('Technique', { exact: true }) as HTMLSelectElement).value).toBe('');
+    expect((screen.getByLabelText('Data structure', { exact: true }) as HTMLSelectElement).value).toBe('');
+    expect(screen.getByText('Showing 150 of 150')).toBeTruthy();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Hide techniques / solution hints' }));
+    await waitFor(() => expect((screen.getByLabelText('Technique', { exact: true }) as HTMLSelectElement).disabled).toBe(false));
+    expect(screen.getByText('Showing 150 of 150')).toBeTruthy();
+  });
+
+  it('surfaces saved-filter storage errors', async () => {
+    const { actions } = setup();
+    await screen.findByText('Showing 150 of 150');
+    vi.spyOn(actions, 'saveRoadmapFilter').mockRejectedValueOnce(new Error('Cannot save filter'));
+    select('Filter name', 'Failure');
+    fireEvent.click(screen.getByRole('button', { name: 'Save current filters' }));
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', 'Cannot save filter');
+  });
+});
+
+
+it('clears unavailable metadata and categories when applying an older preset', async () => {
+  const { actions } = setup();
+  await screen.findByText('Showing 150 of 150');
+  await actions.saveRoadmapFilter('retired', { name: 'Older catalog', filters: {
+    search: '', category: 'Retired category', difficulty: '', status: '', access: '', scope: '',
+    technique: 'Retired technique', structure: 'Retired structure', company: 'retired-company', favoritesOnly: false,
+  } });
+  await screen.findByRole('option', { name: 'Older catalog' });
+  select('Saved filter', 'retired');
+  fireEvent.click(screen.getByRole('button', { name: 'Apply filter' }));
+  for (const label of ['Category', 'Technique', 'Data structure', 'Company evidence']) {
+    expect(screen.getByLabelText(label, { exact: true })).toHaveProperty('value', '');
+  }
+  expect(screen.getByText('Showing 150 of 150')).toBeTruthy();
 });

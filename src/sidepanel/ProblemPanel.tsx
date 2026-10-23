@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { CardVariant } from '../components/ActivityCard';
 import { ProblemActivities } from '../components/ProblemActivities';
 import { AttemptHistory } from '../components/AttemptHistory';
 import { Badge } from '../components/Badge';
@@ -24,6 +23,7 @@ import { groupActivities } from '../lib/groupActivities';
 import { ACTIVITY_LABELS, STATUS_LABELS, STATUS_TONES, difficultyTone } from '../lib/instructions';
 import { acceptedPrompt, type SubmissionEvent } from '../lib/leetcodeSubmissions';
 import { problemHref } from '../lib/route';
+import { panelMatches, selectedPanelActivity } from './focusActivity';
 
 export interface ProblemPanelProps {
   state: AppState;
@@ -37,11 +37,6 @@ export interface ProblemPanelProps {
   openProblem: (slug: string) => void;
   /** Passively detected submission events (empty when detection is off or nothing was seen). */
   submissionEvents?: readonly SubmissionEvent[];
-}
-
-interface Match {
-  activity: Activity;
-  variant: CardVariant;
 }
 
 function DashboardLink({
@@ -244,6 +239,20 @@ export function ProblemPanel({
 }: ProblemPanelProps) {
   const today = localDateFromTimestamp(now);
   const plan = useMemo(() => planDay(state, today), [state, today]);
+  const [focusError, setFocusError] = useState<string | null>(null);
+  const problem = slug === null ? undefined : getProblem(slug);
+  const matches = slug && problem ? panelMatches(plan, slug) : [];
+  const openActivity = selectedPanelActivity(matches);
+  const focused = state.settings.sidePanelFocus === true && openActivity !== undefined;
+  const focusToggle = <div className="stack-tight">
+    <Button aria-pressed={state.settings.sidePanelFocus === true} onClick={() => {
+      setFocusError(null);
+      actions.updateSettings({ sidePanelFocus: !state.settings.sidePanelFocus })
+        .catch((e: unknown) => setFocusError(e instanceof Error ? e.message : String(e)));
+    }}>Focus mode</Button>
+    {state.settings.sidePanelFocus && !openActivity ? <p role="status" className="muted">Nothing to focus on: open a problem with a current activity. Showing the normal panel.</p> : null}
+    {focusError ? <p className="error" role="alert">{focusError}</p> : null}
+  </div>;
   const needsMaterializing =
     plan.items.some((item) => !item.persisted) || plan.bonuses.some((item) => !item.persisted);
   useEffect(() => {
@@ -255,6 +264,7 @@ export function ProblemPanel({
   if (slug === null) {
     return (
       <div className="stack">
+        {focusToggle}
         <Card title="Open a LeetCode problem">
           <p className="muted">
             This panel follows your active tab. Open a problem on leetcode.com, or pick one from today&apos;s
@@ -268,10 +278,10 @@ export function ProblemPanel({
     );
   }
 
-  const problem = getProblem(slug);
   if (!problem) {
     return (
       <div className="stack">
+        {focusToggle}
         <Card title="Not in the NeetCode 150">
           <p className="muted">
             “{slug}” is not one of the 150 problems this program tracks, so there is nothing to plan for it.
@@ -284,16 +294,6 @@ export function ProblemPanel({
     );
   }
 
-  const matches: Match[] = [];
-  const seen = new Set<string>();
-  const collect = (activity: Activity, variant: CardVariant): void => {
-    if (activity.slug !== slug || seen.has(activity.id)) return;
-    seen.add(activity.id);
-    matches.push({ activity, variant });
-  };
-  for (const item of plan.items) collect(item.activity, 'planned');
-  for (const item of plan.bonuses) collect(item.activity, 'bonus');
-  for (const item of plan.carriedOver) collect(item.activity, 'carried');
   const hasOpen = matches.some((m) => m.activity.status === 'planned' || m.activity.status === 'in_progress');
 
   const status = getProblemStatus(state, slug);
@@ -301,10 +301,6 @@ export function ProblemPanel({
   const history = attemptHistory(state, slug);
   const attempts = history.length;
   const position = queuePosition(state, slug);
-  const openActivity =
-    matches.map((m) => m.activity).find((a) => a.status === 'in_progress' && a.timer.running) ??
-    matches.map((m) => m.activity).find((a) => a.status === 'in_progress') ??
-    matches.map((m) => m.activity).find((a) => a.status === 'planned');
   const locked = isNotesLocked(state, slug, today);
   // The activity model stores no first-start time, so "after the activity started" is approximated by
   // "since local midnight today" (a started activity is always one of today's); the latest Accepted
@@ -317,30 +313,33 @@ export function ProblemPanel({
 
   return (
     <div className="stack" key={slug}>
+      {focusToggle}
       <Card>
         <h1 className="panel-title">{problem.title}</h1>
-        <div className="row">
-          <Badge tone={difficultyTone(problem.difficulty)}>{problem.difficulty}</Badge>
-          <Badge tone={STATUS_TONES[status]}>{STATUS_LABELS[status]}</Badge>
-          <span className="muted">{problem.category}</span>
+        <div hidden={focused}>
+          <div className="row">
+            <Badge tone={difficultyTone(problem.difficulty)}>{problem.difficulty}</Badge>
+            <Badge tone={STATUS_TONES[status]}>{STATUS_LABELS[status]}</Badge>
+            <span className="muted">{problem.category}</span>
+          </div>
+          <p className="muted">
+            {position !== null
+              ? `Program problem ${position} of ${programQueue(state).length}`
+              : isBonusProblem(slug)
+                ? 'Bonus problem (not in the 30-day program)'
+                : 'Not in the 30-day program'}
+          </p>
+          <p className="muted">
+            {review
+              ? `Next review: ${ACTIVITY_LABELS[review.type]} on ${formatDate(review.dueDate)}${review.dueDate < today ? ' (overdue)' : ''}`
+              : 'No review scheduled'}
+            {attempts > 0 ? ` · ${attempts} ${attempts === 1 ? 'attempt' : 'attempts'}` : ''}
+          </p>
         </div>
-        <p className="muted">
-          {position !== null
-            ? `Program problem ${position} of ${programQueue(state).length}`
-            : isBonusProblem(slug)
-              ? 'Bonus problem (not in the 30-day program)'
-              : 'Not in the 30-day program'}
-        </p>
-        <p className="muted">
-          {review
-            ? `Next review: ${ACTIVITY_LABELS[review.type]} on ${formatDate(review.dueDate)}${review.dueDate < today ? ' (overdue)' : ''}`
-            : 'No review scheduled'}
-          {attempts > 0 ? ` · ${attempts} ${attempts === 1 ? 'attempt' : 'attempts'}` : ''}
-        </p>
         <div className="row">
-          <DashboardLink hash={problemHref(slug)} openDashboard={openDashboard}>
+          <span hidden={focused}><DashboardLink hash={problemHref(slug)} openDashboard={openDashboard}>
             Open the problem sheet
-          </DashboardLink>
+          </DashboardLink></span>
           <LeetCodeLink href={problemUrl(slug)} />
         </div>
       </Card>
@@ -349,22 +348,25 @@ export function ProblemPanel({
         {matches.length > 0 ? (
           <ProblemActivities items={matches} history={state.activities} now={now} actions={actions}
             compact budgets={state.settings.budgets} accepted={accepted ?? undefined}
-            selectedActivityId={openActivity?.id}
+            selectedActivityId={openActivity?.id} focused={focused}
             openProblemSheet={(target) => openDashboard(problemHref(target))}
             footer={hasOpen ? null : <ExtraPractice state={state} actions={actions} slug={slug} today={today} />} />
         ) : <ExtraPractice state={state} actions={actions} slug={slug} today={today} />}
       </Card>
 
-      <ProblemMetadataSection key={`${slug}-${locked}`} slug={slug} state={state} collapsed protectedReview={locked}
-        openProblemSheet={(target) => openDashboard(problemHref(target))} />
+      <div hidden={focused}><ProblemMetadataSection key={`${slug}-${locked}`} slug={slug} state={state} collapsed protectedReview={locked}
+        openProblemSheet={(target) => openDashboard(problemHref(target))} /></div>
 
       <HintsSection slug={slug} activity={openActivity} actions={actions} />
 
-      <NotesSection state={state} actions={actions} slug={slug} locked={locked} />
-
-      <Card title="Attempt history">
-        <AttemptHistory history={history} compact />
-      </Card>
+      <div hidden={focused}>
+        <NotesSection state={state} actions={actions} slug={slug} locked={locked} />
+      </div>
+      <div hidden={focused}>
+        <Card title="Attempt history">
+          <AttemptHistory history={history} compact />
+        </Card>
+      </div>
     </div>
   );
 }

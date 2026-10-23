@@ -195,3 +195,37 @@ describe('moving, postponing and hints through the store', () => {
     await expect(actions.moveReview(recall.id, '2024-01-01')).rejects.toThrow(/past/);
   });
 });
+
+describe('presentation-only record updates', () => {
+  it('merges favorites and named presets per key without affecting program data; exports and imports them', async () => {
+    const { actions, state } = await setup();
+    const before = await state();
+    const filters = { search: '', category: '', difficulty: '' as const, status: '' as const,
+      access: '' as const, scope: '' as const, technique: '', structure: '', company: '', favoritesOnly: true };
+    await Promise.all([actions.toggleFavorite('two-sum'), actions.toggleFavorite('valid-anagram')]);
+    await Promise.all([
+      actions.saveRoadmapFilter('one', { name: 'First', filters }),
+      actions.saveRoadmapFilter('two', { name: 'Second', filters }),
+    ]);
+    await actions.toggleFavorite('two-sum');
+    await actions.saveRoadmapFilter('one', { name: 'Renamed', filters });
+    await actions.deleteRoadmapFilter('two');
+    await actions.updateSettings({ sidePanelFocus: true });
+    const after = await state();
+    expect(after.favorites).toEqual({ 'two-sum': false, 'valid-anagram': true });
+    expect(after.savedRoadmapFilters).toEqual({ one: { name: 'Renamed', filters } });
+    expect(after.activities).toEqual(before.activities);
+    expect(after.checked).toEqual(before.checked);
+    expect(after.problemStatus).toEqual(before.problemStatus);
+    const json = await actions.exportJson();
+    await actions.initialize(START);
+    await actions.importJson(json);
+    expect(await state()).toEqual(after);
+  });
+  it('rejects an invalid named filter atomically', async () => {
+    const { actions, state } = await setup();
+    const before = await state();
+    await expect(actions.saveRoadmapFilter('invalid', { name: '', filters: {} } as never)).rejects.toThrow();
+    expect(await state()).toEqual(before);
+  });
+});

@@ -1,5 +1,6 @@
-import { deserializeState, defaultState } from '../core/state';
-import type { Outcome, Settings } from '../core/types';
+import { deserializeState, defaultState, validateState } from '../core/state';
+import type { Outcome, Settings, SavedRoadmapFilter } from '../core/types';
+import type { SimulationRecord, DrillSessionRecord } from '../core/practiceTypes';
 import { confirmResultCorrection, type ResultEdit } from '../core/resultCorrection';
 import * as commands from './commands';
 import type { AppStore } from './storage';
@@ -30,6 +31,11 @@ export interface AppActions {
   revealHint(id: string, level: number): Promise<void>;
   saveNote(slug: string, fields: commands.NoteFields): Promise<void>;
   toggleChecked(slug: string): Promise<void>;
+  toggleFavorite(slug: string): Promise<void>;
+  saveRoadmapFilter(id: string, entry: SavedRoadmapFilter): Promise<void>;
+  deleteRoadmapFilter(id: string): Promise<void>;
+  saveSimulation(record: SimulationRecord): Promise<void>;
+  saveDrillSession(record: DrillSessionRecord): Promise<void>;
   updateSettings(change: Partial<Settings>): Promise<void>;
   /** Validates and replaces all data. Rejects with `StateValidationError` on invalid input. */
   importJson(raw: string): Promise<void>;
@@ -75,6 +81,25 @@ export function createActions(store: AppStore, now: Clock = Date.now): AppAction
     },
     saveNote: (slug, fields) => store.update((s) => commands.saveNote(s, slug, fields, now())),
     toggleChecked: (slug) => store.update((s) => commands.toggleChecked(s, slug)),
+    toggleFavorite: (slug) => store.update((s) => ({ ...s,
+      favorites: { ...s.favorites, [slug]: s.favorites?.[slug] !== true },
+    })),
+    saveRoadmapFilter: (id, entry) => store.update((s) => validateState({ ...s,
+      savedRoadmapFilters: { ...s.savedRoadmapFilters, [id]: entry },
+    })),
+    deleteRoadmapFilter: (id) => store.update((s) => {
+      const savedRoadmapFilters = { ...s.savedRoadmapFilters };
+      delete savedRoadmapFilters[id];
+      return { ...s, savedRoadmapFilters };
+    }),
+    saveSimulation: (record) => store.update((s) => {
+      if (Object.hasOwn(s.simulations ?? {}, record.id)) throw new Error('Simulation already saved');
+      return validateState({ ...s, simulations: { ...s.simulations, [record.id]: record } });
+    }),
+    saveDrillSession: (record) => store.update((s) => {
+      if (Object.hasOwn(s.drillSessions ?? {}, record.id)) throw new Error('Drill session already saved');
+      return validateState({ ...s, drillSessions: { ...s.drillSessions, [record.id]: record } });
+    }),
     updateSettings: (change) => store.update((s) => commands.updateSettings(s, change)),
     importJson: async (raw) => store.replace(deserializeState(raw)),
     exportJson: async () => commands.exportState(await store.readState()),

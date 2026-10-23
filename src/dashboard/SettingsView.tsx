@@ -1,4 +1,6 @@
 import { useRef, useState, type FormEvent } from 'react';
+import { SyncSettings, SyncBackups, useSyncInfo } from './SyncSettings';
+import { NotesMarkdownExport } from '../components/NotesMarkdownExport';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
@@ -9,6 +11,7 @@ import type { AppState, BudgetOverrides, BudgetedType, Difficulty } from '../cor
 import type { AppActions } from '../lib/actions';
 import { ACTIVITY_LABELS } from '../lib/instructions';
 import { chromeLeetCodeStorage } from '../lib/leetcodeStorage';
+import { backupBeforeLocalReplace } from '../lib/sync';
 import { LeetCodeDetectionCard, LeetCodeProfileCard } from './LeetCodeSettings';
 
 interface Message {
@@ -211,6 +214,7 @@ function BudgetsForm({
 }
 
 function DataSection({ actions }: { actions: AppActions }) {
+  const sync = useSyncInfo();
   const fileInput = useRef<HTMLInputElement>(null);
   const [pendingImport, setPendingImport] = useState<{ name: string; text: string } | null>(null);
   const [message, setMessage] = useState<Message | null>(null);
@@ -243,8 +247,11 @@ function DataSection({ actions }: { actions: AppActions }) {
 
   const confirmImport = (): void => {
     if (!pendingImport) return;
-    actions.importJson(pendingImport.text).then(
-      () => setMessage({ tone: 'good', text: `Imported ${pendingImport.name}.` }),
+    const { name, text } = pendingImport;
+    // With sync enabled the current data is saved locally first; the import is stopped if that backup cannot be stored.
+    const backup = typeof chrome !== 'undefined' && chrome.storage?.local ? backupBeforeLocalReplace(chrome.storage.local) : Promise.resolve();
+    backup.then(() => actions.importJson(text)).then(
+      () => setMessage({ tone: 'good', text: `Imported ${name}.` }),
       (e: unknown) => setMessage({ tone: 'error', text: `Import failed: ${errorText(e)}` }),
     );
     setPendingImport(null);
@@ -278,6 +285,7 @@ function DataSection({ actions }: { actions: AppActions }) {
         <div className="row">
           <span>
             Replace all current data with <strong>{pendingImport.name}</strong>? The file is validated first.
+            {sync.config.enabled ? ' Sync is enabled: this import is a local change set and will propagate to your other devices (overlapping remote changes may require choices).' : ''}
           </span>
           <Button variant="danger" onClick={confirmImport}>
             Import and replace
@@ -319,13 +327,16 @@ export function SettingsView({ state, actions }: { state: AppState; actions: App
           setMessage={setBudgetMessage}
         />
       </Card>
+      <SyncSettings />
       <LeetCodeDetectionCard />
       <LeetCodeProfileCard />
       <Card title="Your data">
         <p className="muted">
-          Everything is stored locally in this browser. Export a backup, restore one, or start over.
+          Data is stored locally, and also in Chrome sync only if you enable it. Export a backup, restore one, or start over. Resetting while sync is enabled only clears this device: the Chrome sync copy is kept, and after setup this device adopts it again. Disable sync first to start over without it.
         </p>
+        <NotesMarkdownExport state={state} />
         <DataSection actions={actions} />
+        <SyncBackups />
       </Card>
     </div>
   );

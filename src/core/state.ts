@@ -1,4 +1,6 @@
 import { CATEGORY_NAMES } from '../data/neetcode150';
+import { COMPANIES } from '../data/companies';
+import { INTERVIEW_STEPS, type InterviewChecklist, type SimulationRecord, type DrillSessionRecord } from './practiceTypes';
 import { isConsolidationDay } from '../data/program';
 import { BUDGETED_TYPES, DIFFICULTIES } from './activities';
 import { catalogProblems, type CatalogId } from './catalog';
@@ -16,6 +18,7 @@ import type {
   RoadmapCatalog,
   RoadmapViewMode,
   Settings,
+  SavedRoadmapFilter,
   TimerState,
 } from './types';
 
@@ -186,6 +189,10 @@ function validateSettings(value: unknown): Settings {
     if (typeof o.roadmapHideTechniques !== 'boolean') fail('settings.roadmapHideTechniques', 'expected a boolean');
     settings.roadmapHideTechniques = o.roadmapHideTechniques;
   }
+  if (o.sidePanelFocus !== undefined) {
+    if (typeof o.sidePanelFocus !== 'boolean') fail('settings.sidePanelFocus', 'expected a boolean');
+    settings.sidePanelFocus = o.sidePanelFocus;
+  }
   if (o.budgets !== undefined) {
     const budgets = validateBudgets(o.budgets);
     if (budgets) settings.budgets = budgets;
@@ -273,7 +280,83 @@ function validateNote(value: unknown, slug: string): Note {
   return note;
 }
 
+function validateSavedFilter(value: unknown, path: string): SavedRoadmapFilter {
+  const o = asObject(value, path);
+  const name = asString(o.name, `${path}.name`).trim();
+  if (!name || name.length > 80) fail(`${path}.name`, 'expected 1–80 characters');
+  const f = asObject(o.filters, `${path}.filters`);
+  const text = (key: string): string => asString(f[key], `${path}.filters.${key}`);
+  if (typeof f.favoritesOnly !== 'boolean') fail(`${path}.filters.favoritesOnly`, 'expected a boolean');
+  return { name, filters: {
+    search: text('search'), category: text('category'),
+    difficulty: asOneOf(f.difficulty, ['', ...DIFFICULTIES], `${path}.filters.difficulty`),
+    status: asOneOf(f.status, ['', ...PROBLEM_STATUSES], `${path}.filters.status`),
+    access: asOneOf(f.access, ['', 'free', 'premium'] as const, `${path}.filters.access`),
+    scope: asOneOf(f.scope, ['', 'program', 'bonus', 'outside'] as const, `${path}.filters.scope`),
+    technique: text('technique'), structure: text('structure'), company: text('company'),
+    favoritesOnly: f.favoritesOnly,
+  } };
+}
+
 /** Validates an unknown value as `AppState` and returns a normalized copy. */
+function practiceIdentity(o: Json, id: string, path: string) {
+  if (!id.trim() || o.id !== id) fail(`${path}.id`, 'must match the non-empty record key');
+  const createdAt = asNonNegative(o.createdAt, `${path}.createdAt`);
+  const endedAt = asNonNegative(o.endedAt, `${path}.endedAt`);
+  if (endedAt < createdAt || endedAt > 8.64e15) fail(`${path}.endedAt`, 'invalid session time range');
+  return { id, createdAt, endedAt };
+}
+
+function nonEmptyString(value: unknown, path: string): string {
+  const text = asString(value, path);
+  if (!text.trim()) fail(path, 'must not be empty');
+  return text;
+}
+
+function validateSimulation(value: unknown, id: string): SimulationRecord {
+  const path = `simulations.${id}`;
+  const o = asObject(value, path);
+  const identity = practiceIdentity(o, id, path);
+  const mode = asOneOf(o.mode, ['global', 'company'] as const, `${path}.mode`);
+  const companyId = o.companyId === undefined ? undefined : asOneOf(o.companyId, COMPANIES.map((c) => c.id), `${path}.companyId`);
+  if ((mode === 'company') !== (companyId !== undefined)) fail(`${path}.companyId`, 'required only for company mode');
+  const checklistObject = asObject(o.checklist, `${path}.checklist`);
+  const checklist = Object.fromEntries(Object.keys(INTERVIEW_STEPS).map((step) => {
+    const flag = checklistObject[step];
+    if (typeof flag !== 'boolean') fail(`${path}.checklist.${step}`, 'expected a boolean');
+    return [step, flag];
+  })) as InterviewChecklist;
+  const durationMs = asNonNegative(o.durationMs, `${path}.durationMs`);
+  if (durationMs > identity.endedAt - identity.createdAt) fail(`${path}.durationMs`, 'exceeds elapsed session time');
+  const targetMinutes = asNumber(o.targetMinutes, `${path}.targetMinutes`);
+  if (targetMinutes !== 25 && targetMinutes !== 35 && targetMinutes !== 45) fail(`${path}.targetMinutes`, 'expected 25, 35 or 45');
+  const reflection = asString(o.reflection, `${path}.reflection`);
+  if (reflection.length > 1000) fail(`${path}.reflection`, 'maximum 1000 characters');
+  return { ...identity, slug: nonEmptyString(o.slug, `${path}.slug`), mode,
+    ...(companyId !== undefined ? { companyId } : {}), checklist, durationMs, targetMinutes, reflection,
+    outcome: asOneOf(o.outcome, ['solved', 'partial', 'not'] as const, `${path}.outcome`) };
+}
+
+function validateDrillSession(value: unknown, id: string): DrillSessionRecord {
+  const path = `drillSessions.${id}`;
+  const o = asObject(value, path);
+  const identity = practiceIdentity(o, id, path);
+  if (typeof o.includeUnworked !== 'boolean') fail(`${path}.includeUnworked`, 'expected a boolean');
+  if (!Array.isArray(o.answers) || o.answers.length < 1 || o.answers.length > 20) fail(`${path}.answers`, 'expected 1–20 answers');
+  const answers = o.answers.map((value, index) => {
+    const p = `${path}.answers[${index}]`;
+    const answer = asObject(value, p);
+    if (typeof answer.correct !== 'boolean') fail(`${p}.correct`, 'expected a boolean');
+    return { slug: nonEmptyString(answer.slug, `${p}.slug`),
+      kind: asOneOf(answer.kind, ['technique', 'structure', 'outline'] as const, `${p}.kind`), correct: answer.correct };
+  });
+  if (new Set(answers.map((a) => `${a.slug}:${a.kind}`)).size !== answers.length) fail(`${path}.answers`, 'duplicate question');
+  const score = asNonNegative(o.score, `${path}.score`);
+  const total = asNumber(o.total, `${path}.total`);
+  if (total !== answers.length || score !== answers.filter((a) => a.correct).length) fail(path, 'score/total must match answers');
+  return { ...identity, includeUnworked: o.includeUnworked, answers, score, total };
+}
+
 export function validateState(value: unknown): AppState {
   const o = asObject(value, 'state');
   if (o.version !== STATE_VERSION) {
@@ -303,6 +386,27 @@ export function validateState(value: unknown): AppState {
     checked[slug] = flag;
   }
 
+  let favorites: Record<string, boolean> | undefined;
+  if (o.favorites !== undefined) {
+    favorites = Object.fromEntries(Object.entries(asObject(o.favorites, 'favorites')).map(([slug, flag]) => {
+      if (typeof flag !== 'boolean') fail(`favorites.${slug}`, 'expected a boolean');
+      return [slug, flag];
+    }));
+  }
+  let savedRoadmapFilters: Record<string, SavedRoadmapFilter> | undefined;
+  if (o.savedRoadmapFilters !== undefined) {
+    savedRoadmapFilters = Object.fromEntries(Object.entries(asObject(o.savedRoadmapFilters, 'savedRoadmapFilters'))
+      .map(([id, entry]) => {
+        if (!id.trim()) fail('savedRoadmapFilters', 'expected a non-empty ID');
+        return [id, validateSavedFilter(entry, `savedRoadmapFilters.${id}`)];
+      }));
+  }
+
+  const simulations = o.simulations === undefined ? undefined : Object.fromEntries(
+    Object.entries(asObject(o.simulations, 'simulations')).map(([id, entry]) => [id, validateSimulation(entry, id)]));
+  const drillSessions = o.drillSessions === undefined ? undefined : Object.fromEntries(
+    Object.entries(asObject(o.drillSessions, 'drillSessions')).map(([id, entry]) => [id, validateDrillSession(entry, id)]));
+
   let queue: string[] | undefined;
   if (o.queue !== undefined) {
     if (!Array.isArray(o.queue)) fail('queue', 'expected an array');
@@ -318,6 +422,10 @@ export function validateState(value: unknown): AppState {
     problemStatus,
     checked,
     ...(queue ? { queue } : {}),
+    ...(favorites !== undefined ? { favorites } : {}),
+    ...(savedRoadmapFilters !== undefined ? { savedRoadmapFilters } : {}),
+    ...(simulations !== undefined ? { simulations } : {}),
+    ...(drillSessions !== undefined ? { drillSessions } : {}),
   };
 }
 
