@@ -59,9 +59,10 @@ on `leetcode.com`. Events travel `window.postMessage` (same origin) -> isolated 
 the sender is this extension on a `leetcode.com/problems/` page, validates again, drops events when detection is
 off, stamps its own time, appends to a capped list of 200).
 
-Known limits: the scripts are injected for `https://leetcode.com/problems/*` at document start, so a problem page
-reached by in-page navigation from another LeetCode page may need one reload before it is observed. Reload the
-LeetCode tab after installing/updating the extension too. A script on the page could post a fake window message;
+Known limits: since 0.9.3 the scripts are injected for `https://leetcode.com/*` at document start (still within the existing host permission), so a
+problem page reached by in-page navigation from another LeetCode page is observed too; the slug is read from the page URL when the
+verdict arrives and nothing is emitted on pages that are not `/problems/<slug>/...`. Reload the LeetCode tab after
+installing/updating the extension. A script on the page could post a fake window message;
 events never save a result. A fresh matching Accepted while the activity is started and its side panel is open
 pauses the timer and opens a confirmation form. Historical events only offer a manual button; Cancel does not
 reopen the same event. Fetch and text XHR are supported; JSON-mode XHR and alternative result endpoints remain

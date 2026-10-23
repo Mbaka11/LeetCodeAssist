@@ -6,7 +6,7 @@ import { RUNTIME_SUBMISSION_KIND, eventFromWindowMessage } from '../lib/leetcode
  * background worker, which decides whether to store it.
  */
 export default defineContentScript({
-  matches: ['https://leetcode.com/problems/*'],
+  matches: ['https://leetcode.com/*'],
   runAt: 'document_start',
   noScriptStartedPostMessage: true,
   main() {

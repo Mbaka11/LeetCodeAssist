@@ -364,7 +364,7 @@ key, versioned), JSON export/import from Settings.
 
 Permissions: `storage` (also covers `chrome.storage.sync`), `alarms`, `notifications`, `sidePanel`, `tabs`; host `https://leetcode.com/*`.
 The manifest carries a fixed public `key` (section 6f), so the extension ID is `ghpljfdplcicmcfoemfifmmibbdjcmja`. The two content
-scripts of the LeetCode features (section 6a) are declared for `https://leetcode.com/problems/*` only.
+scripts of the LeetCode features (section 6a) are declared for `https://leetcode.com/*` (since 0.9.3, so in-page navigation from the problem list is observed); they only act on `/problems/<slug>/...` pages.
 
 ### Grouped problem activities
 
@@ -394,7 +394,7 @@ separate sections in Today. Full dated history and one-row-per-attempt Logs/CSV 
 
 The API contract behind the first two is documented, with its confidence level, in `docs/leetcode-api.md`.
 
-**Accepted detection (passive).** A content script in the page's own (MAIN) world on `leetcode.com/problems/*`
+**Accepted detection (passive).** A content script in the page's own (MAIN) world on `leetcode.com/*` (events only on `/problems/<slug>/...` pages)
 wraps `fetch` and `XMLHttpRequest` and only *observes*: it never alters a request or response, never submits
 or retries anything. For the submit route (`/problems/<slug>/submit/`) it notes slug and time; for the result
 polling routes (`/submissions/detail/<id>/check/` and `/submissions/detail/<id>/v2/check/`) it reads a bounded

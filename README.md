@@ -391,7 +391,7 @@ star sits at the end of each row so titles stay aligned. See [metadata provenanc
   whitelisted fields were corroborated by a user's browser report; the repaired extension is **not yet
   end-to-end live-verified**, and the profile endpoint remains inferred. See [`docs/leetcode-api.md`](docs/leetcode-api.md). If nothing is detected,
   everything still works manually. No new permissions are used and the content scripts run on
-  `https://leetcode.com/problems/*` only. *Reset all data* clears these keys.
+  `https://leetcode.com/*` (so navigating to a problem from the problem list is observed) and only report on problem pages. *Reset all data* clears these keys.
 
 ## Your data and backups
 

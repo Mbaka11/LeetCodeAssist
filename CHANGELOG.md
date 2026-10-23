@@ -3,6 +3,11 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.9.3
+
+### Fixed
+- Accepted detection: the observer scripts now load on every leetcode.com page instead of only `/problems/*`, so a problem opened by in-page navigation (for example from the problem list) no longer needs a manual reload to be observed. No new permission; events are still only emitted on problem pages.
+
 ## 0.9.2
 
 ### Added

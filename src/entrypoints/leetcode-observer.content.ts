@@ -8,7 +8,7 @@ import { windowMessage } from '../lib/leetcodeSubmissions';
  * It has no access to extension APIs.
  */
 export default defineContentScript({
-  matches: ['https://leetcode.com/problems/*'],
+  matches: ['https://leetcode.com/*'],
   world: 'MAIN',
   runAt: 'document_start',
   noScriptStartedPostMessage: true,
