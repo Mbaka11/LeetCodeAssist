@@ -2,23 +2,23 @@ import { useEffect, useRef, useState } from 'react';
 import { Button } from '../components/Button';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { setUnsavedWorkGuard } from '../lib/navigationGuard';
-import { COMPANY_EVIDENCE_DISCLAIMER, COMPANIES, companyInterviewEnabled, companyInterviewSlugs, getCompanyEvidence, type CompanyId } from '../data/companies';
+import { COMPANY_EVIDENCE_DISCLAIMER, COMPANIES, companyInterviewEnabled, companyInterviewSlugs, type CompanyId } from '../data/companies';
 import { CATEGORY_NAMES, NEETCODE_150 } from '../data/neetcode150';
-import { companyName, drawSimulation, drillQuestions, emptyChecklist, simulationPool, type DrillQuestion } from '../core/practice';
+import { drawSimulationPair, SESSION_BREAK_MINUTES, SESSION_REMINDER_MINUTES } from '../core/interviewSession';
+import { drawSimulation, drillQuestions, emptyChecklist, simulationPool, type DrillQuestion } from '../core/practice';
 import { INTERVIEW_STEPS, type DrillAnswer, type DrillKind, type DrillSessionRecord, type InterviewStep, type SimulationOutcome, type SimulationRecord } from '../core/practiceTypes';
-import type { AppState } from '../core/types';
+import type { AppState, Problem } from '../core/types';
 import type { AppActions } from '../lib/actions';
+import { InterviewPrepPanel } from './InterviewPrepPanel';
+import { TwoProblemSession } from './InterviewSession';
+import { clock as time, problemTitle as title, SimulationHistory } from './SimulationHistory';
 
 type Props = { state: AppState; actions: AppActions };
-function time(ms: number): string {
-  const seconds = Math.max(0, Math.floor(ms / 1000));
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-}
-function title(slug: string): string { return NEETCODE_150.find((p) => p.slug === slug)?.title ?? slug; }
 function message(error: unknown): string { return error instanceof Error ? error.message : String(error); }
 
 export function PracticeView({ state, actions }: Props) {
-  const [tab, setTab] = useState<'simulation' | 'drills'>('simulation');
+  const [tab, setTab] = useState<'simulation' | 'prep' | 'drills'>('simulation');
+  const [presetCompany, setPresetCompany] = useState<'' | CompanyId>('');
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (!busy) return;
@@ -29,22 +29,27 @@ export function PracticeView({ state, actions }: Props) {
   }, [busy]);
   return <section className="stack" aria-label="Optional practice">
     <h1>Practice</h1>
-    <p className="muted">Voluntary, separate practice. No scheduled reviews, problem-status changes, program progress, worked totals, streak or weekly-review credit. Results appear only here and in JSON backups.</p>
+    <p className="muted">Voluntary, separate practice. No scheduled reviews, problem-status changes, program progress, worked totals, streak or weekly-review credit. Results appear only here, in JSON backups and as a separate, labelled series in the Logs pace chart.</p>
     {busy ? <p className="muted">Session in progress. Leaving this view discards unsaved practice; finish here to keep a result.</p> : null}
     <div className="row" role="group" aria-label="Practice mode">
-      <Button disabled={busy} aria-pressed={tab === 'simulation'} onClick={() => setTab('simulation')}>Interview simulation</Button>
+      <Button disabled={busy} aria-pressed={tab === 'simulation'} onClick={() => { setPresetCompany(''); setTab('simulation'); }}>Interview simulation</Button>
+      <Button disabled={busy} aria-pressed={tab === 'prep'} onClick={() => setTab('prep')}>Interview prep</Button>
       <Button disabled={busy} aria-pressed={tab === 'drills'} onClick={() => setTab('drills')}>Pattern drills</Button>
     </div>
-    {tab === 'simulation' ? <SimulationView state={state} actions={actions} onBusy={setBusy} /> : <DrillsView state={state} actions={actions} onBusy={setBusy} />}
+    {tab === 'simulation' ? <SimulationView state={state} actions={actions} onBusy={setBusy} initialCompany={presetCompany} />
+      : tab === 'prep' ? <InterviewPrepPanel state={state} actions={actions} onStartSimulation={(id) => { setPresetCompany(id); setTab('simulation'); }} />
+      : <DrillsView state={state} actions={actions} onBusy={setBusy} />}
   </section>;
 }
 
-function SimulationView({ state, actions, onBusy }: Props & { onBusy: (busy: boolean) => void }) {
-  const [company, setCompany] = useState<'' | CompanyId>('');
+function SimulationView({ state, actions, onBusy, initialCompany }: Props & { onBusy: (busy: boolean) => void; initialCompany: '' | CompanyId }) {
+  const [company, setCompany] = useState<'' | CompanyId>(initialCompany);
   const [includeUnworked, setIncludeUnworked] = useState(false);
   const [difficulty, setDifficulty] = useState('');
   const [category, setCategory] = useState('');
   const [minutes, setMinutes] = useState<25 | 35 | 45>(35);
+  const [pair, setPair] = useState<{ problems: [Problem, Problem]; companyId?: CompanyId; withBreak: boolean } | null>(null);
+  const [withBreak, setWithBreak] = useState(true);
   const [session, setSession] = useState<Omit<SimulationRecord, 'endedAt' | 'outcome' | 'reflection' | 'durationMs'> | null>(null);
   const [endedAt, setEndedAt] = useState<number | null>(null);
   const [clock, setClock] = useState(Date.now);
@@ -59,10 +64,11 @@ function SimulationView({ state, actions, onBusy }: Props & { onBusy: (busy: boo
   }, [session, endedAt]);
   const pool = simulationPool(state, { includeUnworked, difficulty, category, ...(company ? { companyId: company } : {}) });
   const clear = () => { setSession(null); setEndedAt(null); setReflection(''); setError(null); onBusy(false); };
-  const records = Object.values(state.simulations ?? {}).sort((a, b) => b.endedAt - a.endedAt);
+  const records = Object.values(state.simulations ?? {});
   return <div className="stack">
     <h2>Interview simulation</h2>
-    {!session ? <div className="card stack">
+    {pair ? <TwoProblemSession problems={pair.problems} {...(pair.companyId ? { companyId: pair.companyId } : {})} withBreak={pair.withBreak} actions={actions}
+      onClose={() => { setPair(null); onBusy(false); }} /> : !session ? <div className="card stack">
       <label>Interview pool<select value={company} onChange={(e) => setCompany(e.target.value as '' | CompanyId)}>
         <option value="">Global — worked problems by default</option>
         {COMPANIES.map((c) => <option key={c.id} value={c.id} disabled={!companyInterviewEnabled(c.id)}>{c.name} — {companyInterviewEnabled(c.id) ? `${companyInterviewSlugs(c.id).length} documented topics` : 'Not enough documented data'}</option>)}
@@ -86,6 +92,18 @@ function SimulationView({ state, actions, onBusy }: Props & { onBusy: (busy: boo
         setSession({ id: crypto.randomUUID(), createdAt: now, slug: problem.slug, mode: company ? 'company' : 'global', ...(company ? { companyId: company } : {}), checklist: emptyChecklist(), targetMinutes: minutes });
         setClock(now); setEndedAt(null); setOutcome('partial'); setError(null); onBusy(true);
       }}>Start interview</Button>
+      <div className="stack-tight" role="group" aria-label="Two-problem session">
+        <h3>Two-problem session</h3>
+        <p className="muted">Two different problems back to back from this pool, each with its own timer and a reminder banner at {SESSION_REMINDER_MINUTES} minutes (the timer keeps running; the interview length above applies to a single interview only).
+          Each problem gets a checklist and self-rating, then a final summary is saved as two linked records. The second problem stays hidden until it starts.</p>
+        <label className="choice"><input type="checkbox" checked={withBreak} onChange={(e) => setWithBreak(e.target.checked)} />{SESSION_BREAK_MINUTES}-minute break between the problems (skippable)</label>
+        {pool.length === 1 ? <p role="status">A two-problem session needs at least two eligible problems.</p> : null}
+        <Button disabled={pool.length < 2} onClick={() => {
+          const drawn = drawSimulationPair(pool, company || undefined);
+          if (!drawn) return;
+          setPair({ problems: drawn, ...(company ? { companyId: company } : {}), withBreak }); setError(null); onBusy(true);
+        }}>Start two-problem session</Button>
+      </div>
     </div> : <div className="card stack" aria-label="Active interview">
       <h3>{title(session.slug)}</h3>
       <a href={NEETCODE_150.find((p) => p.slug === session.slug)!.url} target="_blank" rel="noreferrer">Open on LeetCode</a>
@@ -108,19 +126,7 @@ function SimulationView({ state, actions, onBusy }: Props & { onBusy: (busy: boo
       <fieldset disabled={saving}><ConfirmButton prompt="Discard this unsaved interview?" confirmLabel="Discard interview" onConfirm={clear}>Discard session</ConfirmButton></fieldset>
     </div>}
     {error ? <p role="alert">{error}</p> : null}
-    {!session ? <section className="stack" aria-label="Interview history"><h3>Interview history</h3>
-      {!records.length ? <p className="muted">No interviews saved.</p> : records.map((r) => <article className="card stack-tight" key={r.id}>
-        <h4>{title(r.slug)}{r.companyId ? ` — ${companyName(r.companyId)}` : ''}</h4>
-        <p>{new Date(r.endedAt).toLocaleString()} · {r.outcome === 'not' ? 'not solved' : r.outcome} · {time(r.durationMs)} elapsed / {r.targetMinutes} min target · Checklist {Object.values(r.checklist).filter(Boolean).length}/8</p>
-        <ul>{(Object.entries(INTERVIEW_STEPS) as [InterviewStep, string][]).map(([key, label]) => <li key={key}>{r.checklist[key] ? '✓' : '—'} {label}</li>)}</ul>
-        {r.reflection ? <p style={{ whiteSpace: 'pre-wrap' }}>{r.reflection}</p> : null}
-        {r.companyId ? <><p className="muted">{COMPANY_EVIDENCE_DISCLAIMER}</p>{getCompanyEvidence(r.slug, r.companyId).evidence.map((row) => <div key={row.source.url}>
-          <strong>{row.label}</strong><p>{row.qualification}</p><p className="muted">{row.source.caveat}</p>
-          <a href={row.source.url} target="_blank" rel="noreferrer">{row.source.title}</a>
-          <p className="muted">Snapshot {row.source.snapshotDate}; publication {row.source.reportedDate ?? 'unknown'}{row.source.reportedDateBasis ? ` (${row.source.reportedDateBasis})` : ''}; interview {row.source.interviewPeriod ?? (row.source.interviewDate ? `${row.source.interviewDate.month}/${row.source.interviewDate.day}, year ${row.source.interviewDate.year ?? 'unknown'}` : 'unknown')}.</p>
-        </div>)}</> : null}
-      </article>)}
-    </section> : null}
+    {!session && !pair ? <SimulationHistory records={records} /> : null}
   </div>;
 }
 

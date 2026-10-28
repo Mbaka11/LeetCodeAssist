@@ -3,9 +3,16 @@ import { suggestedOutcome } from '../core/activities';
 import { addDays } from '../core/dates';
 import type { Outcome } from '../core/types';
 import { OUTCOME_DESCRIPTIONS, OUTCOME_LABELS } from '../lib/instructions';
+import { usePanelShortcuts, type PanelShortcut } from '../lib/panelShortcuts';
 import { Button } from './Button';
 
 const OUTCOMES: readonly Outcome[] = ['solo', 'hint', 'solution', 'stuck'];
+const OUTCOME_SHORTCUTS: Partial<Record<PanelShortcut, Outcome>> = {
+  'outcome-solo': 'solo',
+  'outcome-hint': 'hint',
+  'outcome-solution': 'solution',
+  'outcome-stuck': 'stuck',
+};
 
 export function OutcomeForm({
   initialMinutes,
@@ -14,6 +21,7 @@ export function OutcomeForm({
   initialOutcome,
   detectedNote,
   submitting = false,
+  shortcuts = false,
   onSubmit,
   onCancel,
 }: {
@@ -27,6 +35,8 @@ export function OutcomeForm({
   /** Explains why `initialOutcome` is pre-selected. */
   detectedNote?: string | undefined;
   submitting?: boolean;
+  /** Side panel, selected activity: Alt+1..4 choose the outcome and Alt+Enter saves a valid form. */
+  shortcuts?: boolean;
   /** `totalMs` is only set when the user edited the logged time; `completedDate` is the explicit displayed date. */
   onSubmit: (outcome: Outcome, totalMs: number | undefined, completedDate: string) => void;
   onCancel: () => void;
@@ -39,6 +49,21 @@ export function OutcomeForm({
   const dateValid = completedDate === today || completedDate === yesterday;
   const parsed = Number(minutes);
   const minutesValid = minutes.trim() !== '' && Number.isFinite(parsed) && parsed >= 0;
+  const save = (): boolean => {
+    if (!outcome || !minutesValid || !dateValid || submitting) return false;
+    onSubmit(outcome, edited ? Math.round(parsed * 60_000) : undefined, completedDate);
+    return true;
+  };
+
+  usePanelShortcuts((shortcut) => {
+    if (submitting) return false;
+    const chosen = OUTCOME_SHORTCUTS[shortcut];
+    if (chosen) {
+      setOutcome(chosen);
+      return true;
+    }
+    return shortcut === 'save' && save();
+  }, shortcuts);
 
   return (
     <form
@@ -46,9 +71,7 @@ export function OutcomeForm({
       aria-busy={submitting}
       onSubmit={(event) => {
         event.preventDefault();
-        if (outcome && minutesValid && dateValid && !submitting) {
-          onSubmit(outcome, edited ? Math.round(parsed * 60_000) : undefined, completedDate);
-        }
+        save();
       }}
     >
       <fieldset disabled={submitting}>

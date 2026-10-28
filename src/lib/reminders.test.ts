@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { AppState } from '../core/types';
 import { materializePlan, planDay } from '../core/planner';
 import { START, complete, day, newState, simulateDay } from '../core/testing';
 import {
@@ -85,20 +86,70 @@ describe('morning summary', () => {
 });
 
 describe('eveningNotification', () => {
-  it('reminds while the daily target is not met', () => {
-    const note = eveningNotification(newState(), at(START, 20, 0))!;
-    expect(note.message).toMatch(/^0 min of 2h30 logged today · \d+ left \(/);
+  function partialDay(minutes: number, doneCount: number): AppState {
+    let state = materializePlan(newState(), planDay(newState(), START));
+    for (const activity of state.activities.slice(0, doneCount)) state = complete(state, activity.id, 'solo', START, minutes);
+    return state;
+  }
+
+  it('summarises an untouched day as "Today: 0 done, N left, 0 min logged"', () => {
+    const total = planDay(newState(), START).items.length;
+    expect(eveningNotification(newState(), at(START, 20, 0))!.message).toBe(`Today: 0 done, ${total} left, 0 min logged`);
   });
 
-  it('stays quiet once the target is met', () => {
-    const state = simulateDay(newState(), day(1), { minutes: 80 }).state;
-    expect(eveningNotification(state, at(START, 20, 0))).toBeNull();
+  it('summarises a partial day with done, left and logged minutes', () => {
+    const total = planDay(newState(), START).items.length;
+    const note = eveningNotification(partialDay(20, 3), at(START, 20, 0))!;
+    expect(note.title).toBe('LeetCode Assist · Evening check');
+    expect(note.message).toBe(`Today: 3 done, ${total - 3} left, 60 min logged`);
   });
 
-  it('reports all-done-but-short when everything is finished under the target', () => {
+  it('stays quiet once the whole core plan is done, even under the daily target', () => {
     const state = simulateDay(newState(), day(1), { minutes: 10 }).state;
-    const note = eveningNotification(state, at(START, 20, 0))!;
-    expect(note.message).toContain('all planned activities are done');
+    expect(eveningNotification(state, at(START, 20, 0))).toBeNull();
+    expect(eveningNotification(simulateDay(newState(), day(1), { minutes: 80 }).state, at(START, 20, 0))).toBeNull();
+  });
+
+  it('with the setting off, still sends the summary for a finished day', () => {
+    const done = simulateDay(newState(), day(1), { minutes: 10 }).state;
+    const total = planDay(done, START).items.length;
+    const off = { ...done, settings: { ...done.settings, eveningOnlyIfOpen: false } };
+    expect(eveningNotification(off, at(START, 20, 0))!.message).toBe(`Today: ${total} done, 0 left, ${total * 10} min logged`);
+    // The explicit true value behaves like the default (absent).
+    const on = { ...done, settings: { ...done.settings, eveningOnlyIfOpen: true } };
+    expect(eveningNotification(on, at(START, 20, 0))).toBeNull();
+  });
+
+  it('with the setting off, an open day reads the same as with it on', () => {
+    const off = { ...newState(), settings: { ...newState().settings, eveningOnlyIfOpen: false } };
+    expect(eveningNotification(off, at(START, 20, 0))!.message).toBe(eveningNotification(newState(), at(START, 20, 0))!.message);
+  });
+
+  it('is silent before the program starts, with the setting on or off', () => {
+    const off = { ...newState(), settings: { ...newState().settings, eveningOnlyIfOpen: false } };
+    expect(eveningNotification(newState(), at(day(0), 20, 0))).toBeNull();
+    expect(eveningNotification(off, at(day(0), 20, 0))).toBeNull();
+  });
+
+  it('does not wait for activities that were skipped: the plan has nothing left once they are all skipped or done', () => {
+    let state = materializePlan(newState(), planDay(newState(), START));
+    state = { ...state, activities: state.activities.map((a) => ({ ...a, status: 'skipped' as const })) };
+    const summary = summarizeToday(state, at(START, 20, 0))!;
+    expect(summary.open.every((item) => item.activity.status !== 'skipped')).toBe(true);
+    // Skipped items are never counted as waiting; whatever the planner still has open is exactly what the reminder reports.
+    expect(eveningNotification(state, at(START, 20, 0))?.message).toBe(`Today: ${summary.done} done, ${summary.open.length} left, 0 min logged`);
+  });
+
+  it('does not count minutes of a timer that has been running since before midnight', () => {
+    let state = materializePlan(newState(), planDay(newState(), START));
+    const first = state.activities[0]!;
+    state = {
+      ...state,
+      activities: state.activities.map((a) =>
+        a.id === first.id ? { ...a, status: 'in_progress' as const, timer: { startedAt: at(day(0), 22), accumulatedMs: 0, running: true } } : a,
+      ),
+    };
+    expect(summarizeToday(state, at(START, 1))!.loggedMs).toBe(3_600_000);
   });
 
   it('counts a running timer towards the logged time', () => {

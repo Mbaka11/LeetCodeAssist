@@ -1,6 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react';
 import { SyncSettings, SyncBackups, useSyncInfo } from './SyncSettings';
 import { NotesMarkdownExport } from '../components/NotesMarkdownExport';
+import { TEXT_SIZES, TEXT_SIZE_LABELS, THEMES, THEME_LABELS, saveAppearance, useAppearance, type TextSize, type ThemePreference } from '../lib/appearance';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
@@ -10,7 +11,8 @@ import { BUDGET_MAX_MINUTES, BUDGET_MIN_MINUTES } from '../core/state';
 import type { AppState, BudgetOverrides, BudgetedType, Difficulty } from '../core/types';
 import type { AppActions } from '../lib/actions';
 import { ACTIVITY_LABELS } from '../lib/instructions';
-import { chromeLeetCodeStorage } from '../lib/leetcodeStorage';
+import { chromeLeetCodeStorage, type LeetCodePrefs } from '../lib/leetcodeStorage';
+import { readLeetCodeSettingsSection, restoreLeetCodeSettings, withLeetCodeSettings } from '../lib/backupFile';
 import { backupBeforeLocalReplace } from '../lib/sync';
 import { LeetCodeDetectionCard, LeetCodeProfileCard } from './LeetCodeSettings';
 
@@ -41,6 +43,7 @@ function SettingsForm({
   const [cap, setCap] = useState(String(settings.dailyCapMin));
   const [morning, setMorning] = useState(settings.morningNotify);
   const [evening, setEvening] = useState(settings.eveningNotify);
+  const [eveningOnlyIfOpen, setEveningOnlyIfOpen] = useState(settings.eveningOnlyIfOpen !== false);
 
   const submit = (event: FormEvent): void => {
     event.preventDefault();
@@ -51,6 +54,8 @@ function SettingsForm({
         dailyCapMin: Number(cap),
         morningNotify: morning,
         eveningNotify: evening,
+        // Absent means on, so the default stays absent (nothing to sync for users who never change it).
+        eveningOnlyIfOpen: eveningOnlyIfOpen ? undefined : false,
       })
       .then(
         () => setMessage({ tone: 'good', text: 'Settings saved.' }),
@@ -80,6 +85,15 @@ function SettingsForm({
         <span>Evening reminder</span>
         <input type="time" required value={evening} onChange={(e) => setEvening(e.target.value)} />
       </label>
+      <label className="check-inline full">
+        <input type="checkbox" checked={eveningOnlyIfOpen} onChange={(e) => setEveningOnlyIfOpen(e.target.checked)} />
+        <span>Only remind in the evening if today is not done</span>
+      </label>
+      <p className="muted full">
+        The evening reminder reads like “Today: 3 done, 1 left, 95 min logged”. With this on it is skipped when
+        today&apos;s plan has nothing left (or no activities). With it off you get the summary every evening that
+        has planned activities.
+      </p>
       <div className="row full">
         <Button type="submit" variant="primary">
           Save settings
@@ -164,6 +178,7 @@ function BudgetsForm({
 
   return (
     <form className="stack-tight" onSubmit={save}>
+      <div className="table-scroll">
       <table className="table budget-table">
         <thead>
           <tr>
@@ -198,6 +213,7 @@ function BudgetsForm({
           ))}
         </tbody>
       </table>
+      </div>
       <div className="row">
         <Button type="submit" variant="primary">
           Save budgets
@@ -213,15 +229,59 @@ function BudgetsForm({
   );
 }
 
+/** Device-local: stored under its own key, never exported, never synced and not cleared by "Reset all data". */
+function AppearanceCard() {
+  const appearance = useAppearance();
+  const [error, setError] = useState<string | null>(null);
+  const change = (patch: Partial<typeof appearance>): void => {
+    setError(null);
+    saveAppearance(appearance, patch).catch((e: unknown) => setError(errorText(e)));
+  };
+  return (
+    <Card title="Appearance">
+      <div className="appearance-form">
+        <label className="field">
+          <span>Theme</span>
+          <select value={appearance.theme} onChange={(e) => change({ theme: e.target.value as ThemePreference })}>
+            {THEMES.map((theme) => <option key={theme} value={theme}>{THEME_LABELS[theme]}</option>)}
+          </select>
+        </label>
+        <label className="field">
+          <span>Text size</span>
+          <select value={appearance.textSize} onChange={(e) => change({ textSize: e.target.value as TextSize })}>
+            {TEXT_SIZES.map((size) => <option key={size} value={size}>{TEXT_SIZE_LABELS[size]}</option>)}
+          </select>
+        </label>
+      </div>
+      <p className="muted">
+        Applies to the dashboard and the side panel on this device only. It is not part of your data: it is
+        not exported, not synced, and Reset all data keeps it.
+      </p>
+      {error ? <p className="error" role="alert">{error}</p> : null}
+    </Card>
+  );
+}
+
+function describeLeetCodePrefs(prefs: LeetCodePrefs): string {
+  return [
+    prefs.username ? `username ${prefs.username}` : 'no username',
+    `detection ${prefs.detectionEnabled ? 'on' : 'off'}`,
+    `status ${prefs.showDetectionStatus ? 'shown' : 'hidden'}`,
+  ].join(', ');
+}
+
 function DataSection({ actions }: { actions: AppActions }) {
   const sync = useSyncInfo();
   const fileInput = useRef<HTMLInputElement>(null);
-  const [pendingImport, setPendingImport] = useState<{ name: string; text: string } | null>(null);
+  const [pendingImport, setPendingImport] = useState<{ name: string; text: string; leetcode: LeetCodePrefs | null } | null>(null);
+  const [includeLeetCode, setIncludeLeetCode] = useState(true);
+  const [restoreLeetCode, setRestoreLeetCode] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
 
   const exportJson = (): void => {
     actions.exportJson().then(
-      (json) => {
+      async (stateJson) => {
+        const json = includeLeetCode ? withLeetCodeSettings(stateJson, await chromeLeetCodeStorage().readPrefs()) : stateJson;
         const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
         const link = document.createElement('a');
         link.href = url;
@@ -231,7 +291,7 @@ function DataSection({ actions }: { actions: AppActions }) {
         setMessage({ tone: 'good', text: 'Exported.' });
       },
       (e: unknown) => setMessage({ tone: 'error', text: errorText(e) }),
-    );
+    ).catch((e: unknown) => setMessage({ tone: 'error', text: errorText(e) }));
   };
 
   const chooseFile = (file: File | undefined): void => {
@@ -239,7 +299,15 @@ function DataSection({ actions }: { actions: AppActions }) {
     file.text().then(
       (text) => {
         setMessage(null);
-        setPendingImport({ name: file.name, text });
+        try {
+          // A malformed LeetCode settings section refuses the file before anything is replaced.
+          setPendingImport({ name: file.name, text, leetcode: readLeetCodeSettingsSection(text) });
+          setRestoreLeetCode(false);
+        } catch (e) {
+          setPendingImport(null);
+          setMessage({ tone: 'error', text: `Import failed: ${errorText(e)}` });
+          if (fileInput.current) fileInput.current.value = '';
+        }
       },
       (e: unknown) => setMessage({ tone: 'error', text: errorText(e) }),
     );
@@ -247,11 +315,21 @@ function DataSection({ actions }: { actions: AppActions }) {
 
   const confirmImport = (): void => {
     if (!pendingImport) return;
-    const { name, text } = pendingImport;
+    const { name, text, leetcode } = pendingImport;
+    const restore = restoreLeetCode && leetcode !== null ? leetcode : null;
     // With sync enabled the current data is saved locally first; the import is stopped if that backup cannot be stored.
     const backup = typeof chrome !== 'undefined' && chrome.storage?.local ? backupBeforeLocalReplace(chrome.storage.local) : Promise.resolve();
     backup.then(() => actions.importJson(text)).then(
-      () => setMessage({ tone: 'good', text: `Imported ${name}.` }),
+      () => {
+        if (!restore) {
+          setMessage({ tone: 'good', text: `Imported ${name}.` });
+          return;
+        }
+        return restoreLeetCodeSettings(chromeLeetCodeStorage(), restore).then(
+          () => setMessage({ tone: 'good', text: `Imported ${name} and restored its LeetCode settings.` }),
+          (e: unknown) => setMessage({ tone: 'error', text: `Imported ${name}, but its LeetCode settings could not be restored: ${errorText(e)}` }),
+        );
+      },
       (e: unknown) => setMessage({ tone: 'error', text: `Import failed: ${errorText(e)}` }),
     );
     setPendingImport(null);
@@ -262,6 +340,10 @@ function DataSection({ actions }: { actions: AppActions }) {
     <div className="stack-tight">
       <div className="row">
         <Button onClick={exportJson}>Export JSON</Button>
+        <label className="check-inline">
+          <input type="checkbox" checked={includeLeetCode} onChange={(e) => setIncludeLeetCode(e.target.checked)} />
+          <span>Include LeetCode settings</span>
+        </label>
         <Button onClick={() => fileInput.current?.click()}>Import JSON…</Button>
         <input
           ref={fileInput}
@@ -281,6 +363,14 @@ function DataSection({ actions }: { actions: AppActions }) {
           Reset all data
         </ConfirmButton>
       </div>
+      {pendingImport?.leetcode ? (
+        <label className="check-inline">
+          <input type="checkbox" checked={restoreLeetCode} onChange={(e) => setRestoreLeetCode(e.target.checked)} />
+          <span>
+            Also restore LeetCode settings from this file ({describeLeetCodePrefs(pendingImport.leetcode)})
+          </span>
+        </label>
+      ) : null}
       {pendingImport ? (
         <div className="row">
           <span>
@@ -327,12 +417,13 @@ export function SettingsView({ state, actions }: { state: AppState; actions: App
           setMessage={setBudgetMessage}
         />
       </Card>
+      <AppearanceCard />
       <SyncSettings />
       <LeetCodeDetectionCard />
       <LeetCodeProfileCard />
       <Card title="Your data">
         <p className="muted">
-          Data is stored locally, and also in Chrome sync only if you enable it. Export a backup, restore one, or start over. Resetting while sync is enabled only clears this device: the Chrome sync copy is kept, and after setup this device adopts it again. Disable sync first to start over without it.
+          Data is stored locally, and also in Chrome sync only if you enable it. Export a backup, restore one, or start over. The JSON file can also carry your LeetCode username and detection options (never submissions, the streak cache, sync settings or any login data); they are restored only if you tick the box when importing. Resetting while sync is enabled only clears this device: the Chrome sync copy is kept, and after setup this device adopts it again. Disable sync first to start over without it.
         </p>
         <NotesMarkdownExport state={state} />
         <DataSection actions={actions} />

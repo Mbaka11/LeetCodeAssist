@@ -1,5 +1,5 @@
 /** Data model shared by the pure core, the background worker and the UI (SPEC §5). */
-import type { DrillSessionRecord, SimulationRecord } from './practiceTypes';
+import type { DrillSessionRecord, InterviewPrep, SimulationRecord } from './practiceTypes';
 
 export type Difficulty = 'Easy' | 'Medium' | 'Hard';
 
@@ -120,6 +120,11 @@ export interface Settings {
   /** Side-panel presentation only; absent means off. */
   sidePanelFocus?: boolean;
   /**
+   * Evening reminder only while today's core plan still has open activities. Absent means on; `false`
+   * sends the evening summary whenever today has planned activities, even if all are done.
+   */
+  eveningOnlyIfOpen?: boolean;
+  /**
    * Time budget overrides in minutes per activity type and difficulty (partial: a missing entry uses the
    * default, see `DEFAULT_BUDGETS`). Optional so data saved before it existed stays valid.
    */
@@ -170,6 +175,8 @@ export interface AppState {
   /** Immutable completed voluntary sessions, merged by record ID; never scheduled work. */
   simulations?: Record<string, SimulationRecord>;
   drillSessions?: Record<string, DrillSessionRecord>;
+  /** Optional pre-interview preparation; informational only, merged as one value. Absent means none. */
+  interviewPrep?: InterviewPrep;
   /**
    * Order of the new-problem queue after the user postponed problems (slugs, see `programQueue`).
    * Absent means the default `PROGRAM_QUEUE` order.

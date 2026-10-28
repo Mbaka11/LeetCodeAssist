@@ -105,10 +105,26 @@ immediate multiple-choice feedback and score history. Worked-only is the default
 technique/structure questions require a warning toggle, and unworked pseudo-code is never included.
 Hide techniques disables drills by default until explicitly enabled.
 
-Neither feature changes activities, reviews, problem status, counts, pace, worked totals, streak or
-weekly-review metrics. Completed results are kept only in Practice and JSON backups; unfinished
-sessions are local to the open view and are lost on leaving. See [optional practice](docs/optional-practice.md)
-and [company provenance](docs/roadmap-metadata.md).
+A **two-problem session** (Practice → Interview simulation) draws two different problems from the same pool
+back to back. Each has its own timer with a visible 45-minute banner (no sound, nothing is ended for you),
+an optional skippable 5-minute break sits between them (problem 2 never starts by itself), and the summary
+saves both results as two linked records in one step. Saved history shows them as one session.
+
+**Interview prep** (Practice → *Interview prep*) is an optional note of a company and an interview date up
+to 365 days ahead. It shows days left, that company's documented problems with your status, the untouched,
+slowest and fragile ones, and the reviews already scheduled before the date. It never schedules, moves or
+adds anything.
+
+The Logs page has a **Pace by month** chart: the median logged minutes per completion month and difficulty,
+first attempts and reviews drawn separately, each point with its sample count (hollow when fewer than three),
+no trend line, and an editorial 15/30/45-minute guideline line that is labelled as not being data. Saved
+simulation durations can appear as a separate, labelled series; they are never added to logged time.
+
+None of these features changes activities, reviews, problem status, counts, program pace, worked totals, streak
+or weekly-review metrics. Completed results are kept only in Practice and JSON backups (the Logs pace chart
+may overlay simulation durations as described above); unfinished sessions are local to the open view and are
+lost on leaving. See [optional practice](docs/optional-practice.md) and
+[company provenance](docs/roadmap-metadata.md).
 
 ### Repeated attempts without repeated cards
 
@@ -193,8 +209,19 @@ change. Small samples, difficulty differences and missing history limit comparis
   item. Open it from the dashboard's **Open side panel** button, by clicking a LeetCode link in the
   dashboard, or with the shortcut **Alt+Shift+L** (change it at `chrome://extensions/shortcuts`).
 - **Notifications and badge**: a morning summary (for example
-  `Today: 2 new, 2 recalls, 1 rebuild · ~2h20`) and an evening reminder if the daily target is
-  not met, at the times set in Settings. The toolbar badge shows the activities left today.
+  `Today: 2 new, 2 recalls, 1 rebuild · ~2h20`) and an evening summary such as
+  `Today: 3 done, 1 left, 95 min logged`, at the times set in Settings. By default the evening
+  summary only appears while today's plan still has something left (Settings → *Only remind in the
+  evening if today is not done*; turn it off to get the summary every evening that has planned
+  activities). Nothing is sent before the program starts or for a day that already passed, and
+  yesterday's notifications are cleared at midnight. The toolbar badge shows the activities left today.
+- **Side-panel shortcuts** (they work while the panel has focus and you are not typing in a field; the
+  browser shortcut Alt+Shift+L is unchanged): **Alt+T** start, pause or resume the selected activity's
+  timer, **Alt+R** open Finish, **Alt+1…4** choose Solo / Hint / Solution / Stuck in Finish,
+  **Alt+Enter** save a valid Finish form, **Alt+?** show or hide the *Shortcuts* list.
+- **Appearance** (Settings → Appearance): theme (follow the system, dark or light) and text size
+  (small, normal, large) for the dashboard and the side panel. It is stored on this device only, under its
+  own key: not in the JSON export, not synced, not touched by Reset all data.
 
 ### Focus mode, favorites, saved filters, heatmap and notes export
 
@@ -238,10 +265,14 @@ for the exact additive storage fields and record-level update semantics.
 > 4. In the new install: **Settings → Your data → Import JSON…** and choose the file from step 1.
 > 5. For sync, repeat 1–4 on every computer that has data, then enable **Settings → Sync** on each.
 >
-> **The JSON export contains only your program data.** LeetCode detection settings and recorded events, the
-> LeetCode username/preferences and the sync settings (enabled flag, device name) are **not** in the file and stay
-> under the old ID: after the migration, turn detection and your LeetCode preferences on again, re-enter the
-> username if you used it, and re-enable sync.
+> **The JSON export carries your program data and, optionally, three LeetCode preferences.** Settings → Your
+> data → Export JSON has an *Include LeetCode settings* box (on by default) that adds your LeetCode username,
+> *Detect accepted submissions* and *Show detection status* to the file. When you import such a file, tick
+> **Also restore LeetCode settings from this file** to apply them (nothing is restored without the tick; older
+> files without the section import exactly as before). Recorded submission events, the streak cache and the
+> sync settings (enabled flag, device name) are **never** in the file: after the migration re-enable sync, and
+> files exported by 0.9.3 or earlier have no LeetCode section, so turn detection and your preferences on again
+> and re-enter the username by hand.
 >
 > A first install with no data needs none of this. No private key is stored or committed; only the public key is
 > in the manifest. Details: [sync](docs/sync.md).
@@ -396,8 +427,11 @@ star sits at the end of each row so titles stay aligned. See [metadata provenanc
 ## Your data and backups
 
 All data lives in `chrome.storage.local` under one versioned key. **Settings → Your data**
-exports a JSON backup, restores one (validated before anything is replaced) or resets
-everything. Uninstalling the extension deletes the data, so export a backup first. If the stored
+exports a JSON backup (optionally including the LeetCode username and detection preferences, never
+submission events or the streak cache), restores one (validated before anything is replaced, and a
+malformed LeetCode section refuses the whole file) or resets everything. The appearance setting
+(theme, text size) is device-local and is neither exported nor reset. Uninstalling the extension deletes
+the data, so export a backup first. If the stored
 data ever fails validation, the dashboard shows an error screen and leaves it untouched until you
 reset or import.
 
@@ -410,7 +444,7 @@ reset or import.
   extension ID on both (`ghpljfdplcicmcfoemfifmmibbdjcmja`; see the one-time migration under Install). A copy built
   or installed differently has another ID and another sync area.
 - **Merging:** non-overlapping changes merge automatically, record by record (activities, notes, checks, statuses,
-  favorites, saved filters, practice results, each setting, the queue). If the same record was changed
+  favorites, saved filters, practice results including two-problem sessions, interview prep, each setting, the queue). If the same record was changed
   differently on both computers you get a **conflict** (banner and **Settings → Sync**): both versions are shown
   in plain language and you choose *Keep this device* or *Take other device* per record, or *Keep all from this
   device*. Until you choose, this computer keeps its version and everything else keeps merging.
@@ -427,8 +461,8 @@ reset or import.
   and quota is not the problem, and keeps a readable copy it replaces as a local backup first. Chunks left behind by
   failed uploads are removed after the next successful upload.
 - **Privacy:** notes and code snippets are included in your Chrome sync data when enabled (leave it off if that is
-  not acceptable). Detection settings and events, LeetCode preference/profile data, the device name, sync settings
-  and backups stay local.
+  not acceptable). Detection settings and events, LeetCode preference/profile data, the appearance preference,
+  the device name, sync settings and backups stay local.
 - **Import and reset:** importing or restoring a backup while sync is on is a local change that propagates
   (records missing from the file count as deletions; the confirmation says so). Before an import with sync on, the
   current data is saved as a local backup (the import is stopped if that backup cannot be stored). *Reset all data* clears only

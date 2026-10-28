@@ -93,6 +93,10 @@ export function alarmsToCreate(
 // ---------------------------------------------------------------------------
 
 export interface TodaySummary {
+  /** Activities of today's core plan (reviews, benchmarks, new problems; no bonus offers). */
+  planned: number;
+  /** Core activities already finished. */
+  done: number;
   /** Activities of today's plan that are still to do (planned or in progress). */
   open: PlanItem[];
   remainingMinutes: number;
@@ -108,12 +112,16 @@ export function summarizeToday(state: AppState, now: number): TodaySummary | nul
   const open = plan.items.filter(
     (item) => item.activity.status === 'planned' || item.activity.status === 'in_progress',
   );
+  // A timer that kept running past midnight cannot have logged more than the time since today began.
+  const sinceMidnight = now - new Date(now).setHours(0, 0, 0, 0);
   const loggedMs = state.activities.reduce((sum, a) => {
     if (a.status === 'done' && a.completedAt === today) return sum + (a.totalMs ?? 0);
-    if (a.status === 'in_progress') return sum + elapsedMs(a.timer, now);
+    if (a.status === 'in_progress') return sum + Math.min(elapsedMs(a.timer, now), sinceMidnight);
     return sum;
   }, 0);
   return {
+    planned: plan.items.length,
+    done: plan.items.filter((item) => item.activity.status === 'done').length,
     open,
     remainingMinutes: open.reduce((sum, item) => sum + item.minutes, 0),
     loggedMs,
@@ -172,16 +180,19 @@ export function morningNotification(state: AppState, now: number): NotificationC
   };
 }
 
-/** Evening reminder. Null when the daily target is already met (or the program has not started). */
+/**
+ * Evening reminder, a summary of the day like "Today: 3 done, 1 left, 95 min logged". It is built from
+ * the same plan as the toolbar badge. Null before the program starts and when today has no activities;
+ * unless `settings.eveningOnlyIfOpen` is false (absent means true) it is also null once the core plan
+ * has nothing left to do.
+ */
 export function eveningNotification(state: AppState, now: number): NotificationContent | null {
   const summary = summarizeToday(state, now);
-  if (!summary) return null;
-  const loggedMin = summary.loggedMs / 60_000;
-  if (loggedMin >= summary.targetMinutes) return null;
-  const logged = `${formatMinutes(loggedMin)} of ${formatMinutes(summary.targetMinutes)} logged today`;
-  const left =
-    summary.open.length === 0
-      ? 'all planned activities are done'
-      : `${summary.open.length} left (${describeActivities(summary.open)}) · ~${formatMinutes(summary.remainingMinutes)}`;
-  return { title: 'LeetCode Assist · Evening check', message: `${logged} · ${left}` };
+  if (!summary || summary.planned === 0) return null;
+  if (state.settings.eveningOnlyIfOpen !== false && summary.open.length === 0) return null;
+  const logged = Math.round(summary.loggedMs / 60_000);
+  return {
+    title: 'LeetCode Assist · Evening check',
+    message: `Today: ${summary.done} done, ${summary.open.length} left, ${logged} min logged`,
+  };
 }

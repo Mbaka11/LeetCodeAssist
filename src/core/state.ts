@@ -1,6 +1,6 @@
 import { CATEGORY_NAMES } from '../data/neetcode150';
 import { COMPANIES } from '../data/companies';
-import { INTERVIEW_STEPS, type InterviewChecklist, type SimulationRecord, type DrillSessionRecord } from './practiceTypes';
+import { INTERVIEW_STEPS, type InterviewChecklist, type InterviewPrep, type SimulationRecord, type DrillSessionRecord } from './practiceTypes';
 import { isConsolidationDay } from '../data/program';
 import { BUDGETED_TYPES, DIFFICULTIES } from './activities';
 import { catalogProblems, type CatalogId } from './catalog';
@@ -196,6 +196,10 @@ function validateSettings(value: unknown): Settings {
     if (typeof o.sidePanelFocus !== 'boolean') fail('settings.sidePanelFocus', 'expected a boolean');
     settings.sidePanelFocus = o.sidePanelFocus;
   }
+  if (o.eveningOnlyIfOpen !== undefined) {
+    if (typeof o.eveningOnlyIfOpen !== 'boolean') fail('settings.eveningOnlyIfOpen', 'expected a boolean');
+    settings.eveningOnlyIfOpen = o.eveningOnlyIfOpen;
+  }
   if (o.budgets !== undefined) {
     const budgets = validateBudgets(o.budgets);
     if (budgets) settings.budgets = budgets;
@@ -335,8 +339,18 @@ function validateSimulation(value: unknown, id: string): SimulationRecord {
   if (targetMinutes !== 25 && targetMinutes !== 35 && targetMinutes !== 45) fail(`${path}.targetMinutes`, 'expected 25, 35 or 45');
   const reflection = asString(o.reflection, `${path}.reflection`);
   if (reflection.length > 1000) fail(`${path}.reflection`, 'maximum 1000 characters');
+  // Optional two-problem session link: `sessionId` and `part` come together; the overall reflection belongs to part 2.
+  if ((o.sessionId === undefined) !== (o.part === undefined)) fail(`${path}.part`, 'sessionId and part must be set together');
+  const sessionId = o.sessionId === undefined ? undefined : nonEmptyString(o.sessionId, `${path}.sessionId`);
+  if (sessionId !== undefined && sessionId.length > 100) fail(`${path}.sessionId`, 'maximum 100 characters');
+  if (o.part !== undefined && o.part !== 1 && o.part !== 2) fail(`${path}.part`, 'expected 1 or 2');
+  const part = o.part;
+  const sessionReflection = o.sessionReflection === undefined ? undefined : asString(o.sessionReflection, `${path}.sessionReflection`);
+  if (sessionReflection !== undefined && (part !== 2 || sessionReflection.length > 1000)) fail(`${path}.sessionReflection`, 'part 2 only, maximum 1000 characters');
   return { ...identity, slug: nonEmptyString(o.slug, `${path}.slug`), mode,
     ...(companyId !== undefined ? { companyId } : {}), checklist, durationMs, targetMinutes, reflection,
+    ...(sessionId !== undefined && part !== undefined ? { sessionId, part } : {}),
+    ...(sessionReflection !== undefined ? { sessionReflection } : {}),
     outcome: asOneOf(o.outcome, ['solved', 'partial', 'not'] as const, `${path}.outcome`) };
 }
 
@@ -358,6 +372,13 @@ function validateDrillSession(value: unknown, id: string): DrillSessionRecord {
   const total = asNumber(o.total, `${path}.total`);
   if (total !== answers.length || score !== answers.filter((a) => a.correct).length) fail(path, 'score/total must match answers');
   return { ...identity, includeUnworked: o.includeUnworked, answers, score, total };
+}
+
+function validateInterviewPrep(value: unknown): InterviewPrep {
+  const o = asObject(value, 'interviewPrep');
+  if (typeof o.date !== 'string' || !isValidDateString(o.date)) fail('interviewPrep.date', 'expected a YYYY-MM-DD date');
+  return { companyId: asOneOf(o.companyId, COMPANIES.map((c) => c.id), 'interviewPrep.companyId'), date: o.date,
+    createdAt: asNonNegative(o.createdAt, 'interviewPrep.createdAt') };
 }
 
 export function validateState(value: unknown): AppState {
@@ -410,6 +431,8 @@ export function validateState(value: unknown): AppState {
   const drillSessions = o.drillSessions === undefined ? undefined : Object.fromEntries(
     Object.entries(asObject(o.drillSessions, 'drillSessions')).map(([id, entry]) => [id, validateDrillSession(entry, id)]));
 
+  const interviewPrep = o.interviewPrep === undefined ? undefined : validateInterviewPrep(o.interviewPrep);
+
   let queue: string[] | undefined;
   if (o.queue !== undefined) {
     if (!Array.isArray(o.queue)) fail('queue', 'expected an array');
@@ -429,6 +452,7 @@ export function validateState(value: unknown): AppState {
     ...(savedRoadmapFilters !== undefined ? { savedRoadmapFilters } : {}),
     ...(simulations !== undefined ? { simulations } : {}),
     ...(drillSessions !== undefined ? { drillSessions } : {}),
+    ...(interviewPrep !== undefined ? { interviewPrep } : {}),
   };
 }
 

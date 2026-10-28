@@ -1,7 +1,9 @@
+import { addDays, isValidDateString, localDateFromTimestamp } from '../core/dates';
 import { deserializeState, defaultState, validateState } from '../core/state';
 import type { Outcome, Settings, SavedRoadmapFilter } from '../core/types';
-import type { SimulationRecord, DrillSessionRecord } from '../core/practiceTypes';
+import type { DrillSessionRecord, InterviewPrep, SimulationRecord } from '../core/practiceTypes';
 import { confirmResultCorrection, type ResultEdit } from '../core/resultCorrection';
+import { readLeetCodeSettingsSection } from './backupFile';
 import * as commands from './commands';
 import type { AppStore } from './storage';
 
@@ -35,6 +37,11 @@ export interface AppActions {
   saveRoadmapFilter(id: string, entry: SavedRoadmapFilter): Promise<void>;
   deleteRoadmapFilter(id: string): Promise<void>;
   saveSimulation(record: SimulationRecord): Promise<void>;
+  /** Saves both records of a two-problem session in one write (all or nothing). */
+  saveSimulationSession(records: readonly [SimulationRecord, SimulationRecord]): Promise<void>;
+  /** Sets or edits the optional interview prep; the date must be today..+365 days. Never schedules anything. */
+  saveInterviewPrep(prep: Pick<InterviewPrep, 'companyId' | 'date'>): Promise<void>;
+  clearInterviewPrep(): Promise<void>;
   saveDrillSession(record: DrillSessionRecord): Promise<void>;
   updateSettings(change: Partial<Settings>): Promise<void>;
   /** Validates and replaces all data. Rejects with `StateValidationError` on invalid input. */
@@ -96,12 +103,32 @@ export function createActions(store: AppStore, now: Clock = Date.now): AppAction
       if (Object.hasOwn(s.simulations ?? {}, record.id)) throw new Error('Simulation already saved');
       return validateState({ ...s, simulations: { ...s.simulations, [record.id]: record } });
     }),
+    saveSimulationSession: (records) => store.update((s) => {
+      for (const record of records) if (Object.hasOwn(s.simulations ?? {}, record.id)) throw new Error('Simulation already saved');
+      if (records[0].id === records[1].id || records[0].sessionId === undefined || records[0].sessionId !== records[1].sessionId ||
+        records[0].part !== 1 || records[1].part !== 2) throw new Error('A session needs two linked records (part 1 and part 2)');
+      return validateState({ ...s, simulations: { ...s.simulations, [records[0].id]: records[0], [records[1].id]: records[1] } });
+    }),
+    saveInterviewPrep: (prep) => store.update((s) => {
+      const t = now();
+      const today = localDateFromTimestamp(t);
+      if (!isValidDateString(prep.date) || prep.date < today || prep.date > addDays(today, 365)) throw new Error('Choose an interview date from today up to 365 days ahead.');
+      return validateState({ ...s, interviewPrep: { companyId: prep.companyId, date: prep.date, createdAt: s.interviewPrep?.createdAt ?? t } });
+    }),
+    clearInterviewPrep: () => store.update((s) => {
+      const { interviewPrep: _removed, ...rest } = s;
+      return rest;
+    }),
     saveDrillSession: (record) => store.update((s) => {
       if (Object.hasOwn(s.drillSessions ?? {}, record.id)) throw new Error('Drill session already saved');
       return validateState({ ...s, drillSessions: { ...s.drillSessions, [record.id]: record } });
     }),
     updateSettings: (change) => store.update((s) => commands.updateSettings(s, change)),
-    importJson: async (raw) => store.replace(deserializeState(raw)),
+    importJson: async (raw) => {
+      // A malformed LeetCode settings section refuses the whole import before anything is changed.
+      readLeetCodeSettingsSection(raw);
+      return store.replace(deserializeState(raw));
+    },
     exportJson: async () => commands.exportState(await store.readState()),
     reset: () => store.reset(),
   };

@@ -16,7 +16,7 @@ export interface ProblemActivityItem {
 
 /** Classic card for one activity, shared heading and numbered rows for repeats. No data is merged. */
 export function ProblemActivities({ items, history, now, actions, budgets, compact = false,
-  openProblemSheet, accepted, selectedActivityId, footer, unfinishedFirst = false, focused = false,
+  openProblemSheet, accepted, selectedActivityId, footer, unfinishedFirst = false, focused = false, shortcuts = false,
 }: {
   items: readonly ProblemActivityItem[];
   history: readonly Activity[];
@@ -31,6 +31,8 @@ export function ProblemActivities({ items, history, now, actions, budgets, compa
   footer?: ReactNode;
   unfinishedFirst?: boolean;
   focused?: boolean;
+  /** Side panel: keyboard shortcuts act on the selected activity only. */
+  shortcuts?: boolean;
 }) {
   return <div className="stack-tight problem-groups">
     {groupActivities(items, history, unfinishedFirst).map((group) => {
@@ -56,6 +58,7 @@ export function ProblemActivities({ items, history, now, actions, budgets, compa
         <div className="problem-attempts">
           {group.items.map((item, index) => <ActivityCard key={item.activity.id}
             hidden={focused && item.activity.id !== selectedActivityId} focused={focused}
+            shortcuts={shortcuts && item.activity.id === selectedActivityId}
             activity={item.activity} variant={item.variant ?? 'planned'} now={now} actions={actions}
             budgets={budgets} compact={compact} grouped={multiple} attemptNumber={index + 1}
             openProblemSheet={openProblemSheet}

@@ -7,6 +7,7 @@ import { localDateFromTimestamp } from '../core/dates';
 import type { AppState } from '../core/types';
 import {
   EVENING_ALARM,
+  MIDNIGHT_ALARM,
   MORNING_ALARM,
   alarmsToCreate,
   badgeText,
@@ -81,6 +82,11 @@ export function createBackgroundTasks(deps: BackgroundDeps): BackgroundTasks {
             content,
           );
         }
+      }
+      // A new day starts: yesterday's summaries must not linger in the notification center.
+      if (alarm.name === MIDNIGHT_ALARM) {
+        await deps.clearNotification(MORNING_NOTIFICATION_ID);
+        await deps.clearNotification(EVENING_NOTIFICATION_ID);
       }
       // A fired alarm is gone: schedule the next one, and the badge always reflects the new moment.
       await refresh();

@@ -246,6 +246,7 @@ interface Settings { startDate: string; dailyTargetMin: number; dailyCapMin: num
   roadmapDetail?: 'compact'|'detailed';     // All layout; absent = 'compact'
   roadmapHideTechniques?: boolean;         // absent = false
   sidePanelFocus?: boolean;                // side-panel Focus mode; absent = false
+  eveningOnlyIfOpen?: boolean;             // evening reminder only while today is not done; absent = true
   budgets?: BudgetOverrides }     // partial minutes per type and difficulty; absent = defaults
 type BudgetOverrides = { [T in Exclude<ActivityType,'benchmark'>]?: Partial<Record<Difficulty, number>> }
 interface AppState { version: 1; settings: Settings; activities: Activity[];
@@ -254,15 +255,19 @@ interface AppState { version: 1; settings: Settings; activities: Activity[];
   favorites?: Record<string, boolean>;                  // by slug; false = explicit unstar (kept for sync)
   savedRoadmapFilters?: Record<string, { name: string; filters: RoadmapFilters }>; // by UUID
   simulations?: Record<string, SimulationRecord>;       // immutable, by id (section 6e)
-  drillSessions?: Record<string, DrillSessionRecord> }  // immutable, by id (section 6e)
+  drillSessions?: Record<string, DrillSessionRecord>;   // immutable, by id (section 6e)
+  interviewPrep?: { companyId: CompanyId; date: string; createdAt: number } } // optional, one whole value (section 6e)
+// SimulationRecord additionally has optional sessionId + part (1|2) together, and sessionReflection on part 2 only.
 ```
 
 `hintsUsed`, `postponed`, `corrections`, `roadmapView`, `roadmapCatalog`, `roadmapDetail`,
-`roadmapHideTechniques`, `sidePanelFocus`, `budgets`, `queue`, `favorites`, `savedRoadmapFilters`, `simulations` and
-`drillSessions` are optional and additive: data saved by 0.1 stays valid and absent fields stay absent, so
+`roadmapHideTechniques`, `sidePanelFocus`, `eveningOnlyIfOpen`, `budgets`, `queue`, `favorites`, `savedRoadmapFilters`, `simulations`,
+`drillSessions` and `interviewPrep` (and the simulation fields `sessionId`, `part`, `sessionReflection`) are optional and additive: data saved by 0.1 stays valid and absent fields stay absent, so
 `version` remains `1`. Exact field rules: `presentation-state.md` and `optional-practice.md`. Sync (section 6f) adds no
 fields and keeps its own state (config, status, base snapshot, conflicts, backups) in separate `chrome.storage.local`
-keys that are not part of `AppState` or the JSON backup.
+keys that are not part of `AppState` or the JSON backup. Every optional `AppState` and `Settings` field travels through the
+sync merge (guarded by `src/core/syncFieldCoverage.test.ts`); the device-local appearance preference
+(`leetcodeAssist.appearance.v1`: theme and text size) does not.
 
 The timer is derived from timestamps (`accumulatedMs + (now - startedAt)`), never from tick counting.
 Dates are local calendar dates (YYYY-MM-DD) computed in the user's timezone.
@@ -326,7 +331,10 @@ key, versioned), JSON export/import from Settings.
      difficulty, outcome, category, date range and free-text search on the title. A summary row covers the
      filtered set: count, total time, average time against average budget, and the solo rate (share of
      done rows with outcome `solo`). *Export CSV* downloads the filtered rows. Filtering, summary and CSV
-     are pure helpers in `src/core/logs.ts`.
+     are pure helpers in `src/core/logs.ts`. Below the heatmap, **Pace by month** (`src/core/pace.ts`) charts the median
+     logged minutes per completion month and difficulty, first attempts and reviews separately, with sample counts,
+     hollow few-sample markers, an editorial 15/30/45-minute guideline line (labelled as not data) and, when simulations
+     exist, a separate overlay of simulation medians; see `optional-practice.md`.
    - **Problem sheet**: program position, notes (Trigger, Principle, Pitfall, Complexity, Python
      snippet), hints, attempt history (type, duration, approach time, hints used, outcome), next review.
      During review activities notes are **hidden until the user clicks "Reveal"**.
@@ -334,7 +342,10 @@ key, versioned), JSON export/import from Settings.
      (section 6e).
    - **Settings**: start date, daily target and cap, notification times, a compact **time budgets** table
      (rows = activity types, columns = Easy / Medium / Hard, *Reset to defaults*), **Sync** (section 6f), detection and
-     LeetCode profile cards, and *Your data*: JSON export/import/reset, *Export all notes (.md)* (a reading export,
+     LeetCode profile cards, an **Appearance** card (theme system/dark/light and text size small/normal/large, stored on this
+     device only), and *Your data*: JSON export/import/reset (the export can add an optional top-level `leetcodeSettings`
+     section with the LeetCode username and the two detection switches; import restores it only when the file has it and the
+     user ticks the option, and a malformed section refuses the whole file), *Export all notes (.md)* (a reading export,
      not a backup format) and the local pre-merge sync backups.
 2. **Side panel** (`chrome.sidePanel`): one **global** panel per window. The service worker calls
    `setOptions({ path, enabled: true })` once (no per-tab enabling), so the panel stays open while
@@ -350,6 +361,9 @@ key, versioned), JSON export/import from Settings.
      mounted and replaced by a one-line detection summary; everything stays mounted where it holds state, so timers
      and unsaved Finish edits survive toggling; detection and Accepted auto-Finish are unchanged. Without a current
      activity the toggle explains that and the normal panel stays visible.
+   - **Shortcuts** (only while the panel document has focus and the target is not a text field): Alt+T start/pause/resume
+     the selected activity, Alt+R open Finish, Alt+1..4 choose the outcome, Alt+Enter save a valid form, Alt+? toggles the
+     visible list. They call the same handlers as the buttons; Alt+Shift+L stays the browser command.
    - On any other page: an **Open a LeetCode problem** state with today's checklist (core items, the up-to-two
      optional bonus offers marked *Optional bonus*, carried-over reviews); each item has an
      **Open** button that navigates the active tab (when it is a LeetCode or empty tab) or opens a new
@@ -358,8 +372,11 @@ key, versioned), JSON export/import from Settings.
      LeetCode problem link in the dashboard (which also calls `chrome.sidePanel.open({ windowId })`
      in the same click handler, best effort).
 3. **Background service worker**: the sync service (section 6f, registered first), `chrome.alarms` for the morning summary notification
-   ("Today: 2 new, 2 recalls, 1 rebuild · ~2h20") and the evening reminder if the day's
-   target is not met; toolbar **badge** = remaining activities today; clicking a
+   ("Today: 2 new, 2 recalls, 1 rebuild · ~2h20") and the evening summary ("Today: 3 done, 1 left, 95 min logged",
+   built from the same plan as the badge). With `settings.eveningOnlyIfOpen` (absent = on) the evening summary is
+   skipped when today's core plan has nothing left or no activities; off sends it on every evening with planned
+   activities. A notification that fires on a later day than scheduled is dropped, and the midnight alarm clears
+   the previous day's notifications. Toolbar **badge** = remaining activities today; clicking a
    notification opens the dashboard.
 
 Permissions: `storage` (also covers `chrome.storage.sync`), `alarms`, `notifications`, `sidePanel`, `tabs`; host `https://leetcode.com/*`.
@@ -460,7 +477,8 @@ card computed locally from `submissionCalendar` over **UTC days**: current strea
 when today is still empty), longest streak in the returned data, active days this year, a 16-week heat grid,
 a link to the profile, *Updated N min ago*, error states and a *Set your username in Settings* empty state.
 Username and detection preference live in the key `leetcodeAssist.leetcodePrefs.v1`, not in `Settings`, so
-the stored `AppState` format and JSON export are unchanged. *Reset all data* also clears the three LeetCode keys.
+the stored `AppState` format is unchanged; the JSON export only carries the username and the two detection switches in the
+optional `leetcodeSettings` section (never events or the streak cache). *Reset all data* also clears the three LeetCode keys.
 
 **Timer colours.** `TimerBadge` shows the elapsed time of an open activity against the estimated minutes
 shown on the card (`timerTone` in `src/lib/timerTone.ts`): green under 75 % (*on pace*), amber from 75 % up to
@@ -556,7 +574,8 @@ Voluntary and separate from the program and the older extra/bonus Activity flow.
 - **Isolation (invariant):** simulations and drills never create or update Activities, scheduled reviews, problem status,
   solved checks, notes, budgets or timers, and never change program counts, pace, worked totals, logged minutes, heatmaps,
   calendar, reminders, streak or the weekly review (which does not show them even separately). Records appear only in
-  Practice history and JSON backups. There is no network/API dependency; Accepted detection does not finish or score a
+  Practice history and JSON backups; the one deliberate exception is the Logs **Pace by month** chart, which may overlay
+  saved simulation durations as a separate, labelled series (never added to logged minutes or any total). There is no network/API dependency; Accepted detection does not finish or score a
   simulation.
 - **Interview simulation:** global pool = worked problems (in-progress/done Activity, learned status or solved check) unless
   unworked problems are explicitly included with a warning; category/difficulty filters; 25/35/45-minute timestamp-derived
@@ -569,6 +588,12 @@ Voluntary and separate from the program and the older extra/bonus Activity flow.
   data*. Draws use documented slugs only (editorial sampling weight 3 for exact, 1 for variant-only; not a frequency),
   with no similar-pattern fallback. Setup discloses that reports are uncorroborated, may be mirrored, and may not
   generalize across roles.
+- **Two-problem session:** two different problems from the same pool back to back, a per-problem timer with a visible
+  45-minute reminder banner, an optional skippable 5-minute break, checklist and self-rating per problem, and a final
+  summary saved as two linked simulation records (optional `sessionId`/`part`, merged by record ID).
+- **Interview prep:** an optional `interviewPrep` value (company + date up to 365 days ahead) with a read-only summary:
+  days left, the company's documented problems with your status, untouched/slowest/fragile ones and the reviews
+  already scheduled before the date. It never schedules or changes anything; sync merges it as one whole value.
 - **Pattern drills:** original prompt, correct pseudo-code outline, two plausible wrong outlines and explanations for all
   50 program problems (`src/data/drills.ts`); technique/structure questions use the normalized tag vocabularies and never
   offer a registered, curated also-valid, closely related or generic tag as a wrong answer (`src/data/drillAmbiguity.ts`);

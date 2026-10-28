@@ -3,6 +3,7 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { ActivityHeatmap } from './ActivityHeatmap';
+import { PaceChart } from './PaceChart';
 import { Stat } from '../components/Stat';
 import { ResultCorrectionDialog } from '../components/ResultCorrectionDialog';
 import type { AppActions } from '../lib/actions';
@@ -254,6 +255,7 @@ export function LogsView({ state, actions }: { state: AppState; actions?: AppAct
         <SummaryRow rows={rows} />
       </Card>
       <ActivityHeatmap state={state} today={localDateFromTimestamp(Date.now())} />
+      <PaceChart state={state} />
       <Card>
         {allRows.length === 0 ? (
           <p className="muted">Nothing logged yet. Completed and skipped activities show up here.</p>

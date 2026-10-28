@@ -10,6 +10,7 @@ import { MAX_MOVE_DAYS } from '../lib/commands';
 import { formatDate, formatMinutes, formatMs } from '../lib/format';
 import { ACTIVITY_INSTRUCTIONS, ACTIVITY_LABELS, OUTCOME_LABELS, difficultyTone } from '../lib/instructions';
 import { acceptedPromptText, formatClockTime, languageLabel, type AcceptedPrompt } from '../lib/leetcodeSubmissions';
+import { usePanelShortcuts } from '../lib/panelShortcuts';
 import { problemHref } from '../lib/route';
 import { Badge } from './Badge';
 import { hintsLabel } from './AttemptHistory';
@@ -35,6 +36,7 @@ export function ActivityCard({
   autoOpenAccepted = false,
   hidden = false,
   focused = false,
+  shortcuts = false,
 }: {
   activity: Activity;
   now: number;
@@ -55,6 +57,8 @@ export function ActivityCard({
   autoOpenAccepted?: boolean;
   hidden?: boolean;
   focused?: boolean;
+  /** Side panel only, for the selected activity: Alt+T timer, Alt+R Finish, and the Finish form's Alt keys. */
+  shortcuts?: boolean;
 }) {
   const [finishing, setFinishing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -108,6 +112,21 @@ export function ActivityCard({
     setError(null);
     task.catch((e: unknown) => setError(e instanceof Error ? e.message : String(e)));
   };
+
+  // Keyboard twins of the Start/Pause/Resume and Finish buttons. While the Finish form is open the timer
+  // keys do nothing, so an open form and its pause are never disturbed.
+  usePanelShortcuts((shortcut) => {
+    if (finishing || submitting) return false;
+    if (shortcut === 'timer') {
+      run(!inProgress ? actions.startActivity(activity.id) : running ? actions.pause(activity.id) : actions.resume(activity.id));
+      return true;
+    }
+    if (shortcut === 'finish' && inProgress) {
+      startFinishing();
+      return true;
+    }
+    return false;
+  }, shortcuts && open);
 
   const classes = ['activity', `activity-${activity.status}`];
   if (grouped) classes.push('activity-attempt');
@@ -273,6 +292,7 @@ export function ActivityCard({
           initialMinutes={Math.round(elapsed / 60_000)}
           today={today}
           submitting={submitting}
+          shortcuts={shortcuts}
           hintsUsed={activity.hintsUsed}
           {...(accepted && !activity.hintsUsed
             ? {

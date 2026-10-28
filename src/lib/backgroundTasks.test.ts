@@ -111,15 +111,15 @@ describe('background tasks', () => {
     expect(ctx.browser.dashboardOpened).toEqual([]);
   });
 
-  it('sends the evening reminder only while the target is not met', async () => {
+  it('sends the evening summary only while today is not done', async () => {
     const ctx = setup();
     await ctx.actions.initialize(START);
     await ctx.startWorker().refresh();
 
     await fire(ctx, EVENING_ALARM);
-    expect(ctx.browser.notifications.get(EVENING_NOTIFICATION_ID)?.message).toContain('logged today');
+    expect(ctx.browser.notifications.get(EVENING_NOTIFICATION_ID)?.message).toMatch(/^Today: 0 done, 4 left, 0 min logged$/);
 
-    // Meet the target the next day and the reminder stays quiet.
+    // Finish the whole plan the next day and the reminder stays quiet.
     ctx.browser.notifications.clear();
     ctx.clock.now = at(day(2), 9);
     await ctx.actions.materializeToday();
@@ -159,5 +159,77 @@ describe('background tasks', () => {
     await ctx.startWorker().handleAlarm({ name: MORNING_ALARM, scheduledTime });
     expect(ctx.browser.notifications.size).toBe(0);
     expect(ctx.browser.alarms.has(MORNING_ALARM)).toBe(true);
+  });
+});
+
+describe('smart evening reminder', () => {
+  async function finishToday(ctx: ReturnType<typeof setup>, date: string): Promise<void> {
+    ctx.clock.now = at(date, 12);
+    await ctx.actions.materializeToday();
+    const ids = (await ctx.store.readState()).activities.filter((a) => a.dueDate === date && a.status === 'planned').map((a) => a.id);
+    for (const id of ids) await ctx.actions.completeActivity(id, 'solo', 10 * 60_000);
+  }
+
+  it('shows a partial-day summary in the evening', async () => {
+    const ctx = setup(at(START, 7));
+    await ctx.actions.initialize(START);
+    ctx.clock.now = at(START, 12);
+    await ctx.actions.materializeToday();
+    const first = (await ctx.store.readState()).activities[0]!;
+    await ctx.actions.completeActivity(first.id, 'solo', 25 * 60_000);
+    await ctx.startWorker().refresh();
+    await fire(ctx, EVENING_ALARM);
+    expect(ctx.browser.notifications.get(EVENING_NOTIFICATION_ID)?.message).toBe('Today: 1 done, 3 left, 25 min logged');
+  });
+
+  it('is silent on a finished day and speaks again when the setting is turned off', async () => {
+    const ctx = setup(at(START, 7));
+    await ctx.actions.initialize(START);
+    await finishToday(ctx, START);
+    await ctx.startWorker().refresh();
+    await fire(ctx, EVENING_ALARM);
+    expect(ctx.browser.notifications.has(EVENING_NOTIFICATION_ID)).toBe(false);
+
+    await ctx.actions.updateSettings({ eveningOnlyIfOpen: false });
+    expect((await ctx.store.readState()).settings.eveningOnlyIfOpen).toBe(false);
+    ctx.clock.now = at(START, 20, 0) + 1000;
+    await ctx.startWorker().handleAlarm({ name: EVENING_ALARM, scheduledTime: at(START, 20, 0) });
+    expect(ctx.browser.notifications.get(EVENING_NOTIFICATION_ID)?.message).toMatch(/^Today: 4 done, 0 left, \d+ min logged$/);
+
+    // Switching back to the default removes the field again.
+    await ctx.actions.updateSettings({ eveningOnlyIfOpen: undefined });
+    expect((await ctx.store.readState()).settings).not.toHaveProperty('eveningOnlyIfOpen');
+  });
+
+  it('drops an evening alarm delivered after midnight and clears stale notifications at midnight', async () => {
+    const ctx = setup(at(START, 7));
+    await ctx.actions.initialize(START);
+    await ctx.startWorker().refresh();
+    await fire(ctx, MORNING_ALARM);
+    await fire(ctx, EVENING_ALARM);
+    expect(ctx.browser.notifications.size).toBe(2);
+
+    await fire(ctx, MIDNIGHT_ALARM);
+    expect(ctx.browser.notifications.size).toBe(0);
+
+    // Laptop asleep over midnight: the 20:00 alarm of the previous day fires at 00:30 of the next one.
+    ctx.clock.now = at(day(2), 0, 30);
+    await ctx.startWorker().handleAlarm({ name: EVENING_ALARM, scheduledTime: at(START, 20, 0) });
+    expect(ctx.browser.notifications.size).toBe(0);
+  });
+
+  it('after skipped days the next evening reminder describes the current day only', async () => {
+    const ctx = setup(at(START, 7));
+    await ctx.actions.initialize(START);
+    await ctx.startWorker().refresh();
+    // Nothing is done on days 1-3 and the browser is closed; it is restarted on day 4 in the afternoon.
+    ctx.browser.alarms.clear();
+    ctx.clock.now = at(day(4), 15);
+    await ctx.startWorker().refresh();
+    expect(ctx.browser.alarms.get(EVENING_ALARM)).toBe(at(day(4), 20, 0));
+    await fire(ctx, EVENING_ALARM);
+    expect(ctx.browser.notifications.get(EVENING_NOTIFICATION_ID)?.message).toMatch(/^Today: 0 done, \d+ left, 0 min logged$/);
+    // Only one reminder: nothing is replayed for the skipped days.
+    expect(ctx.browser.notifications.size).toBe(1);
   });
 });

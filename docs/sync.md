@@ -27,9 +27,17 @@ use its own key). **One-time migration** for an existing install (its ID changes
 The old extension's `chrome.storage.local` is not carried over automatically, so do not skip the export.
 Data of the old ID stays on disk until that extension is removed.
 
-The JSON export contains **only the program data** (`AppState`). LeetCode detection settings and recorded events, the
-LeetCode username/preferences and the sync config (enabled flag, device name) are **not** in it. After the migration,
-re-enable detection and your LeetCode preferences, re-enter the username if you used it, and turn sync on again.
+The JSON export contains the program data (`AppState`) and, optionally, a top-level `leetcodeSettings` section with exactly
+three LeetCode preferences: `username`, `detectionEnabled`, `showDetectionStatus`. Settings → Your data → Export JSON has
+an *Include LeetCode settings* box (on by default). Importing restores the section only when the file has it and you tick
+**Also restore LeetCode settings from this file**; files without the section (everything exported by 0.9.3 or earlier)
+import exactly as before. The section is validated strictly (unknown fields, wrong types or an invalid username reject the
+whole import before anything is changed). Submission events, the profile/streak cache, the sync config (enabled flag,
+device name), sync backups and anything credential-like are **never** in the file. After the migration re-enable sync, and
+for files without the section re-enable detection and your LeetCode preferences and re-enter the username by hand.
+
+The section is not part of `AppState` (storage version stays 1): `validateState`/`deserializeState` ignore it, Chrome sync
+never carries it and an import with sync on does not propagate it.
 
 ## Storage layout (`chrome.storage.sync`)
 
@@ -58,17 +66,20 @@ re-enable detection and your LeetCode preferences, re-enter the username if you 
 ## What syncs, and what stays local
 
 Synced: the whole `AppState` (activities with their correction audit, notes, checked, problem status, favorites,
-saved All filters, simulations, drill results, settings, queue).
+saved All filters, simulations including two-problem session records, drill results, interview prep, settings, queue).
 
-Local only (never uploaded): detection settings and events, LeetCode profile/preference keys, sync config, device name,
-sync status, the merge base and the pre-merge backups. Chrome may also sync the extension's storage to Google
+Local only (never uploaded): detection settings and events, LeetCode profile/preference keys, the device-local appearance
+preference (`leetcodeAssist.appearance.v1`: theme and text size, applied through `data-theme`/`data-text-size`; not in
+`AppState`, not in the JSON export and kept by Reset all data), sync config, device name,
+sync status, the merge base and the pre-merge backups. The optional setting `settings.eveningOnlyIfOpen` (evening
+reminder only while today is not done; absent = on) is an ordinary settings field and merges per field like the others. Chrome may also sync the extension's storage to Google
 servers, so notes and code snippets leave your computer: leave sync off if that is not acceptable.
 
 ## Merge rules (three-way, deterministic)
 
 Each device remembers the last remote snapshot it merged or published (`lca.sync.base.v1`, local). Records:
 each activity by id, note by slug, `checked` / `problemStatus` / `favorites` entry by slug, saved filter / simulation /
-drill result by id, each settings field, and `queue` as one value.
+drill result by id, each settings field, and `queue` and `interviewPrep` each as one value.
 
 | Local vs base | Remote vs base | Result |
 | --- | --- | --- |
@@ -89,8 +100,11 @@ Other rules:
 - First sync with no base: if this device has only first-run defaults, it adopts the cloud copy whole (after a backup);
   otherwise records merge normally and settings that differ (for example `startDate`) are conflicts.
 - Settings are merged per field; if the merged combination is invalid (e.g. cap below target) those fields become conflicts.
-- Simulations and drill results are immutable records merged by id; the same id with different content is a conflict.
-  They never feed program counts, pace, worked totals or streak.
+- Simulations (including the two linked records of a two-problem session) and drill results are immutable records merged
+  by id; the same id with different content is a conflict. They never feed program counts, program pace, worked totals or streak (the Logs pace chart only reads simulation durations
+  for a separate, labelled overlay).
+- The optional interview prep is one whole value: set, edited or cleared on one device it propagates; changed
+  differently on both devices it is a conflict (the two versions are never mixed field by field).
 - Conflict list (Settings → Sync and a dashboard banner) shows both versions (problem, type, status/outcome/date) with
   *Keep this device* / *Take other device* per record and *Keep all from this device*.
 - Merge is a pure function of (base, local, remote, pending conflicts), tested for symmetry on non-conflicting changes.
@@ -106,6 +120,8 @@ Other rules:
   again. Disable sync first for a truly empty start.
 
 ## Honest limits
+
+- **Update every computer together.** A build older than 0.10 ignores the newer optional fields (interview prep, two-problem session records, the evening-reminder setting); if it republishes, those values can look cleared. Install the same version on both computers before relying on sync.
 
 - Real cross-device Chrome sync cannot be verified by the automated tests; they use a mock `chrome.storage.sync` that
   enforces the documented byte/item/count/rate quotas. Chrome may delay propagation (seconds to minutes) or throttle sync.

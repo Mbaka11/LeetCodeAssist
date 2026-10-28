@@ -3,7 +3,7 @@
  *
  * Granularity ("records"): each activity (by id, including its corrections audit), each note (by slug),
  * each `checked` / `problemStatus` / `favorites` entry, each saved filter, simulation and drill result (by id),
- * each settings field, and the `queue` as one value. A record changed on one side only is taken from that side;
+ * each settings field, and the `queue` and `interviewPrep` as one value each. A record changed on one side only is taken from that side;
  * a record changed differently on both sides is a conflict.
  */
 import { getProblem } from '../data/neetcode150';
@@ -49,6 +49,7 @@ export function stateRecords(state: AppState | undefined): Record<string, unknow
   }
   for (const [key, value] of Object.entries(state.settings)) records[`settings/${key}`] = value;
   if (state.queue !== undefined) records.queue = state.queue;
+  if (state.interviewPrep !== undefined) records.interviewPrep = state.interviewPrep;
   return records;
 }
 
@@ -62,7 +63,7 @@ export function applyRecords(state: AppState, changes: Record<string, unknown>):
   result.settings = settings;
   for (const [path, value] of Object.entries(records)) {
     if (value === undefined) continue;
-    if (path === 'queue') { result.queue = value; continue; }
+    if (path === 'queue' || path === 'interviewPrep') { result[path] = value; continue; }
     const slash = path.indexOf('/');
     const field = path.slice(0, slash);
     const key = path.slice(slash + 1);
@@ -100,7 +101,7 @@ export function isUntouchedState(state: AppState): boolean {
   const settings = state.settings as unknown as Record<string, unknown>;
   const defaults = DEFAULT_SETTINGS as unknown as Record<string, unknown>;
   const settingsDefault = Object.entries(settings).every(([key, value]) => key === 'startDate' || canonical(value) === canonical(defaults[key]));
-  return settingsDefault && state.activities.every(isPristineActivity) && state.queue === undefined &&
+  return settingsDefault && state.activities.every(isPristineActivity) && state.queue === undefined && state.interviewPrep === undefined &&
     collections.every((field) => Object.keys(state[field] ?? {}).length === 0);
 }
 
@@ -191,7 +192,8 @@ export function describeRecord(path: string, value: unknown): string {
   if (field === 'problemStatus') return `${title(key)}: status ${text(value)}`;
   if (field === 'favorites') return `${title(key)}: ${value === true ? 'starred' : 'not starred'}`;
   if (field === 'savedRoadmapFilters') return `Saved filter "${text(o.name)}"`;
-  if (field === 'simulations') return `Simulation of ${title(text(o.slug))} · outcome ${text(o.outcome)} · ${new Date(Number(o.endedAt)).toISOString().slice(0, 10)}`;
+  if (field === 'simulations') return `Simulation of ${title(text(o.slug))}${o.part !== undefined ? ` (problem ${text(o.part)} of a two-problem session)` : ''} · outcome ${text(o.outcome)} · ${new Date(Number(o.endedAt)).toISOString().slice(0, 10)}`;
+  if (field === 'interviewPrep') return `Interview prep · ${text(o.companyId)} · ${text(o.date)}`;
   if (field === 'drillSessions') return `Drill session · score ${text(o.score)}/${text(o.total)} · ${new Date(Number(o.endedAt)).toISOString().slice(0, 10)}`;
   if (field === 'settings') return `Setting ${key}: ${JSON.stringify(value)}`;
   if (field === 'queue') return `New-problem queue (${Array.isArray(value) ? value.length : 0} problems, starting with ${Array.isArray(value) && value.length ? title(text(value[0])) : 'none'})`;

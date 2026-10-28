@@ -3,6 +3,24 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.10.0
+
+No new permission and no new dependency. Optional state fields are additive, so older backups import unchanged;
+new records and values are covered by the sync merge (see `docs/sync.md`).
+
+### Added
+- **Two-problem interview session** (Practice → Interview simulation): two different problems from the same pool, a per-problem timer with a visible 45-minute banner (no sound, nothing ends automatically), an optional skippable 5-minute break (problem 2 never starts by itself), a checklist and self-rating per problem, and one summary that saves two linked simulation records at once (optional `sessionId`, `part`, `sessionReflection`). History shows them as one session. The single simulation is unchanged.
+- **Pace by month** in Logs: median logged minutes per completion month and difficulty for first attempts and for reviews, with sample counts, hollow markers under three samples, an editorial 15/30/45-minute guideline line labelled as not data, and a separate simulation-duration overlay. No trend or forecast.
+- **Interview prep** (Practice → Interview prep, optional `interviewPrep`): a company and a date up to 365 days ahead with a read-only summary (days left, the company's documented problems with your status, untouched, slowest and fragile ones, reviews already scheduled before the date). It never schedules or changes anything.
+- **LeetCode settings in the JSON backup**: Export JSON can include the LeetCode username and the two detection switches (checkbox, on by default); import restores them only if the file has the section and you tick the option. A malformed section refuses the whole file. Events and the streak cache are never exported.
+- **Side-panel shortcuts**: Alt+T timer, Alt+R Finish, Alt+1…4 outcome, Alt+Enter save, Alt+? list; ignored while typing in a field. Alt+Shift+L is unchanged.
+- **Appearance** in Settings: theme (system, dark, light) and text size (small, normal, large), stored on this device only (not exported, not synced, kept by Reset all data). The light palette was retuned so text meets 4.5:1 contrast, and the Settings budget table no longer overflows at 360 px.
+- **Setting `eveningOnlyIfOpen`** (optional, absent = on): *Only remind in the evening if today is not done*.
+
+### Changed
+- The evening notification now reads `Today: 3 done, 1 left, 95 min logged` and, by default, is skipped once nothing is left in today's plan. It used to stay quiet once the daily target minutes were met, so a day with the target met but items left now still gets the summary. The midnight alarm clears the previous day's notifications.
+- Simulation records can now also appear, as a separate labelled series, in the Logs pace chart; they are still never added to logged minutes, totals, pace, streak or the weekly review.
+
 ## 0.9.3
 
 ### Fixed

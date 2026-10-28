@@ -22,6 +22,7 @@ import { formatDate, formatMinutes } from '../lib/format';
 import { groupActivities } from '../lib/groupActivities';
 import { ACTIVITY_LABELS, STATUS_LABELS, STATUS_TONES, difficultyTone } from '../lib/instructions';
 import { acceptedPrompt, type SubmissionEvent } from '../lib/leetcodeSubmissions';
+import { PANEL_SHORTCUT_LIST, usePanelShortcuts } from '../lib/panelShortcuts';
 import { problemHref } from '../lib/route';
 import { panelMatches, selectedPanelActivity } from './focusActivity';
 
@@ -58,6 +59,27 @@ function DashboardLink({
     >
       {children}
     </a>
+  );
+}
+
+/** Collapsed by default; Alt+? toggles it. */
+function ShortcutsHelp({ open, onToggle }: { open: boolean; onToggle: (open: boolean) => void }) {
+  return (
+    <details className="shortcuts-help" open={open} onToggle={(event) => onToggle(event.currentTarget.open)}>
+      <summary>Shortcuts</summary>
+      <dl>
+        {PANEL_SHORTCUT_LIST.map((shortcut) => (
+          <div key={shortcut.keys}>
+            <dt><kbd>{shortcut.keys}</kbd></dt>
+            <dd>{shortcut.description}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="muted">
+        They work while this panel has focus and you are not typing in a field. The browser shortcut Alt+Shift+L
+        opens the panel.
+      </p>
+    </details>
   );
 }
 
@@ -240,6 +262,12 @@ export function ProblemPanel({
   const today = localDateFromTimestamp(now);
   const plan = useMemo(() => planDay(state, today), [state, today]);
   const [focusError, setFocusError] = useState<string | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  usePanelShortcuts((shortcut) => {
+    if (shortcut !== 'help') return false;
+    setHelpOpen((open) => !open);
+    return true;
+  });
   const problem = slug === null ? undefined : getProblem(slug);
   const matches = slug && problem ? panelMatches(plan, slug) : [];
   const openActivity = selectedPanelActivity(matches);
@@ -252,6 +280,7 @@ export function ProblemPanel({
     }}>Focus mode</Button>
     {state.settings.sidePanelFocus && !openActivity ? <p role="status" className="muted">Nothing to focus on: open a problem with a current activity. Showing the normal panel.</p> : null}
     {focusError ? <p className="error" role="alert">{focusError}</p> : null}
+    <ShortcutsHelp open={helpOpen} onToggle={setHelpOpen} />
   </div>;
   const needsMaterializing =
     plan.items.some((item) => !item.persisted) || plan.bonuses.some((item) => !item.persisted);
@@ -348,7 +377,7 @@ export function ProblemPanel({
         {matches.length > 0 ? (
           <ProblemActivities items={matches} history={state.activities} now={now} actions={actions}
             compact budgets={state.settings.budgets} accepted={accepted ?? undefined}
-            selectedActivityId={openActivity?.id} focused={focused}
+            selectedActivityId={openActivity?.id} focused={focused} shortcuts
             openProblemSheet={(target) => openDashboard(problemHref(target))}
             footer={hasOpen ? null : <ExtraPractice state={state} actions={actions} slug={slug} today={today} />} />
         ) : <ExtraPractice state={state} actions={actions} slug={slug} today={today} />}
