@@ -8,7 +8,7 @@ import { Stat } from '../components/Stat';
 import { ResultCorrectionDialog } from '../components/ResultCorrectionDialog';
 import type { AppActions } from '../lib/actions';
 import { DIFFICULTIES } from '../core/activities';
-import { localDateFromTimestamp } from '../core/dates';
+import { localDateFromTimestamp, trainingDateFromTimestamp } from '../core/dates';
 import {
   buildLogRows,
   filterLogRows,
@@ -27,6 +27,7 @@ import {
   difficultyTone,
 } from '../lib/instructions';
 import { problemHref } from '../lib/route';
+import { useNow } from '../lib/useNow';
 
 const TYPES = Object.keys(ACTIVITY_LABELS) as ActivityType[];
 const OUTCOMES = Object.keys(OUTCOME_LABELS) as Outcome[];
@@ -197,7 +198,7 @@ function LogTable({ rows, onEdit }: { rows: readonly LogRow[]; onEdit?: ((id: st
         <tbody>
           {rows.map((row) => (
             <tr key={row.id}>
-              <td>{row.date}</td>
+              <td>{row.date}{row.completedAtMs !== undefined ? <small className="muted"> · Saved at {new Date(row.completedAtMs).toLocaleString()}</small> : null}</td>
               <td>{row.programDay >= 1 ? row.programDay : '–'}</td>
               <td>
                 <Badge tone={row.type}>{ACTIVITY_LABELS[row.type]}</Badge>
@@ -229,6 +230,7 @@ function LogTable({ rows, onEdit }: { rows: readonly LogRow[]; onEdit?: ((id: st
 }
 
 export function LogsView({ state, actions }: { state: AppState; actions?: AppActions }) {
+  const today = trainingDateFromTimestamp(useNow(30_000));
   const [filters, setFilters] = useState<LogFilters>({});
   const [editing, setEditing] = useState<string | null>(null);
   const selected = state.activities.find((a) => a.id === editing && a.status === 'done');
@@ -254,7 +256,7 @@ export function LogsView({ state, actions }: { state: AppState; actions?: AppAct
       <Card>
         <SummaryRow rows={rows} />
       </Card>
-      <ActivityHeatmap state={state} today={localDateFromTimestamp(Date.now())} />
+      <ActivityHeatmap state={state} today={today} />
       <PaceChart state={state} />
       <Card>
         {allRows.length === 0 ? (

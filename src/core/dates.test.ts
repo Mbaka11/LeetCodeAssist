@@ -8,7 +8,27 @@ import {
   formatLocalDate,
   isValidDateString,
   localDateFromTimestamp,
+  trainingDateFromTimestamp,
+  trainingDayStart,
 } from './dates';
+
+describe('04:00 training dates', () => {
+  it.each(['2025-01-07', '2025-03-09', '2025-11-02', '2026-01-01', '2024-03-01'])(
+    'uses local calendar arithmetic around midnight and 04:00 on %s', (date) => {
+      const at = (hour: number, minute = 0, second = 0) => new Date(`${date}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`).getTime();
+      for (const now of [at(0), at(1), at(3, 59, 59)]) {
+        expect(trainingDateFromTimestamp(now)).toBe(addDays(date, -1));
+        const previous = new Date(trainingDayStart(now));
+        expect(formatLocalDate(previous)).toBe(addDays(date, -1));
+        expect(previous.getHours()).toBe(4);
+      }
+      expect(trainingDateFromTimestamp(at(4))).toBe(date);
+      expect(trainingDayStart(at(4))).toBe(at(4));
+      expect(trainingDateFromTimestamp(at(14))).toBe(date);
+      expect(localDateFromTimestamp(at(1))).toBe(date); // civil dates remain unchanged
+    },
+  );
+});
 
 describe('dates', () => {
   it('adds days across month, year and leap-year boundaries', () => {

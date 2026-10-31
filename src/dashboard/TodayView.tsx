@@ -7,7 +7,7 @@ import { Card } from '../components/Card';
 import { ProgressBar } from '../components/ProgressBar';
 import { Stat } from '../components/Stat';
 import { WorkedTotal } from '../components/WorkedTotal';
-import { diffDays, localDateFromTimestamp } from '../core/dates';
+import { diffDays, trainingDateFromTimestamp, trainingDayStart } from '../core/dates';
 import { planDay, type PlanItem } from '../core/planner';
 import { needsBenchmarkBackfill } from '../core/reviews';
 import { computeStreak, dailyTargetMinutes } from '../core/state';
@@ -34,7 +34,7 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
   const anyRunning = state.activities.some((a) => a.timer.running);
   // Re-render every second only while a timer runs; the displayed time is derived from timestamps.
   const now = useNow(anyRunning ? 1000 : 30_000);
-  const today = localDateFromTimestamp(now);
+  const today = trainingDateFromTimestamp(now);
   const plan = useMemo(() => planDay(state, today), [state, today]);
   const worked = useMemo(() => workedTotals(state), [state]);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -47,6 +47,7 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
   const needsMaterializing =
     plan.items.some((i) => !i.persisted) ||
     plan.bonuses.some((offer) => !offer.persisted) ||
+    plan.missedBenchmarks.some((item) => !item.persisted) ||
     needsBenchmarkBackfill(state);
   useEffect(() => {
     if (needsMaterializing) actions.materializeToday().catch(console.error);
@@ -77,7 +78,7 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
     .reduce((sum, a) => sum + (a.totalMs ?? 0), 0);
   const runningMs = state.activities
     .filter((a) => a.status === 'in_progress')
-    .reduce((sum, a) => sum + elapsedMs(a.timer, now), 0);
+    .reduce((sum, a) => sum + Math.min(elapsedMs(a.timer, now), now - trainingDayStart(now)), 0);
   const loggedMin = (doneMs + runningMs) / 60_000;
   const streak = computeStreak(state, today);
 
@@ -106,6 +107,8 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
         {plan.isConsolidationDay ? <Badge tone="resolve">Consolidation day</Badge> : null}
         {plan.isBenchmarkDay ? <Badge tone="benchmark">Benchmark day</Badge> : null}
       </div>
+
+      <p className="muted" role="note">Training day: {formatDate(today)} · changes at 04:00 local time. Results are dated automatically when you save.</p>
 
       <Card>
         <div className="stats">
@@ -171,6 +174,14 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
         actions={actions}
         budgets={state.settings.budgets}
       />
+
+      {plan.missedBenchmarks.length > 0 ? (
+        <Card title={`Missed benchmarks (${plan.missedBenchmarks.length})`}>
+          <p className="muted">These benchmarks are still available outside today&apos;s core plan. Finishing one credits the current training day, not its original date.</p>
+          <ProblemActivities items={plan.missedBenchmarks.map((item) => ({ ...item, variant: 'carried' as const }))}
+            history={state.activities} now={now} actions={actions} budgets={state.settings.budgets} unfinishedFirst />
+        </Card>
+      ) : null}
 
       {plan.carriedOver.length > 0 ? (
         <Card title={`Carried over (${plan.carriedOver.length})`}>

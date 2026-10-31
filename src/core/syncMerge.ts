@@ -91,7 +91,7 @@ function isPristineActivity(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const a = value as Activity;
   return a.status === 'planned' && !a.timer.running && a.timer.startedAt === null && a.timer.accumulatedMs === 0 &&
-    a.approachMs === undefined && a.totalMs === undefined && a.outcome === undefined && a.completedAt === undefined &&
+    a.approachMs === undefined && a.totalMs === undefined && a.outcome === undefined && a.completedAt === undefined && a.completedAtMs === undefined &&
     a.corrections === undefined && a.hintsUsed === undefined && a.postponed === undefined &&
     new RegExp(`^${a.type}:${a.slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:${a.dueDate}(#\\d+)?$`).test(a.id);
 }

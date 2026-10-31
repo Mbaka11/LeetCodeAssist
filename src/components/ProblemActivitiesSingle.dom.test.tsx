@@ -58,7 +58,6 @@ describe('classic display for a single problem activity', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Finish' }));
     fireEvent.click(screen.getByRole('radio', { name: /Hint/ }));
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Time logged (min)' }), { target: { value: '13' } });
-    fireEvent.change(screen.getByRole('combobox', { name: 'Completed on' }), { target: { value: '2025-01-06' } });
 
     page.rerender(cards([first, second], { actions: realActions }));
     expect(page.container.querySelectorAll('.attempt-number')).toHaveLength(2);
@@ -68,14 +67,14 @@ describe('classic display for a single problem activity', () => {
     expect(screen.getByText('2 activities · 0 done')).toBeTruthy();
     expect((screen.getByRole('radio', { name: /Hint/ }) as HTMLInputElement).checked).toBe(true);
     expect((screen.getByRole('spinbutton', { name: 'Time logged (min)' }) as HTMLInputElement).value).toBe('13');
-    expect((screen.getByRole('combobox', { name: 'Completed on' }) as HTMLSelectElement).value).toBe('2025-01-06');
+    expect(screen.getByText('2025-01-07')).toBeTruthy();
 
     page.rerender(cards([first], { actions: realActions }));
     expect(page.container.querySelectorAll('.attempt-number')).toHaveLength(0);
     expect(screen.getByText('How did it go?')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Save result' }));
     await waitFor(() => expect(screen.queryByText('How did it go?')).toBeNull());
-    expect(complete).toHaveBeenCalledExactlyOnceWith(first.id, 'hint', 13 * 60_000, '2025-01-06');
+    expect(complete).toHaveBeenCalledExactlyOnceWith(first.id, 'hint', 13 * 60_000, '2025-01-07');
   });
 });
 

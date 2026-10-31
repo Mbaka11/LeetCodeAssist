@@ -1,5 +1,5 @@
 import { createActivity, isReviewType } from './activities';
-import { isValidDateString, localDateFromTimestamp } from './dates';
+import { isValidDateString, trainingDateFromTimestamp } from './dates';
 import { applyOutcome } from './reviews';
 import type { Activity, AppState, Outcome, ProblemStatus } from './types';
 
@@ -35,11 +35,14 @@ export function correctionDateBounds(state: AppState, id: string, today: string)
   const earliest = target.completedAt! < state.settings.startDate ? target.completedAt! : state.settings.startDate;
   const min = history[index - 1]?.completedAt ?? earliest;
   const next = history[index + 1]?.completedAt;
-  return { min, max: next && next < today ? next : today };
+  // Legacy midnight-based results can be dated one civil day ahead before 04:00. Keep their
+  // unchanged date editable, without allowing a correction to move anything further into the future.
+  const latest = target.completedAt! > today ? target.completedAt! : today;
+  return { min, max: next && next < latest ? next : latest };
 }
 
 function fingerprint(state: AppState, target: Activity, now: number): string {
-  return JSON.stringify({ today: localDateFromTimestamp(now), settings: state.settings,
+  return JSON.stringify({ today: trainingDateFromTimestamp(now), settings: state.settings,
     status: state.problemStatus[target.slug], activities: state.activities.filter((a) => a.slug === target.slug) });
 }
 
@@ -69,7 +72,7 @@ export function prepareResultCorrection(state: AppState, id: string, edit: Resul
   preview: CorrectionPreview; state: AppState;
 } {
   const target = targetOf(state, id);
-  const today = localDateFromTimestamp(now);
+  const today = trainingDateFromTimestamp(now);
   const bounds = correctionDateBounds(state, id, today);
   if (!isValidDateString(edit.completedDate) || edit.completedDate < bounds.min || edit.completedDate > bounds.max) {
     throw new Error(`Choose a completion date from ${bounds.min} to ${bounds.max}; the order of completed attempts must stay unchanged.`);

@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { createActivity } from '../core/activities';
-import { localDateFromTimestamp } from '../core/dates';
+import { trainingDateFromTimestamp } from '../core/dates';
 import { materializePlan, planDay } from '../core/planner';
 import { defaultState } from '../core/state';
 import type { AppState } from '../core/types';
@@ -13,7 +13,7 @@ import { ProblemPanel } from './ProblemPanel';
 
 const actions = new Proxy({}, { get: () => () => Promise.resolve() }) as AppActions;
 const now = Date.now();
-const today = localDateFromTimestamp(now);
+const today = trainingDateFromTimestamp(now);
 const noop = (): void => undefined;
 
 function render(state: AppState, slug: string | null): string {

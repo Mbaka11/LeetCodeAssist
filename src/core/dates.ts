@@ -50,6 +50,22 @@ export function localDateFromTimestamp(now: number): string {
   return formatLocalDate(new Date(now));
 }
 
+/** All training days run from 04:00 local time to 04:00 the next day. */
+export const TRAINING_DAY_START_HOUR = 4;
+
+export function trainingDateFromTimestamp(now: number): string {
+  const date = new Date(now);
+  const calendarDate = formatLocalDate(date);
+  // Compare local wall-clock hours, not now - 4 hours: DST days are not always 24 hours long.
+  return date.getHours() < TRAINING_DAY_START_HOUR ? addDays(calendarDate, -1) : calendarDate;
+}
+
+/** The real start timestamp of the training day containing `now` (also DST-safe). */
+export function trainingDayStart(now: number): number {
+  const [year, month, day] = trainingDateFromTimestamp(now).split('-').map(Number);
+  return new Date(year!, month! - 1, day!, TRAINING_DAY_START_HOUR).getTime();
+}
+
 export function addDays(date: string, days: number): string {
   return fromUtcDayNumber(toUtcDayNumber(date) + days);
 }

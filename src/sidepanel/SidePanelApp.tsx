@@ -9,7 +9,7 @@ import { useAppState } from '../lib/useAppState';
 import { useLeetCodePrefs, useSubmissionEvents } from '../lib/useLeetCodeData';
 import { useNow } from '../lib/useNow';
 import { planDay } from '../core/planner';
-import { localDateFromTimestamp } from '../core/dates';
+import { trainingDateFromTimestamp } from '../core/dates';
 import { panelMatches, selectedPanelActivity } from './focusActivity';
 import { ProblemPanel } from './ProblemPanel';
 import { useActiveTabUrl } from './useActiveTabUrl';
@@ -29,7 +29,7 @@ export function SidePanelApp() {
   const openProblem = (target: string): void =>
     void openProblemInBrowser(target).catch((e: unknown) => console.error('Could not open the problem', e));
   const focused = snapshot.status === 'ready' && snapshot.state.settings.sidePanelFocus === true && slug !== null &&
-    selectedPanelActivity(panelMatches(planDay(snapshot.state, localDateFromTimestamp(now)), slug)) !== undefined;
+    selectedPanelActivity(panelMatches(planDay(snapshot.state, trainingDateFromTimestamp(now)), slug)) !== undefined;
   const panel = (content: ReactNode): ReactNode => (
     <main className="panel">
       <div className="stack">

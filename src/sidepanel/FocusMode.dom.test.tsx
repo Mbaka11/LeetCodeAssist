@@ -48,7 +48,6 @@ describe('side-panel focus mode', () => {
     const minutes = screen.getByRole('spinbutton', { name: 'Time logged (min)' });
     fireEvent.click(screen.getByRole('radio', { name: /Hint/ }));
     fireEvent.change(minutes, { target: { value: '17' } });
-    fireEvent.change(screen.getByRole('combobox', { name: 'Completed on' }), { target: { value: '2025-01-06' } });
     for (const pressedBefore of [true, false]) {
       // One stable label; only aria-pressed changes.
       fireEvent.click(screen.getByRole('button', { name: 'Focus mode', pressed: pressedBefore }));
@@ -56,10 +55,10 @@ describe('side-panel focus mode', () => {
       expect(screen.getByRole('spinbutton', { name: 'Time logged (min)' })).toBe(minutes);
       expect(minutes).toHaveProperty('value', '17');
       expect(screen.getByRole('radio', { name: /Hint/ })).toHaveProperty('checked', true);
-      expect(screen.getByRole('combobox', { name: 'Completed on' })).toHaveProperty('value', '2025-01-06');
+      expect(screen.getByText('2025-01-07')).toBeTruthy();
     }
     fireEvent.click(screen.getByRole('button', { name: 'Save result' }));
-    await waitFor(async () => expect((await store.readState()).activities.find((a) => a.id === activity.id)).toMatchObject({ status: 'done', outcome: 'hint', totalMs: 17 * 60_000, completedAt: '2025-01-06' }));
+    await waitFor(async () => expect((await store.readState()).activities.find((a) => a.id === activity.id)).toMatchObject({ status: 'done', outcome: 'hint', totalMs: 17 * 60_000, completedAt: '2025-01-07' }));
   });
 
   it('still auto-opens Finish for a fresh Accepted while focused and saves nothing before confirmation', async () => {

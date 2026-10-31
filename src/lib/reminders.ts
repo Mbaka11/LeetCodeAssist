@@ -3,7 +3,7 @@
  * what the toolbar badge shows. Everything is derived from the stored state and a timestamp, so it
  * works no matter how often the service worker is killed.
  */
-import { localDateFromTimestamp } from '../core/dates';
+import { TRAINING_DAY_START_HOUR, trainingDateFromTimestamp, trainingDayStart } from '../core/dates';
 import { planDay, type PlanItem } from '../core/planner';
 import { dailyTargetMinutes } from '../core/state';
 import { elapsedMs } from '../core/timer';
@@ -12,6 +12,7 @@ import { formatMinutes } from './format';
 
 export const MORNING_ALARM = 'morning-summary';
 export const EVENING_ALARM = 'evening-reminder';
+/** Keep the legacy alarm ID so an update replaces its schedule rather than leaving a stale alarm. */
 export const MIDNIGHT_ALARM = 'midnight-refresh';
 
 export interface ExistingAlarm {
@@ -32,7 +33,7 @@ interface DailyTime {
   second: number;
 }
 
-/** Offset after midnight so the refresh runs in the new day even with a little clock skew. */
+/** Offset after the 04:00 boundary so the refresh runs in the new training day. */
 const MIDNIGHT_OFFSET_SECONDS = 5;
 
 function dailyTimes(settings: Settings): DailyTime[] {
@@ -45,7 +46,7 @@ function dailyTimes(settings: Settings): DailyTime[] {
   return [
     { name: MORNING_ALARM, hour: morningHour, minute: morningMinute, second: 0 },
     { name: EVENING_ALARM, hour: eveningHour, minute: eveningMinute, second: 0 },
-    { name: MIDNIGHT_ALARM, hour: 0, minute: 0, second: MIDNIGHT_OFFSET_SECONDS },
+    { name: MIDNIGHT_ALARM, hour: TRAINING_DAY_START_HOUR, minute: 0, second: MIDNIGHT_OFFSET_SECONDS },
   ];
 }
 
@@ -106,17 +107,17 @@ export interface TodaySummary {
 
 /** Null before the program has started. */
 export function summarizeToday(state: AppState, now: number): TodaySummary | null {
-  const today = localDateFromTimestamp(now);
+  const today = trainingDateFromTimestamp(now);
   const plan = planDay(state, today);
   if (plan.dayIndex < 1) return null;
   const open = plan.items.filter(
     (item) => item.activity.status === 'planned' || item.activity.status === 'in_progress',
   );
-  // A timer that kept running past midnight cannot have logged more than the time since today began.
-  const sinceMidnight = now - new Date(now).setHours(0, 0, 0, 0);
+  // Do not count more live timer time than the time since the current training day began.
+  const sinceDayStart = now - trainingDayStart(now);
   const loggedMs = state.activities.reduce((sum, a) => {
     if (a.status === 'done' && a.completedAt === today) return sum + (a.totalMs ?? 0);
-    if (a.status === 'in_progress') return sum + Math.min(elapsedMs(a.timer, now), sinceMidnight);
+    if (a.status === 'in_progress') return sum + Math.min(elapsedMs(a.timer, now), sinceDayStart);
     return sum;
   }, 0);
   return {
@@ -173,7 +174,7 @@ export interface NotificationContent {
 export function morningNotification(state: AppState, now: number): NotificationContent | null {
   const summary = summarizeToday(state, now);
   if (!summary || summary.open.length === 0) return null;
-  const plan = planDay(state, localDateFromTimestamp(now));
+  const plan = planDay(state, trainingDateFromTimestamp(now));
   return {
     title: `LeetCode Assist · Day ${plan.dayIndex}`,
     message: `Today: ${describeActivities(summary.open)} · ~${formatMinutes(summary.remainingMinutes)}`,

@@ -8,7 +8,7 @@ import { HintsSection } from '../components/HintsSection';
 import { LeetCodeLink } from '../components/LeetCodeLink';
 import { NotesForm } from '../components/NotesForm';
 import { ProblemMetadataSection } from '../components/ProblemMetadata';
-import { localDateFromTimestamp } from '../core/dates';
+import { trainingDateFromTimestamp } from '../core/dates';
 import { attemptHistory, isNotesLocked, nextReview, openActivityToday } from '../core/problemSheet';
 import { programQueue, queuePosition } from '../core/queue';
 import { getProblemStatus } from '../core/state';
@@ -31,7 +31,7 @@ export function ProblemView({
   actions: AppActions;
 }) {
   const now = useNow(30_000);
-  const today = localDateFromTimestamp(now);
+  const today = trainingDateFromTimestamp(now);
   const [revealed, setRevealed] = useState(false);
   const problem = getProblem(slug);
 

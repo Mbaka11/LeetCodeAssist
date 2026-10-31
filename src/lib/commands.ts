@@ -10,7 +10,7 @@ import {
   markApproachFound,
   updateActivity,
 } from '../core/activities';
-import { addDays, compareDates, isValidDateString, localDateFromTimestamp } from '../core/dates';
+import { addDays, compareDates, isValidDateString, localDateFromTimestamp, trainingDateFromTimestamp } from '../core/dates';
 import { materializePlan, planDay } from '../core/planner';
 import { isBonusProblem } from '../data/bonus';
 import { getProblem } from '../data/neetcode150';
@@ -23,7 +23,7 @@ import type { Activity, AppState, Note, Outcome, ReviewType, Settings } from '..
 /** Persists the activities of today's plan (new problems, benchmarks, bonus) so timers can persist. */
 export function materializeToday(state: AppState, now: number): AppState {
   const backfilled = backfillBenchmarkReviews(state);
-  return materializePlan(backfilled, planDay(backfilled, localDateFromTimestamp(now)));
+  return materializePlan(backfilled, planDay(backfilled, trainingDateFromTimestamp(now)));
 }
 
 function requireOpen(state: AppState, id: string): Activity {
@@ -72,7 +72,7 @@ export interface CompletionInput {
   outcome: Outcome;
   /** Overrides the timer-derived time (for example after forgetting to pause). */
   totalMs?: number;
-  /** Local practice date: today or yesterday. Absent keeps the usual current-day completion. */
+  /** Optional expected training date (race guard). Cannot override the automatic 04:00 rule. */
   completedDate?: string;
 }
 
@@ -83,17 +83,17 @@ export function completeActivity(
   now: number,
 ): AppState {
   requireOpen(state, id);
-  const today = localDateFromTimestamp(now);
-  const completedDate = input.completedDate === undefined ? today : input.completedDate;
-  if (!isValidDateString(completedDate) || (completedDate !== today && completedDate !== addDays(today, -1))) {
-    throw new Error('Completion date must be today or yesterday. Choose the date again before saving.');
+  const completedDate = trainingDateFromTimestamp(now);
+  if (input.completedDate !== undefined && input.completedDate !== completedDate) {
+    throw new Error('The training day changed at 04:00. Please save again; dates are assigned automatically.');
   }
-  return applyOutcome(state, id, {
+  const completed = applyOutcome(state, id, {
     outcome: input.outcome,
     completedDate,
     now,
     ...(input.totalMs !== undefined ? { totalMs: input.totalMs } : {}),
   });
+  return updateActivity(completed, id, (a) => ({ ...a, completedAtMs: now }));
 }
 
 /**
@@ -105,7 +105,7 @@ export function completeActivity(
  */
 export function skipActivity(state: AppState, id: string, now: number): AppState {
   const activity = requireOpen(state, id);
-  const today = localDateFromTimestamp(now);
+  const today = trainingDateFromTimestamp(now);
   const retireTwins = activity.type === 'new' && isBonusProblem(activity.slug);
   // A skipped bonus is dated to the day it is skipped (not the day it was offered), so the Calendar and Logs do
   // not rewrite an earlier day. Bonus problems are never debt, so their due date has no other meaning.
@@ -167,7 +167,7 @@ export function rescheduleReview(state: AppState, id: string, newDate: string, n
   }
   if (activity.status !== 'planned') throw new Error(`Activity ${id} is already ${activity.status}`);
   if (!isValidDateString(newDate)) throw new Error(`Invalid date: "${newDate}"`);
-  const today = localDateFromTimestamp(now);
+  const today = trainingDateFromTimestamp(now);
   if (compareDates(newDate, today) < 0) throw new Error('A review cannot be moved to a day in the past');
   if (compareDates(newDate, addDays(today, MAX_MOVE_DAYS)) > 0) {
     throw new Error(`A review can be moved at most ${MAX_MOVE_DAYS} days ahead`);
@@ -243,10 +243,10 @@ export function startExtraPractice(
   now: number,
 ): { state: AppState; activityId: string } {
   if (!getProblem(slug)) throw new Error(`"${slug}" is not in the NeetCode 150 list`);
-  const today = localDateFromTimestamp(now);
+  const today = trainingDateFromTimestamp(now);
   const materialized = materializeToday(state, now);
   const todayPlan = planDay(materialized, today);
-  const planned = [...todayPlan.items, ...todayPlan.bonuses].find(
+  const planned = [...todayPlan.items, ...todayPlan.bonuses, ...todayPlan.missedBenchmarks].find(
     (item) =>
       item.activity.slug === slug &&
       (item.activity.status === 'planned' || item.activity.status === 'in_progress'),

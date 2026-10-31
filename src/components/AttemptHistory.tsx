@@ -17,7 +17,7 @@ export function AttemptHistory({ history, compact = false }: { history: readonly
       <ul className="attempt-list">
         {history.map((a) => (
           <li key={a.id}>
-            <strong>{formatDate(a.completedAt!)}</strong> · {ACTIVITY_LABELS[a.type]} ·{' '}
+            <strong title={a.completedAtMs === undefined ? undefined : `Saved at ${new Date(a.completedAtMs).toLocaleString()}`}>{formatDate(a.completedAt!)}</strong> · {ACTIVITY_LABELS[a.type]} ·{' '}
             {a.outcome ? OUTCOME_LABELS[a.outcome] : '–'} · {formatMs(a.totalMs ?? 0)}
             {a.approachMs !== undefined ? ` · approach ${formatElapsed(a.approachMs)}` : ''}
             {a.hintsUsed ? ` · ${hintsLabel(a.hintsUsed)}` : ''}
@@ -41,7 +41,7 @@ export function AttemptHistory({ history, compact = false }: { history: readonly
       <tbody>
         {history.map((a) => (
           <tr key={a.id}>
-            <td>{formatDate(a.completedAt!)}</td>
+            <td>{formatDate(a.completedAt!)}{a.completedAtMs !== undefined ? <small className="muted"> · Saved at {new Date(a.completedAtMs).toLocaleString()}</small> : null}</td>
             <td>{ACTIVITY_LABELS[a.type]}</td>
             <td>{formatMs(a.totalMs ?? 0)}</td>
             <td>{a.approachMs !== undefined ? formatElapsed(a.approachMs) : '–'}</td>

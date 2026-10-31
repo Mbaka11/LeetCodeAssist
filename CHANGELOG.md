@@ -3,6 +3,18 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.11.0
+
+### Changed
+- Training days now change at **04:00 local time** throughout the plan, dashboard, side panel, app streak, calendar, weekly review and reminders. Finish assigns the save-time training date automatically, with no Today/Yesterday choice. Saving at 01:00 credits the previous calendar date; saving at/after 04:00 credits the new date regardless of timer start time. Existing logs are not redated.
+- The day-rollover alarm now fires at 04:00 (retaining its legacy alarm ID). Review intervals remain measured in dates; D+1 no longer activates at midnight during the same evening's session.
+
+### Added
+- Actual save timestamps (`Activity.completedAtMs`, optional for legacy records), shown in Logs and attempt history and retained by JSON backups, sync and audited result corrections.
+- **Missed benchmarks** in Today and the side panel: unstarted reserved pairs remain accessible without forcing them into the daily core budget. They keep their original due date but completion credits the current training day. Done/skipped benchmarks are never recreated.
+
+No new dependency or permission. Update all synced computers to use the same day-boundary rule.
+
 ## 0.10.0
 
 No new permission and no new dependency. Optional state fields are additive, so older backups import unchanged;

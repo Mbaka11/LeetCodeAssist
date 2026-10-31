@@ -62,8 +62,10 @@ export interface Activity {
   approachMs?: number;
   totalMs?: number;
   outcome?: Outcome;
-  /** Local calendar date (YYYY-MM-DD) on which the activity was completed. */
+  /** Credited training date (YYYY-MM-DD); new completions use the local 04:00 boundary. */
   completedAt?: string;
+  /** Actual save timestamp, independent of the credited date; absent on legacy records. Never changed by corrections. */
+  completedAtMs?: number;
   /** Optional correction audit; absent on records saved before result editing existed. */
   corrections?: ResultCorrection[];
   /** Local calendar date (YYYY-MM-DD) on which the activity was created. */

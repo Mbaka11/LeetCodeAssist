@@ -16,7 +16,7 @@ import {
   isReviewType,
 } from './activities';
 import { BONUS_SLOTS, openBonusOffers, selectBonusSlugs, type BonusHold } from './bonus';
-import { compareDates, dayIndex, diffDays } from './dates';
+import { compareDates, dateFromDayIndex, dayIndex, diffDays } from './dates';
 import { programQueue } from './queue';
 import { CONSOLIDATION_TARGET_MIN, getProblemStatus } from './state';
 import type { Activity, AppState, Settings } from './types';
@@ -92,6 +92,8 @@ export interface DayPlan {
   bonusRoomMinutes: number;
   /** Due reviews that did not fit under the cap today; they stay planned and are re-planned tomorrow. */
   carriedOver: PlanItem[];
+  /** Unstarted benchmarks from earlier training days: accessible catch-up, outside today's core budget. */
+  missedBenchmarks: PlanItem[];
   /** Weaker reviews hidden because a stronger review of the same problem is due (merge rule). */
   mergedAway: Activity[];
   targetMinutes: number;
@@ -150,6 +152,13 @@ function lastDoneDate(state: AppState, slug: string): string | undefined {
     }
   }
   return last;
+}
+
+/** A fixed benchmark is not a new attempt when the program start date changes. */
+function existingBenchmark(state: AppState, slug: string): Activity | undefined {
+  const matches = state.activities.filter((a) => a.type === 'benchmark' && a.slug === slug);
+  return matches.find((a) => a.status === 'done' || a.status === 'skipped') ??
+    matches.find((a) => a.status === 'in_progress') ?? matches[0];
 }
 
 /**
@@ -226,6 +235,7 @@ export function planDay(
     bonusHold: null,
     bonusRoomMinutes: 0,
     carriedOver: [],
+    missedBenchmarks: [],
     mergedAway: [],
     targetMinutes,
     capMinutes,
@@ -262,9 +272,7 @@ export function planDay(
   const benchmarkItems: PlanItem[] = [];
   if (benchmark) {
     for (const slug of [benchmark.easy, benchmark.medium]) {
-      const existing = state.activities.find(
-        (a) => a.type === 'benchmark' && a.slug === slug && a.dueDate === date,
-      );
+      const existing = existingBenchmark(state, slug);
       if (existing) {
         // An explicitly backdated result belongs to its chosen completion day, not today's checklist.
         if (existing.status !== 'skipped' && (existing.status !== 'done' || existing.completedAt === date)) {
@@ -281,7 +289,21 @@ export function planDay(
   // A benchmark started on an earlier day and still running must stay finishable.
   for (const a of state.activities) {
     if (a.type !== 'benchmark' || a.status !== 'in_progress' || a.dueDate >= date) continue;
-    benchmarkItems.push(toItem(a));
+    if (!benchmarkItems.some((item) => item.activity.id === a.id)) benchmarkItems.push(toItem(a));
+  }
+
+  // Missed benchmarks remain accessible without forcing every missed pair into today's budget.
+  // Recover fixed pairs even if Chrome was closed on their original day; reuse IDs on every render.
+  const missedBenchmarks: PlanItem[] = [];
+  for (const past of benchmarks.filter((b) => b.day < index)) {
+    const dueDate = dateFromDayIndex(settings.startDate, past.day);
+    for (const slug of [past.easy, past.medium]) {
+      // Reserved benchmark slugs are unique. A start-date edit must not recreate a pair
+      // that was already worked, skipped or planned under the former schedule.
+      const existing = existingBenchmark(state, slug);
+      if (!existing) missedBenchmarks.push(makeVirtual({ type: 'benchmark', slug, dueDate, createdAt: dueDate }));
+      else if (existing.status === 'planned') missedBenchmarks.push(toItem(existing));
+    }
   }
 
   // 3. New problems already committed for today (done, started, or materialized).
@@ -289,11 +311,15 @@ export function planDay(
     const i = queue.indexOf(slug);
     return i === -1 ? Number.MAX_SAFE_INTEGER : i;
   };
+  // A midnight-based build may have materialized a second unopened card for the same problem.
+  // Keep the real attempt and its history; never ask for that initial learning a second time.
+  const committedNew = new Set(state.activities.filter((a) => a.type === 'new' && !a.extra &&
+    (a.status === 'in_progress' || a.status === 'done')).map((a) => a.slug));
   const todaysNew = state.activities
     .filter(
       (a) =>
         a.type === 'new' &&
-        (isMandatory(a, date) || (a.status === 'planned' && a.dueDate === date)),
+        (isMandatory(a, date) || (a.status === 'planned' && a.dueDate === date && !committedNew.has(a.slug))),
     )
     .sort((a, b) => queueIndex(a.slug) - queueIndex(b.slug) || (a.id < b.id ? -1 : 1));
   // Bonus-pool problems are never core: they are handled as offers below. The rest are core problems from the
@@ -439,6 +465,7 @@ export function planDay(
     bonusHold: selection.hold,
     bonusRoomMinutes: Math.max(0, capMinutes - plannedMinutes),
     carriedOver,
+    missedBenchmarks,
     mergedAway,
     plannedMinutes,
     remainingMinutes: sum(items.filter((i) => i.activity.status !== 'done')),
@@ -447,7 +474,7 @@ export function planDay(
 
 /** Persists the activities of a plan that do not exist yet (new problems, benchmarks, practice, bonus offers). */
 export function materializePlan(state: AppState, plan: DayPlan): AppState {
-  const missing = [...plan.items, ...plan.bonuses]
+  const missing = [...plan.items, ...plan.bonuses, ...plan.missedBenchmarks]
     .filter((item) => !item.persisted)
     .map((item) => item.activity);
   if (missing.length === 0) return state;

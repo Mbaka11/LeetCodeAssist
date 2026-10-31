@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { createActivity } from '../core/activities';
 import { simulateDay } from '../core/testing';
-import { addDays, localDateFromTimestamp } from '../core/dates';
+import { addDays, trainingDateFromTimestamp as localDateFromTimestamp } from '../core/dates';
 import { defaultState } from '../core/state';
 import type { AppState } from '../core/types';
 import type { AppActions } from '../lib/actions';

@@ -141,17 +141,24 @@ no attempt is open. Its general checklist summarizes repeats in one row (for exa
 with one Open button. Bonus offers and carried-over work keep their separate sections, and Logs still has
 one row per activity for detailed inspection or CSV export.
 
-### Logging after midnight
+### Training days and logging after midnight
 
-In **Finish → Completed on**, choose **Today** (default) or **Yesterday**, then **Save result**.
-Use Yesterday when the activity belongs to the previous evening's session: its time and completion go into
-that day's app log/calendar, and its reviews are scheduled from that date. A new problem or benchmark logged
-for yesterday therefore has its **D+1 recall due today**. The original activity is finished, not left as work
-to redo today; bonus totals and program counts remain distinct.
+A training day runs from **04:00 to 04:00 local time**. Finish no longer asks you to choose Today or Yesterday:
+it shows the credited training date and assigns it automatically when you save. Finishing at 01:00 on the 31st
+counts for the 30th; finishing at or after 04:00 counts for the 31st, even if you started the timer earlier.
+The plan, benchmarks, app streak, calendar, weekly totals and review dates all use this same boundary.
+D+1 reviews become due at the next 04:00, not at midnight during the same evening's session.
 
-The timer still uses real elapsed time. If you leave Finish open across midnight, its selected calendar date
-stays fixed (the label becomes Yesterday); an older selection must be changed before saving. This does not
-move the program's midnight boundary, edit an already-saved result, or change LeetCode's own submission streak.
+Timers still measure real elapsed time. New results also retain the actual save timestamp (`completedAtMs`),
+visible in Logs and attempt history and preserved in JSON backups and sync. If Finish stays open past 04:00,
+its displayed date advances automatically without losing your outcome or edited minutes. A save racing the
+boundary asks you to retry, never silently backdates the result.
+
+**Missed benchmarks** remain accessible in Today and the side panel, outside the core budget until started.
+Their original scheduled date is retained, but completion credits the current training day, not a missed day.
+Existing results are never automatically redated; exceptional corrections still use **Logs → Correct…** and
+retain their audit trail. Update the extension on every synced computer so they use the same day boundary.
+This changes only this app, not LeetCode's own submission calendar or streak.
 
 ### Correcting a saved result
 

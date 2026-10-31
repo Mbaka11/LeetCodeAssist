@@ -13,7 +13,7 @@ import {
   type CalendarEntry,
   type EntryState,
 } from '../core/calendar';
-import { addDays, localDateFromTimestamp } from '../core/dates';
+import { addDays, trainingDateFromTimestamp } from '../core/dates';
 import { projectDay } from '../core/projection';
 import { computeStreak, loggedTotals } from '../core/state';
 import type { ActivityType, AppState } from '../core/types';
@@ -519,7 +519,7 @@ function DayDetail({
 
 export function CalendarView({ state, actions }: { state: AppState; actions: AppActions }) {
   const now = useNow(60_000);
-  const today = localDateFromTimestamp(now);
+  const today = trainingDateFromTimestamp(now);
   const days = useMemo(() => calendarDays(state, today), [state, today]);
   const worked = useMemo(() => workedTotals(state), [state]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);

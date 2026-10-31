@@ -3,7 +3,7 @@
  * memory between calls: every task re-reads the stored state, so it keeps working after the
  * service worker has been killed and restarted.
  */
-import { localDateFromTimestamp } from '../core/dates';
+import { trainingDateFromTimestamp } from '../core/dates';
 import type { AppState } from '../core/types';
 import {
   EVENING_ALARM,
@@ -68,7 +68,7 @@ export function createBackgroundTasks(deps: BackgroundDeps): BackgroundTasks {
       const now = deps.now();
       const state = await deps.readState();
       // A notification that fires late (the browser was closed) is only useful on the same day.
-      const sameDay = localDateFromTimestamp(alarm.scheduledTime) === localDateFromTimestamp(now);
+      const sameDay = trainingDateFromTimestamp(alarm.scheduledTime) === trainingDateFromTimestamp(now);
       if (state && sameDay) {
         const content =
           alarm.name === MORNING_ALARM

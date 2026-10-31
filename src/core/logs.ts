@@ -11,6 +11,8 @@ export interface LogRow {
   id: string;
   /** Completion date, or the due date of a skipped activity (YYYY-MM-DD). */
   date: string;
+  /** Actual save timestamp, when available (legacy results have no timestamp). */
+  completedAtMs?: number;
   /** 1-based program day of `date` (<= 0 before the start date). */
   programDay: number;
   type: ActivityType;
@@ -73,6 +75,7 @@ function rowOf(state: AppState, activity: Activity): LogRow {
   return {
     id: activity.id,
     date,
+    ...(done && activity.completedAtMs !== undefined ? { completedAtMs: activity.completedAtMs } : {}),
     programDay: dayIndex(state.settings.startDate, date),
     type: activity.type,
     slug: activity.slug,

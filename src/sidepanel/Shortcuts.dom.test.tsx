@@ -134,7 +134,8 @@ describe('side-panel keyboard shortcuts', () => {
     altR();
     await screen.findByText('How did it go?');
     const field = screen.getByRole('spinbutton', { name: 'Time logged (min)' });
-    const select = screen.getByRole('combobox', { name: 'Completed on' });
+    const select = document.createElement('select');
+    document.body.append(select);
     for (const target of [field, select]) {
       altDigit(2, target);
       altEnter(target);
@@ -142,6 +143,7 @@ describe('side-panel keyboard shortcuts', () => {
     expect(screen.getByRole('radio', { name: /Hint/ })).toHaveProperty('checked', false);
     expect((await activityOf(app.store, activity.id)).status).toBe('in_progress');
     editable.remove();
+    select.remove();
   });
 
   it('ignores keys without exactly Alt, and shortcuts do nothing outside the side panel cards', async () => {

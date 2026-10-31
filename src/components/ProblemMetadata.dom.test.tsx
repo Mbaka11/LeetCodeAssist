@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createActivity } from '../core/activities';
-import { localDateFromTimestamp } from '../core/dates';
+import { trainingDateFromTimestamp as localDateFromTimestamp } from '../core/dates';
 import { getProblemMetadata } from '../core/problemMetadata';
 import { defaultState } from '../core/state';
 import { ProblemView } from '../dashboard/ProblemView';

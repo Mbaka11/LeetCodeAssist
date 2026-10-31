@@ -155,7 +155,7 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
   const carriedIds = new Set(plan?.carriedOver.map((i) => i.activity.id));
   const bonus = overflowBonusIds(state, date);
 
-  // After midnight an unopened queue problem can have a new card. If that card is explicitly finished
+  // Legacy midnight-based builds could create a second unopened queue card. If it was finished
   // for this earlier day, it fulfills the old unopened slot instead of showing both "done" and "missed".
   // This is presentation only: keep every stored record, and never fold an attempt that was started.
   const backdatedNew = new Map(state.activities
@@ -172,8 +172,14 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
     if (!bonus.has(a.id)) fulfillsCore.add(completion.id);
   }
 
+  const committedNewSlugs = new Set(state.activities.filter((a) => a.type === 'new' && !a.extra &&
+    ((a.status === 'done' && a.completedAt !== undefined && a.completedAt <= date) ||
+      (date === today && a.status === 'in_progress'))).map((a) => a.slug));
+  const supersededNewPlans = new Set(state.activities.filter((a) => a.type === 'new' && a.status === 'planned' &&
+    !a.extra && committedNewSlugs.has(a.slug)).map((a) => a.id));
+
   for (const a of state.activities) {
-    if (fulfilledPlans.has(a.id)) continue;
+    if (fulfilledPlans.has(a.id) || supersededNewPlans.has(a.id)) continue;
     if (isBonusActivity(a)) {
       const bonusState = bonusEntryState(a, date, today);
       if (bonusState !== null) {

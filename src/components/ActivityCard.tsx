@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { estimatedMinutes, isReviewType } from '../core/activities';
-import { addDays, localDateFromTimestamp } from '../core/dates';
+import { addDays, trainingDateFromTimestamp } from '../core/dates';
 import { elapsedMs, formatElapsed } from '../core/timer';
 import type { Activity, BudgetOverrides } from '../core/types';
 import { isBonusProblem } from '../data/bonus';
@@ -78,7 +78,7 @@ export function ActivityCard({
   // day; benchmarks, optional practice and bonus problems can only be skipped.
   const postponable = activity.type === 'new' && !activity.extra && !isBonusProblem(activity.slug);
   const movable = isReviewType(activity.type) && !activity.extra && activity.status === 'planned';
-  const today = localDateFromTimestamp(now);
+  const today = trainingDateFromTimestamp(now);
   const acceptedAt = accepted?.acceptedAt;
   // Observe only fresh events while this particular started activity is on screen. Loading saved events,
   // switching activities or re-opening the panel must not pause a new attempt because of an older Accepted.

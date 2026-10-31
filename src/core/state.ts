@@ -238,6 +238,7 @@ function validateActivity(value: unknown, index: number): Activity {
   if (o.totalMs !== undefined) activity.totalMs = asNonNegative(o.totalMs, `${path}.totalMs`);
   if (o.outcome !== undefined) activity.outcome = asOneOf(o.outcome, OUTCOMES, `${path}.outcome`);
   if (o.completedAt !== undefined) activity.completedAt = asDate(o.completedAt, `${path}.completedAt`);
+  if (o.completedAtMs !== undefined) activity.completedAtMs = asNonNegative(o.completedAtMs, `${path}.completedAtMs`);
   if (o.corrections !== undefined) {
     if (!Array.isArray(o.corrections)) fail(`${path}.corrections`, 'expected an array');
     activity.corrections = o.corrections.map((raw, i) => {

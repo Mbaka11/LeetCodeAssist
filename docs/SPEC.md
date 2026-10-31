@@ -95,27 +95,30 @@ Rules:
 
 ### Completion date and late logging
 
-The shared **Finish** form (Today and side panel, including an Accepted-opened form) has **Completed on**:
-**Today** or **Yesterday**, each labelled with its local YYYY-MM-DD date. Today is selected on opening; the
-selected date is an absolute date, not a moving relative offset. If the form crosses midnight, the same date
-becomes Yesterday. If it becomes older than yesterday, Save is disabled until another choice is made.
+The shared **Finish** form (Today and side panel, including an Accepted-opened form) displays an automatic
+training date, with no Today/Yesterday selector. A training day starts at **04:00 local wall-clock time**:
+00:00–03:59 belongs to the preceding calendar date. `trainingDateFromTimestamp` compares local hours and
+uses calendar-day arithmetic, not a fixed millisecond subtraction, so daylight-saving changes work too.
+Civil dates remain civil dates for LeetCode events, interview appointments and backup filenames.
 
-`commands.completeActivity` accepts optional `completedDate` (default: actual local today), validated at save
-time to be today or yesterday. `AppActions.completeActivity` forwards it. Only open activities can be completed;
-this is not an editor for saved results. The existing `completedAt` stores the chosen practice date, so no
-schema migration is needed. The timer is paused at the actual `now`, never a backdated timestamp, and edited
-minutes still work as before. The form stays open with its values if validation/storage fails; pending saves
-are disabled to prevent double submission.
+`commands.completeActivity` derives `completedAt` from the actual save-time clock. Its optional `completedDate`
+is only an expected-date race guard, not an override: a mismatch rejects without a write and asks for a retry.
+A timer started before 04:00 does not retain the old day's credit when saved after the boundary. The timer
+always uses actual timestamps. New results store additive `completedAtMs` (actual save timestamp), preserved
+by validation, sync, JSON backups and audited corrections, and displayed in Logs and attempt history.
+Legacy results keep their dates and may lack this field; no history is inferred or automatically redated.
 
-Logs, calendar completion/time totals and the app streak use that chosen date. Review offsets use it too:
-a new problem or benchmark saved for Yesterday produces a recall due Today (subject to the usual cap/carry
-rules). The completed activity is no longer today's unfinished work. A benchmark finished before its original
-due date is omitted from that day's checklist. When a regenerated `new` card is backdated to an earlier day's
-unopened plan, the calendar presents one completed entry fulfilling that slot, not both done and missed;
-all stored planning records are retained, and genuinely started attempts are never folded away.
+The planner, dashboard, side panel, calendar, weekly window, streak, reminder badge and review operations
+use the training date. Review offsets remain +1/3/7/21 training dates; the next day's reviews activate at
+04:00, not midnight. An open Finish form updates its displayed date at the boundary without resetting its
+outcome or edited time. Pending saves remain disabled and errors retain the form's values.
 
-The program still changes day at local midnight. The 50-problem order, budgets and review intervals are
-unchanged. This changes only app records, not the public LeetCode submission calendar or its UTC streak.
+Unstarted missed benchmarks are exposed as `DayPlan.missedBenchmarks`, separately from the core plan,
+its minutes, badge and plan-done denominator. Missing fixed pairs are materialized once at their original
+due date; done/skipped pairs are not recreated. Starting an old benchmark keeps the existing core-plan
+behaviour for in-progress work. Its completion credits the current training date, never its missed date.
+Legacy backdated records retain their existing calendar presentation (including fulfilled unopened new slots).
+The 50-problem order and review intervals are unchanged, as is LeetCode's public calendar and UTC streak.
 
 ### Correcting completed results
 
@@ -232,7 +235,7 @@ type Outcome = 'solo'|'hint'|'solution'|'stuck';
 interface TimerState { startedAt: number|null; accumulatedMs: number; running: boolean }
 interface Activity { id: string; slug: string; type: ActivityType; dueDate: string /*YYYY-MM-DD*/;
   status: 'planned'|'in_progress'|'done'|'skipped'; timer: TimerState;
-  approachMs?: number; totalMs?: number; outcome?: Outcome; completedAt?: string; createdAt: string;
+  approachMs?: number; totalMs?: number; outcome?: Outcome; completedAt?: string; completedAtMs?: number; createdAt: string;
   extra?: boolean;      // optional practice, never debt
   hintsUsed?: number;   // 1-3: hints revealed during the attempt (additive, absent = none)
   postponed?: boolean; // skipped `new` that was moved back in the queue
@@ -260,7 +263,7 @@ interface AppState { version: 1; settings: Settings; activities: Activity[];
 // SimulationRecord additionally has optional sessionId + part (1|2) together, and sessionReflection on part 2 only.
 ```
 
-`hintsUsed`, `postponed`, `corrections`, `roadmapView`, `roadmapCatalog`, `roadmapDetail`,
+`hintsUsed`, `postponed`, `corrections`, `completedAtMs`, `roadmapView`, `roadmapCatalog`, `roadmapDetail`,
 `roadmapHideTechniques`, `sidePanelFocus`, `eveningOnlyIfOpen`, `budgets`, `queue`, `favorites`, `savedRoadmapFilters`, `simulations`,
 `drillSessions` and `interviewPrep` (and the simulation fields `sessionId`, `part`, `sessionReflection`) are optional and additive: data saved by 0.1 stays valid and absent fields stay absent, so
 `version` remains `1`. Exact field rules: `presentation-state.md` and `optional-practice.md`. Sync (section 6f) adds no
@@ -375,7 +378,7 @@ key, versioned), JSON export/import from Settings.
    ("Today: 2 new, 2 recalls, 1 rebuild · ~2h20") and the evening summary ("Today: 3 done, 1 left, 95 min logged",
    built from the same plan as the badge). With `settings.eveningOnlyIfOpen` (absent = on) the evening summary is
    skipped when today's core plan has nothing left or no activities; off sends it on every evening with planned
-   activities. A notification that fires on a later day than scheduled is dropped, and the midnight alarm clears
+   activities. A notification that fires on a later day than scheduled is dropped, and the 04:00 rollover alarm clears
    the previous day's notifications. Toolbar **badge** = remaining activities today; clicking a
    notification opens the dashboard.
 
@@ -433,7 +436,7 @@ not part of `AppState`). Pure parsing and validation: `src/lib/leetcodeSubmissio
   storage updates and timer ticks do not reopen the form. A later Accepted can open it again. An already-open
   manual form and its selected outcome are left untouched.
 - Older detected results still offer *Accepted at 23:14 (Python3) — finish this activity?* and a manual
-  *Finish this activity…* button. This advisory uses the latest Accepted since local midnight, not a persisted
+  *Finish this activity…* button. This advisory uses the latest Accepted since the local 04:00 training-day boundary, not a persisted
   first-start timestamp (the activity schema is unchanged). A closed side panel cannot automatically open a
   form or stop a timer; reopening it after a verdict uses the manual button instead.
 - Settings, *LeetCode detection*: on/off (default on; when off, events are dropped by the worker and none are

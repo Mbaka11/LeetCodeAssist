@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { localDateFromTimestamp } from '../core/dates';
+import { trainingDateFromTimestamp } from '../core/dates';
 import { correctionDateBounds, prepareResultCorrection, type CorrectionPreview, type ResultEdit } from '../core/resultCorrection';
 import type { Activity, AppState, Outcome } from '../core/types';
 import { getProblem } from '../data/neetcode150';
@@ -23,7 +23,7 @@ export function ResultCorrectionDialog({ state, activity, actions, onClose }: {
   const [preview, setPreview] = useState<{ data: CorrectionPreview; edit: ResultEdit } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const today = localDateFromTimestamp(Date.now());
+  const today = trainingDateFromTimestamp(Date.now());
   const bounds = correctionDateBounds(state, activity.id, today);
   useEffect(() => {
     const node = dialog.current;

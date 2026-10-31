@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { addDays, localDateFromTimestamp } from '../core/dates';
+import { addDays, trainingDateFromTimestamp as localDateFromTimestamp } from '../core/dates';
 import { simulateDay } from '../core/testing';
 import { getProblem } from '../data/neetcode150';
 import { PROGRAM_QUEUE } from '../data/program';

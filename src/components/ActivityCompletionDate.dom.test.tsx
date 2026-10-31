@@ -33,13 +33,13 @@ async function setup() {
 }
 
 describe('Finish date through real actions and storage', () => {
-  it('saves Yesterday from the shared activity card with the overnight timer total', async () => {
+  it('automatically saves the previous training day with the real overnight timer total', async () => {
     const { store, original } = await setup();
     fireEvent.click(screen.getByRole('radio', { name: /Solo/ }));
-    fireEvent.change(screen.getByRole('combobox', { name: 'Completed on' }), { target: { value: '2025-01-06' } });
+    expect(screen.queryByRole('combobox', { name: 'Completed on' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Save result' }));
     await waitFor(async () => expect((await store.readState()).activities.find((a) => a.id === original.id)).toMatchObject({
-      status: 'done', completedAt: '2025-01-06', totalMs: 30 * 60_000,
+      status: 'done', completedAt: '2025-01-06', completedAtMs: NOW, totalMs: 30 * 60_000,
     }));
     expect((await store.readState()).activities.find((a) => a.slug === original.slug && a.type === 'recall')?.dueDate).toBe('2025-01-07');
     await waitFor(() => expect(screen.queryByText('How did it go?')).toBeNull());
@@ -49,19 +49,18 @@ describe('Finish date through real actions and storage', () => {
     const { store, clock, original, update } = await setup();
     fireEvent.click(screen.getByRole('radio', { name: /Hint/ }));
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Time logged (min)' }), { target: { value: '22' } });
-    fireEvent.change(screen.getByRole('combobox', { name: 'Completed on' }), { target: { value: '2025-01-06' } });
     const before = await store.readState();
     // Simulate a suspended tab: the real date advanced before the UI clock got a chance to refresh.
-    clock.now = new Date(2025, 0, 8, 0, 10).getTime();
+    clock.now = new Date(2025, 0, 7, 4, 0).getTime();
     fireEvent.click(screen.getByRole('button', { name: 'Save result' }));
-    await screen.findByText('Completion date must be today or yesterday. Choose the date again before saving.');
+    await screen.findByText('The training day changed at 04:00. Please save again; dates are assigned automatically.');
     await waitFor(() => expect((screen.getByRole('button', { name: 'Save result' }) as HTMLButtonElement).disabled).toBe(false));
     expect(await store.readState()).toEqual(before);
     expect((screen.getByRole('radio', { name: /Hint/ }) as HTMLInputElement).checked).toBe(true);
     expect((screen.getByRole('spinbutton', { name: 'Time logged (min)' }) as HTMLInputElement).value).toBe('22');
-    expect((screen.getByRole('combobox', { name: 'Completed on' }) as HTMLSelectElement).value).toBe('2025-01-06');
+    expect(screen.getByText('2025-01-06')).toBeTruthy();
     update();
-    fireEvent.change(screen.getByRole('combobox', { name: 'Completed on' }), { target: { value: '2025-01-07' } });
+    expect(screen.getByText('2025-01-07')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Save result' }));
     await waitFor(async () => expect((await store.readState()).activities.find((a) => a.id === original.id)).toMatchObject({
       status: 'done', completedAt: '2025-01-07', outcome: 'hint', totalMs: 22 * 60_000,

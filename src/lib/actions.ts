@@ -20,7 +20,7 @@ export interface AppActions {
   pause(id: string): Promise<void>;
   resume(id: string): Promise<void>;
   markApproachFound(id: string): Promise<void>;
-  /** Saves an open activity on today (default) or an explicit today/yesterday date; timer uses the real clock. */
+  /** Saves on the automatic 04:00 training date; optional completedDate is a race guard, not a date override. */
   completeActivity(id: string, outcome: Outcome, totalMs?: number, completedDate?: string): Promise<void>;
   /** Apply only a confirmed, current preview of a saved-result correction. */
   correctResult(id: string, edit: ResultEdit, fingerprint: string): Promise<void>;

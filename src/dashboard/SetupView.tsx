@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
-import { addDays, isValidDateString, localDateFromTimestamp } from '../core/dates';
+import { addDays, isValidDateString, trainingDateFromTimestamp } from '../core/dates';
 import type { AppActions } from '../lib/actions';
 import { formatDate } from '../lib/format';
 
 type StartChoice = 'today' | 'tomorrow' | 'custom';
 
 export function SetupView({ actions }: { actions: AppActions }) {
-  const today = localDateFromTimestamp(Date.now());
+  const today = trainingDateFromTimestamp(Date.now());
   const [choice, setChoice] = useState<StartChoice>('today');
   const [custom, setCustom] = useState(addDays(today, 2));
   const [error, setError] = useState<string | null>(null);

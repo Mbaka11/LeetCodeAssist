@@ -6,6 +6,10 @@ installed with the **same extension ID** on every computer (see "Fixed extension
 LeetCode request, account, cookie or server of ours is involved; the data travels only through Chrome sync.
 Manual JSON export/import is unaffected and always works.
 
+Update every synced computer to 0.11.0 or newer for the **04:00 local training-day boundary**. Older builds
+still use midnight and can assign different dates to overnight work. Existing dated logs are not migrated.
+Actual save timestamps (`Activity.completedAtMs`) travel with each activity; older records may lack one.
+
 ## Fixed extension ID
 
 `wxt.config.ts` pins the manifest `key` (public key only; RSA 2048, SPKI DER, base64). Unpacked extensions

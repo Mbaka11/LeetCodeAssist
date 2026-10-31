@@ -2,7 +2,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useSyncExternalStore } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { localDateFromTimestamp } from '../core/dates';
+import { trainingDateFromTimestamp } from '../core/dates';
 import { defaultState } from '../core/state';
 import type { AppState } from '../core/types';
 import { isBonusProblem } from '../data/bonus';
@@ -19,7 +19,7 @@ function Harness({ store, actions }: { store: AppStore; actions: AppActions }) {
   return snapshot.status === 'ready' ? <TodayView state={snapshot.state} actions={actions} /> : null;
 }
 
-const today = (): string => localDateFromTimestamp(Date.now());
+const today = (): string => trainingDateFromTimestamp(Date.now());
 const offers = (container: HTMLElement): HTMLElement[] => [...container.querySelectorAll<HTMLElement>('.bonus-offer')];
 const slugsOf = (state: AppState): string[] =>
   state.activities.filter((a) => a.type === 'new' && isBonusProblem(a.slug)).map((a) => a.slug);

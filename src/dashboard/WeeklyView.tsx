@@ -3,7 +3,7 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { Stat } from '../components/Stat';
-import { addDays, isValidDateString, localDateFromTimestamp } from '../core/dates';
+import { addDays, isValidDateString, trainingDateFromTimestamp } from '../core/dates';
 import type { AppState } from '../core/types';
 import { weeklySummary } from '../core/weekly';
 import { getProblem } from '../data/neetcode150';
@@ -13,7 +13,7 @@ import { problemHref } from '../lib/route';
 import { useNow } from '../lib/useNow';
 
 export function WeeklyView({ state }: { state: AppState }) {
-  const today = localDateFromTimestamp(useNow(30_000));
+  const today = trainingDateFromTimestamp(useNow(30_000));
   const [chosenEnd, setChosenEnd] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const end = chosenEnd ?? today;

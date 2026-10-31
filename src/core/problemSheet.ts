@@ -58,6 +58,7 @@ export function openActivityToday(state: AppState, slug: string, today: string):
     ...plan.items,
     ...plan.bonuses,
     ...plan.carriedOver,
+    ...plan.missedBenchmarks,
   ]
     .map((item) => item.activity)
     .filter((a) => a.slug === slug && (a.status === 'planned' || a.status === 'in_progress'));

@@ -129,7 +129,7 @@ describe('background tasks', () => {
     expect(ctx.browser.notifications.size).toBe(0);
   });
 
-  it('updates the badge on every state change and at midnight, without any worker memory', async () => {
+  it('updates the badge on every state change and at 04:00, without worker memory', async () => {
     const ctx = setup(at(START, 9));
     await ctx.actions.initialize(START);
     await ctx.startWorker().refresh();
@@ -141,12 +141,12 @@ describe('background tasks', () => {
     await ctx.startWorker().refresh(); // a brand-new worker, as after the old one was killed
     expect(Number(ctx.browser.badge)).toBe(before - 1);
 
-    // Midnight alarm: the badge shows the new day's plan.
+    // The legacy alarm ID now fires at 04:00: the badge shows the new training day's plan.
     await ctx.startWorker().refresh();
     await fire(ctx, MIDNIGHT_ALARM);
     expect(ctx.clock.now).toBeGreaterThanOrEqual(at(day(2), 0, 0));
     expect(Number(ctx.browser.badge)).toBeGreaterThan(0);
-    expect(ctx.browser.alarms.get(MIDNIGHT_ALARM)).toBe(at(day(3), 0, 0) + 5000);
+    expect(ctx.browser.alarms.get(MIDNIGHT_ALARM)).toBe(at(day(3), 4, 0) + 5000);
   });
 
   it('skips a notification that fires on a later day than scheduled', async () => {
@@ -201,7 +201,7 @@ describe('smart evening reminder', () => {
     expect((await ctx.store.readState()).settings).not.toHaveProperty('eveningOnlyIfOpen');
   });
 
-  it('drops an evening alarm delivered after midnight and clears stale notifications at midnight', async () => {
+  it('drops an evening alarm delivered after 04:00 and clears stale notifications at the cutoff', async () => {
     const ctx = setup(at(START, 7));
     await ctx.actions.initialize(START);
     await ctx.startWorker().refresh();
@@ -212,8 +212,8 @@ describe('smart evening reminder', () => {
     await fire(ctx, MIDNIGHT_ALARM);
     expect(ctx.browser.notifications.size).toBe(0);
 
-    // Laptop asleep over midnight: the 20:00 alarm of the previous day fires at 00:30 of the next one.
-    ctx.clock.now = at(day(2), 0, 30);
+    // Laptop asleep past the cutoff: yesterday's 20:00 alarm arrives at 04:30.
+    ctx.clock.now = at(day(2), 4, 30);
     await ctx.startWorker().handleAlarm({ name: EVENING_ALARM, scheduledTime: at(START, 20, 0) });
     expect(ctx.browser.notifications.size).toBe(0);
   });

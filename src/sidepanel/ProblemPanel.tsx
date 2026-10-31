@@ -8,7 +8,7 @@ import { HintsSection } from '../components/HintsSection';
 import { LeetCodeLink } from '../components/LeetCodeLink';
 import { NotesForm } from '../components/NotesForm';
 import { ProblemMetadataSection } from '../components/ProblemMetadata';
-import { localDateFromTimestamp } from '../core/dates';
+import { trainingDateFromTimestamp, trainingDayStart } from '../core/dates';
 import { planDay, type PlanItem } from '../core/planner';
 import { attemptHistory, isNotesLocked, nextReview } from '../core/problemSheet';
 import { programQueue, queuePosition } from '../core/queue';
@@ -221,7 +221,7 @@ function TodayChecklist({
   openDashboard,
   openProblem,
 }: Pick<ProblemPanelProps, 'state' | 'now' | 'openDashboard' | 'openProblem'>) {
-  const today = localDateFromTimestamp(now);
+  const today = trainingDateFromTimestamp(now);
   const plan = useMemo(() => planDay(state, today), [state, today]);
   if (plan.dayIndex < 1) {
     return <p className="muted">Your program starts on {formatDate(state.settings.startDate)}.</p>;
@@ -239,6 +239,7 @@ function TodayChecklist({
           ...plan.items,
           ...plan.bonuses.map((item) => ({ ...item, tag: OPTIONAL_BONUS_TAG })),
           ...plan.carriedOver.map((item) => ({ ...item, tag: 'Carried over' })),
+          ...plan.missedBenchmarks.map((item) => ({ ...item, tag: 'Missed benchmark' })),
         ], state.activities).map((group) => (
           <ChecklistRow key={group.slug} items={group.items} openProblem={openProblem} />
         ))}
@@ -259,7 +260,7 @@ export function ProblemPanel({
   openProblem,
   submissionEvents = [],
 }: ProblemPanelProps) {
-  const today = localDateFromTimestamp(now);
+  const today = trainingDateFromTimestamp(now);
   const plan = useMemo(() => planDay(state, today), [state, today]);
   const [focusError, setFocusError] = useState<string | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -283,7 +284,8 @@ export function ProblemPanel({
     <ShortcutsHelp open={helpOpen} onToggle={setHelpOpen} />
   </div>;
   const needsMaterializing =
-    plan.items.some((item) => !item.persisted) || plan.bonuses.some((item) => !item.persisted);
+    plan.items.some((item) => !item.persisted) || plan.bonuses.some((item) => !item.persisted) ||
+    plan.missedBenchmarks.some((item) => !item.persisted);
   useEffect(() => {
     // Keep offers sticky even when the side panel is the only surface open. The shared store locks
     // this update against the dashboard, and materializing an existing plan is a no-op.
@@ -332,12 +334,11 @@ export function ProblemPanel({
   const position = queuePosition(state, slug);
   const locked = isNotesLocked(state, slug, today);
   // The activity model stores no first-start time, so "after the activity started" is approximated by
-  // "since local midnight today" (a started activity is always one of today's); the latest Accepted
-  // since then is used for the advisory button. ActivityCard auto-opens only for a fresh event observed
+  // "since this training day's 04:00 boundary"; the latest Accepted since then is advisory only. ActivityCard auto-opens only for a fresh event observed
   // while that started activity is on screen; loading older events never auto-opens the form.
   const accepted = acceptedPrompt(submissionEvents, {
     slug,
-    since: new Date(now).setHours(0, 0, 0, 0),
+    since: trainingDayStart(now),
   });
 
   return (

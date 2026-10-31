@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { addDays, localDateFromTimestamp } from '../core/dates';
+import { addDays, trainingDateFromTimestamp as localDateFromTimestamp } from '../core/dates';
 import { defaultState } from '../core/state';
 import { simulateDay } from '../core/testing';
 import type { AppActions } from '../lib/actions';

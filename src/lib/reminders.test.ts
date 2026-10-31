@@ -26,10 +26,10 @@ describe('alarmsToCreate', () => {
     const now = at(START, 9);
     const specs = alarmsToCreate([], settings, now);
     expect(specs.map((s) => s.name)).toEqual([MORNING_ALARM, EVENING_ALARM, MIDNIGHT_ALARM]);
-    // 08:30 already passed today: tomorrow. 20:00 and midnight: later today / tonight.
+    // Morning passed: tomorrow; evening today; training rollover tomorrow at 04:00.
     expect(specs[0]!.when).toBe(at(day(2), 8, 30));
     expect(specs[1]!.when).toBe(at(START, 20, 0));
-    expect(specs[2]!.when).toBe(at(day(2), 0, 0) + 5000);
+    expect(specs[2]!.when).toBe(at(day(2), 4, 0) + 5000);
   });
 
   it('leaves alarms that match the settings alone and recreates missing ones', () => {
@@ -46,7 +46,7 @@ describe('alarmsToCreate', () => {
     const existing = [
       { name: MORNING_ALARM, scheduledTime: at(day(2), 8, 30) },
       { name: EVENING_ALARM, scheduledTime: at(START, 20, 0) },
-      { name: MIDNIGHT_ALARM, scheduledTime: at(day(2), 0, 0) + 5000 },
+      { name: MIDNIGHT_ALARM, scheduledTime: at(day(2), 4, 0) + 5000 },
     ];
     const changed = { ...settings, morningNotify: '09:30', eveningNotify: '21:15' };
     expect(alarmsToCreate(existing, changed, now)).toEqual([
@@ -140,7 +140,7 @@ describe('eveningNotification', () => {
     expect(eveningNotification(state, at(START, 20, 0))?.message).toBe(`Today: ${summary.done} done, ${summary.open.length} left, 0 min logged`);
   });
 
-  it('does not count minutes of a timer that has been running since before midnight', () => {
+  it('caps live timer minutes at the 04:00 training-day boundary', () => {
     let state = materializePlan(newState(), planDay(newState(), START));
     const first = state.activities[0]!;
     state = {
@@ -149,7 +149,7 @@ describe('eveningNotification', () => {
         a.id === first.id ? { ...a, status: 'in_progress' as const, timer: { startedAt: at(day(0), 22), accumulatedMs: 0, running: true } } : a,
       ),
     };
-    expect(summarizeToday(state, at(START, 1))!.loggedMs).toBe(3_600_000);
+    expect(summarizeToday(state, at(START, 5))!.loggedMs).toBe(3_600_000);
   });
 
   it('counts a running timer towards the logged time', () => {
@@ -192,9 +192,11 @@ describe('badgeText', () => {
     expect(badgeText(null, at(START))).toBe('');
   });
 
-  it("rolls over at midnight: the same state shows the next day's count", () => {
+  it("stays on the same plan after midnight and rolls over at 04:00", () => {
     const state = simulateDay(newState(), day(1)).state;
     expect(badgeText(state, at(day(1), 23, 59))).toBe('');
-    expect(Number(badgeText(state, at(day(2), 0, 1)))).toBeGreaterThan(0);
+    expect(badgeText(state, at(day(2), 0, 1))).toBe('');
+    expect(badgeText(state, at(day(2), 3, 59))).toBe('');
+    expect(Number(badgeText(state, at(day(2), 4, 0)))).toBeGreaterThan(0);
   });
 });

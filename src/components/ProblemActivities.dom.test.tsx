@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testi
 import { useSyncExternalStore } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createActivity } from '../core/activities';
-import { addDays, localDateFromTimestamp } from '../core/dates';
+import { addDays, trainingDateFromTimestamp } from '../core/dates';
 import { buildLogRows } from '../core/logs';
 import { planDay } from '../core/planner';
 import { defaultState } from '../core/state';
@@ -23,7 +23,7 @@ const group = () => screen.getByRole('region', { name: new RegExp('Best Time to 
 afterEach(cleanup);
 
 function repeatedState() {
-  const today = localDateFromTimestamp(Date.now());
+  const today = trainingDateFromTimestamp(Date.now());
   const yesterday = addDays(today, -1);
   const now = new Date(`${today}T12:00:00`).getTime();
   const base = defaultState(yesterday);
@@ -80,7 +80,7 @@ describe('one problem card with independent attempts', () => {
     expect(within(group()).getAllByRole('article')).toHaveLength(4);
     fireEvent.click(within(group()).getByRole('button', { name: 'Finish' }));
     fireEvent.click(within(group()).getByRole('radio', { name: /Solo/ }));
-    expect(within(group()).getByRole('combobox', { name: 'Completed on' })).toBeTruthy();
+    expect(within(group()).getByText(/Recorded for training day/)).toBeTruthy();
     fireEvent.click(within(group()).getByRole('button', { name: 'Save result' }));
     await waitFor(() => expect(within(group()).getByText('4 activities · 4 done')).toBeTruthy());
     const final = await store.readState();
