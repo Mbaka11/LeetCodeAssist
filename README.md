@@ -1,6 +1,6 @@
 # LeetCode Assist
 
-A Chrome extension (Manifest V3) that runs a **30-day LeetCode bootcamp** on the
+A Chrome extension (Manifest V3) that runs a **60-day LeetCode bootcamp** on the
 **NeetCode 150** roadmap. Open it and it tells you exactly what to do today: new problems,
 spaced reviews and how long each should take. It reminds you with notifications, sits next to
 LeetCode in a side panel, and tracks progress, timing and notes. Everything stays in your
@@ -25,27 +25,38 @@ _Screenshots will be added here._
 
 ### Goal
 
-Measured on **unseen** problems on day 30:
+Measured on **unseen** problems on day 30 (and again on day 60, with a harder pair):
 
 - **Easy:** solved alone in ≤ 20 min in at least 80 % of attempts.
 - **Medium:** approach found in ≤ 15 min and accepted in ≤ 45 min in at least 60 % of attempts.
 
-Three timed **benchmarks** (1 Easy + 1 Medium, unseen, 60 min budget) on days **1, 15 and 30**
-measure progress. Benchmark problems are reserved and never appear in the learning queue.
+Timed **benchmarks** (unseen, 60 min budget per pair) measure progress: 1 Easy + 1 Medium on days **1, 15
+and 30**, then 1 Medium + 1 Hard on days **45 and 60**. Benchmark problems are reserved and never appear in the
+learning queue. A **Day 30 retrospective** and a **Day 60 retrospective** on the Calendar summarise each phase
+(problems learned, reviews by type, weakest categories, benchmark pairs); they are read-only.
+
+### Two phases
+
+- **Days 1–30:** the 50 core problems (every free Easy plus the core Mediums), two new problems a day.
+- **Days 31–60:** a second, deeper pass over the same categories with 36 more problems (Mediums plus
+  `word-search-ii`), again in roadmap order, with consolidation days every seventh day (35, 42, 49, 56). From
+  day 31 the reviews fill about half of the daily budget, so the expected pace is 5 new problems per 4 learning
+  days instead of 2 a day. The remaining Mediums and the Hard problems stay in the optional bonus pool.
+- Existing data is unchanged: the start date and history stay, and days 31–60 are added after day 30.
 
 ### Daily budget
 
 - Default target **150 min**, hard planning cap **180 min** (both configurable in Settings).
-- **Consolidation days 7, 14, 21 and 28**: no new problems, target **90 min** (reviews, failed
+- **Consolidation days 7, 14, 21, 28, 35, 42, 49 and 56**: no new problems, target **90 min** (reviews, failed
   items and "blind" mixed practice).
 - A normal day has **2 new problems**, plus a third when the next one is an Easy and the day stays within
-  the cap + 30 min (soft overflow). Besides them (also on consolidation days and after day 30) **two
+  the cap + 30 min (soft overflow). Besides them (also on consolidation days and after day 60) **two
   optional bonus problems** are always on offer. They are outside the core plan time, pace, reminders and
   the toolbar badge, never become debt, and stay on offer even when the core plan already fills the cap:
   each card shows how much time it adds and warns when that passes your target or the cap.
-- The bonuses come from a separate **bonus pool** of 46 extra NeetCode 150 problems outside the
-  50-problem program (Tries, Math & Geometry, 2-D DP, Bit Manipulation, Linked List, Sliding Window and the
-  Mediums that did not fit the 30 days), in a fixed order with hints. The two offers are stored, so they
+- The bonuses come from a separate **bonus pool** of 47 extra NeetCode 150 problems outside the
+  86-problem program (30 Mediums that did not fit the 60 days and the 17 free Hards), in a fixed order with
+  hints. The two offers are stored, so they
   survive reloads and days, and a started one keeps its timer. Finishing or skipping one refills the slot
   at once. A problem is only offered when its category is ready (something of it was already worked or is in
   today's plan, or all its prerequisite categories were introduced), so Graphs or DP stay locked until
@@ -55,11 +66,11 @@ measure progress. Benchmark problems are reserved and never appear in the learni
   work, though: finishing many bonus problems fills later days' cap with reviews, which can leave less room
   for new program problems. A skipped bonus is dated to the day it was skipped.
 - **Problems worked** (Today and Calendar): the number of distinct problems with at least one finished
-  attempt, split into *Program x/50 · Benchmarks x/6 · Bonus x* (*Other* appears only when needed). Each
+  attempt, split into *Program x/86 · Benchmarks x/10 · Bonus x* (*Other* appears only when needed). Each
   problem counts once: reviews never add to it and a bonus never replaces a program problem. The program
-  counter *x/50* is separate.
-- New problems come from an ordered queue (50 problems in NeetCode roadmap order, **every free Easy
-  problem**, no Hard), not
+  counter *x/86* is separate.
+- New problems come from an ordered queue (86 problems: 50 in phase 1, **every free Easy problem**,
+  no Hard; 36 in phase 2, in NeetCode roadmap order), not
   from fixed dates, so a missed day never produces an impossible day. Reviews are never dropped:
   what does not fit under the cap is carried over to the next days.
 
@@ -85,7 +96,7 @@ calendar, the reminders and the cards all follow your values.
 A failed `recall` or `rebuild` (solution/stuck) schedules a `retry` for the next day. A
 `resolve` that is not solved alone puts the problem back to *consolidating* and schedules a new
 rebuild and resolve. A `blind` solved alone makes the problem *mastered*. At most one review per
-problem is planned on a day (the strongest wins). Reviews continue after day 30.
+problem is planned on a day (the strongest wins). Reviews continue after day 60.
 
 Notes are hidden while a review of the same problem is in progress or due; click **Reveal** if
 you really need them.
@@ -172,7 +183,7 @@ Other completed/started attempts and optional extra practice are protected. Date
 or reorder this problem's completed attempts, and logged time cannot be less than its recorded approach time.
 The preview is rejected if related data or the local date changes before confirmation. Previous values are
 kept in the activity's optional correction audit, preserved in JSON backups. Export a backup before major
-changes. The daily planner can rebalance later work under the same cap; the 50-problem queue is unchanged.
+changes. The daily planner can rebalance later work under the same cap; the 86-problem queue is unchanged.
 
 ### Weekly learning review
 
@@ -329,7 +340,7 @@ page looks; a stylesheet test only guards the layout rules (see the CHANGELOG fo
 - `src/core/` – pure TypeScript (no browser APIs): types, dates, timer, review cycle, planner,
   projection, queue, calendar, roadmap tree layout, state, logs, optional practice (`practice.ts`),
   activity heatmap and notes Markdown export.
-- `src/data/` – static NeetCode 150 list, roadmap categories, the 30-day program (queue,
+- `src/data/` – static NeetCode 150 list, roadmap categories, the 60-day program (queue,
   benchmarks), the bonus pool and the three-level hints.
 - `src/lib/` – storage, commands and actions, reminders and background tasks, URL and side panel
   helpers, and the Chrome sync service (`sync*.ts`; the pure merge is `src/core/syncMerge.ts`).
@@ -357,7 +368,7 @@ conjunctive title, category, difficulty, learning-status, Free/Premium, program-
 data-structure and company-evidence filters. Program membership includes benchmarks; Outside excludes
 both the program/benchmarks and the bonus pool. **Showing N of 150/75** counts matches, not progress.
 Live filters are temporary (named saved filters persist), reset on catalog/layout changes, and never change either catalog counter, shared
-checks/statuses, scheduled work or the fixed 50-problem program. **Clear filters** restores the catalog.
+checks/statuses, scheduled work or the fixed 86-problem program. **Clear filters** restores the catalog.
 
 Detailed rows add original editorial tags and qualified company evidence. **Hide techniques / solution
 hints** removes tags and clears/disables their filters. The layout, row detail and hide-hints preference

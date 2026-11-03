@@ -48,7 +48,7 @@ export interface CalendarDay {
   /** 1-based program day. */
   dayIndex: number;
   kind: 'past' | 'today' | 'future';
-  /** Beyond day 30: only listed when it has reviews (or is today). */
+  /** Beyond day 60: only listed when it has reviews (or is today). */
   overflow: boolean;
   isConsolidation: boolean;
   isBenchmark: boolean;
@@ -57,6 +57,8 @@ export interface CalendarDay {
   plannedMinutes: number;
   /** Activities completed on this day (including carried-in reviews from earlier days). */
   doneCount: number;
+  /** Optional practice (extra attempts) finished on this day; included in `doneCount`, never in the plan. */
+  extraCount: number;
   loggedMinutes: number;
   /** Reviews that were not finished on their day and moved on. */
   carriedCount: number;
@@ -195,7 +197,8 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
     const isBonus = bonus.has(a.id);
     drafts.set(a.id, {
       entry: entryOf(a, isBonus && date < today && a.status !== 'done' ? 'skipped' : entryState, budgets),
-      planned: fulfillsCore.has(a.id) || (dueHere && !isBonus && !a.postponed),
+      // Optional practice (extra) is never planned work: it is counted apart (`extraCount`).
+      planned: fulfillsCore.has(a.id) || (dueHere && !isBonus && !a.postponed && !a.extra),
       core: fulfillsCore.has(a.id) || (dueHere && !isBonus && isCoreActivity(a, date)),
     });
   }
@@ -284,6 +287,7 @@ function buildDay(state: AppState, date: string, today: string): CalendarDay {
     plannedCount: planned.length,
     plannedMinutes: planned.reduce((sum, d) => sum + d.entry.minutes, 0),
     doneCount: progress.doneCount,
+    extraCount: state.activities.filter((a) => a.extra && a.status === 'done' && a.completedAt === date).length,
     loggedMinutes: progress.loggedMs / 60_000,
     carriedCount: drafts.filter((d) => d.entry.state === 'carried').length,
     targetMinutes: dailyTargetMinutes(state.settings, date),
@@ -296,8 +300,8 @@ function buildDay(state: AppState, date: string, today: string): CalendarDay {
 }
 
 /**
- * Days 1-30 of the program, then the later days that have reviews (planned or done) and today when
- * it is past day 30. Before the start date every program day is in the future.
+ * Days 1-60 of the program, then the later days that have reviews (planned or done) and today when
+ * it is past day 60. Before the start date every program day is in the future.
  */
 export function calendarDays(state: AppState, today: string): CalendarDay[] {
   const start = state.settings.startDate;
@@ -337,7 +341,7 @@ export interface ProgramProgress {
   totalDays: number;
 }
 
-/** Overall progress through the 30-day program (shown at the top of the Calendar). */
+/** Overall progress through the 60-day program (shown at the top of the Calendar). */
 export function programProgress(state: AppState, today: string): ProgramProgress {
   const inProgram = new Set(PROGRAM_QUEUE);
   const learned = new Set(

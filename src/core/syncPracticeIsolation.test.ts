@@ -52,7 +52,7 @@ describe('syncing optional practice and presentation records', () => {
     expect(result.conflicts).toEqual([]);
     expect(result.state).toEqual(validateState(remote));
     expect(programView(result.state)).toEqual(programView(base));
-    expect(programQueue(result.state)).toHaveLength(50);
+    expect(programQueue(result.state)).toHaveLength(86);
   });
 
   it('propagates an explicit unstar and a deleted saved filter, but asks when one side edits what the other deleted', () => {

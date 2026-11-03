@@ -356,8 +356,8 @@ export function ProblemPanel({
             {position !== null
               ? `Program problem ${position} of ${programQueue(state).length}`
               : isBonusProblem(slug)
-                ? 'Bonus problem (not in the 30-day program)'
-                : 'Not in the 30-day program'}
+                ? 'Bonus problem (not in the 60-day program)'
+                : 'Not in the 60-day program'}
           </p>
           <p className="muted">
             {review

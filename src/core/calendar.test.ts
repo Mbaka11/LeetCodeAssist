@@ -8,12 +8,12 @@ import { applyOutcome } from './reviews';
 import type { Activity, ActivityType, AppState } from './types';
 
 describe('calendarDays', () => {
-  it('lists days 1-30 with markers and a highlighted today', () => {
+  it('lists days 1-60 with markers and a highlighted today', () => {
     const days = calendarDays(newState(), day(1));
-    expect(days).toHaveLength(30);
+    expect(days).toHaveLength(60);
     expect(days[0]).toMatchObject({ date: START, dayIndex: 1, kind: 'today', isBenchmark: true, overflow: false });
-    expect(days.filter((d) => d.isConsolidation).map((d) => d.dayIndex)).toEqual([7, 14, 21, 28]);
-    expect(days.filter((d) => d.isBenchmark).map((d) => d.dayIndex)).toEqual([1, 15, 30]);
+    expect(days.filter((d) => d.isConsolidation).map((d) => d.dayIndex)).toEqual([7, 14, 21, 28, 35, 42, 49, 56]);
+    expect(days.filter((d) => d.isBenchmark).map((d) => d.dayIndex)).toEqual([1, 15, 30, 45, 60]);
     expect(days.filter((d) => d.kind === 'today')).toHaveLength(1);
     expect(days[1]!.kind).toBe('future');
   });
@@ -99,18 +99,18 @@ describe('calendarDays', () => {
     expect(first.streakQualified).toBe(false);
   });
 
-  it('adds overflow days that have reviews and today when it is past day 30', () => {
-    // Learn problems on day 29: resolve lands on day 36 and blind on day 50.
+  it('adds overflow days that have reviews and today when it is past day 60', () => {
+    // Learn problems on day 59: recall lands on day 60, rebuild on 62, resolve on 66 and blind on 80.
     let state = newState();
-    state = simulateDay(state, day(29)).state;
-    const days = calendarDays(state, day(30));
+    state = simulateDay(state, day(59)).state;
+    const days = calendarDays(state, day(60));
     const overflow = days.filter((d) => d.overflow);
-    expect(overflow.map((d) => d.dayIndex)).toEqual([32, 36, 50]);
+    expect(overflow.map((d) => d.dayIndex)).toEqual([62, 66, 80]);
     expect(overflow.every((d) => d.kind === 'future' && d.entries.length > 0)).toBe(true);
 
-    const later = calendarDays(state, day(40));
-    expect(later.filter((d) => d.overflow).map((d) => d.dayIndex)).toEqual([32, 36, 40, 50]);
-    expect(later.find((d) => d.dayIndex === 40)?.kind).toBe('today');
+    const later = calendarDays(state, day(70));
+    expect(later.filter((d) => d.overflow).map((d) => d.dayIndex)).toEqual([62, 66, 70, 80]);
+    expect(later.find((d) => d.dayIndex === 70)?.kind).toBe('today');
   });
 });
 
@@ -155,7 +155,7 @@ describe('programProgress', () => {
       learned: 0,
       totalProblems: PROGRAM_QUEUE.length,
       daysElapsed: 1,
-      totalDays: 30,
+      totalDays: 60,
     });
     const state = simulateDay(simulateDay(newState(), day(1)).state, day(2)).state;
     const progress = programProgress(state, day(3));
@@ -164,9 +164,10 @@ describe('programProgress', () => {
     expect(progress.daysElapsed).toBe(3);
   });
 
-  it('clamps the elapsed days before the start and after day 30, and ignores non-program problems', () => {
+  it('clamps the elapsed days before the start and after day 60, and ignores non-program problems', () => {
     expect(programProgress(newState(), day(-5)).daysElapsed).toBe(0);
-    expect(programProgress(newState(), day(45)).daysElapsed).toBe(30);
+    expect(programProgress(newState(), day(45)).daysElapsed).toBe(45);
+    expect(programProgress(newState(), day(75)).daysElapsed).toBe(60);
   });
 });
 
@@ -246,6 +247,23 @@ describe('plan done', () => {
       { type: 'blind', slug: 'valid-anagram', extra: true },
     ]);
     expect(dayTwo(state)).toMatchObject({ coreCount: 2, coreDoneCount: 2, planDone: true });
+  });
+
+  it('keeps finished optional practice out of the planned count and minutes, and counts it apart', () => {
+    const base = [
+      { type: 'new' as const, slug: 'two-sum', status: 'done' as const },
+      { type: 'new' as const, slug: 'valid-anagram', status: 'done' as const },
+    ];
+    const without = dayTwo(stateWith(day(2), base));
+    const withExtras = dayTwo(stateWith(day(2), [
+      ...base,
+      { type: 'resolve', slug: 'two-sum', status: 'done', extra: true },
+      { type: 'resolve', slug: 'valid-anagram', status: 'done', extra: true },
+    ]));
+    expect(withExtras.plannedCount).toBe(without.plannedCount);
+    expect(withExtras.plannedMinutes).toBe(without.plannedMinutes);
+    expect(withExtras).toMatchObject({ extraCount: 2, doneCount: without.doneCount + 2 });
+    expect(without.extraCount).toBe(0);
   });
 
   it('counts a third Easy new problem as core, not as the bonus', () => {

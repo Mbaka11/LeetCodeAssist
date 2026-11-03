@@ -70,18 +70,19 @@ describe('categories: introduced and prerequisite-ready', () => {
 describe('selectBonusSlugs', () => {
   it('takes the first ready pool problems in pool order', () => {
     const selection = selectBonusSlugs(newState(), { pool: BONUS_POOL, count: BONUS_SLOTS, coreSlugs: ['two-sum'], exclude: NONE });
-    expect(selection).toEqual({ slugs: [BONUS_POOL[0], BONUS_POOL[1]], hold: null });
+    // Two Pointers and Stack are ready after Arrays & Hashing; Sliding Window still waits for Two Pointers.
+    expect(selection).toEqual({ slugs: ['trapping-rain-water', 'evaluate-reverse-polish-notation'], hold: null });
   });
 
   it('skips excluded and already worked problems and never repeats them', () => {
-    const state = workedState('valid-sudoku');
+    const state = workedState('two-sum', 'evaluate-reverse-polish-notation');
     const selection = selectBonusSlugs(state, {
       pool: BONUS_POOL,
       count: 2,
       coreSlugs: [],
-      exclude: new Set(['container-with-most-water']),
+      exclude: new Set(['trapping-rain-water']),
     });
-    expect(selection.slugs).toEqual(['generate-parentheses', 'evaluate-reverse-polish-notation']);
+    expect(selection.slugs).toEqual(['car-fleet', 'largest-rectangle-in-histogram']);
   });
 
   it('puts a skipped problem behind the ones that were never skipped, without dropping it', () => {
@@ -126,14 +127,14 @@ describe('openBonusOffers', () => {
     const add = (type: 'new', slug: string, due: string, status: 'planned' | 'in_progress' | 'skipped'): void => {
       state = { ...state, activities: [...state.activities, { ...createActivity(state.activities, { type, slug, dueDate: due, createdAt: due }), status }] };
     };
-    add('new', 'valid-sudoku', day(1), 'planned');
-    add('new', 'valid-sudoku', day(2), 'planned');
-    add('new', 'container-with-most-water', day(2), 'skipped');
-    add('new', 'generate-parentheses', day(2), 'planned');
+    add('new', 'trapping-rain-water', day(1), 'planned');
+    add('new', 'trapping-rain-water', day(2), 'planned');
+    add('new', 'permutation-in-string', day(2), 'skipped');
+    add('new', 'evaluate-reverse-polish-notation', day(2), 'planned');
     add('new', 'car-fleet', day(3), 'in_progress');
     const pool = new Set(BONUS_POOL);
-    expect(openBonusOffers(state, pool, 2).map((a) => a.slug)).toEqual(['valid-sudoku', 'car-fleet']);
-    expect(openBonusOffers(state, pool, 3).map((a) => a.slug)).toEqual(['valid-sudoku', 'generate-parentheses', 'car-fleet']);
+    expect(openBonusOffers(state, pool, 2).map((a) => a.slug)).toEqual(['trapping-rain-water', 'car-fleet']);
+    expect(openBonusOffers(state, pool, 3).map((a) => a.slug)).toEqual(['trapping-rain-water', 'evaluate-reverse-polish-notation', 'car-fleet']);
     expect(openBonusOffers(state, pool, 0).map((a) => a.slug)).toEqual(['car-fleet']);
   });
 });

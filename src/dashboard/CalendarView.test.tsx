@@ -16,9 +16,9 @@ const actions = new Proxy({}, { get: () => () => Promise.resolve() }) as AppActi
 const today = localDateFromTimestamp(Date.now());
 
 describe('CalendarView (render smoke test)', () => {
-  it('shows 30 days with markers, today, the start date picker and separate streak, plan done and time logged stats', () => {
+  it('shows 60 days with markers, today, the start date picker and separate streak, plan done and time logged stats', () => {
     const html = renderToStaticMarkup(<CalendarView state={defaultState(today)} actions={actions} />);
-    expect(html.match(/class="cal-day/g)).toHaveLength(30);
+    expect(html.match(/class="cal-day/g)).toHaveLength(60);
     expect(html).toContain('cal-today');
     expect(html).toContain('Consolidation');
     expect(html).toContain('Benchmark');
@@ -35,13 +35,13 @@ describe('CalendarView (render smoke test)', () => {
     expect(html).toContain('Problems learned');
     expect(html).toContain(`0/${PROGRAM_QUEUE.length}`);
     expect(html).toContain('Days elapsed');
-    expect(html).toContain('1/30');
-    expect(html.match(/<span class="cal-bar[ "]/g)).toHaveLength(30);
+    expect(html).toContain('1/60');
+    expect(html.match(/<span class="cal-bar[ "]/g)).toHaveLength(60);
     // Each day sits in a cell with an always-mounted, hidden popover that its button points to; the
     // popover content is only rendered on hover or focus.
-    expect(html.match(/class="cal-cell"/g)).toHaveLength(30);
-    expect(html.match(/aria-describedby="/g)).toHaveLength(30);
-    expect(html.match(/class="cal-popover" hidden=""/g)).toHaveLength(30);
+    expect(html.match(/class="cal-cell"/g)).toHaveLength(60);
+    expect(html.match(/aria-describedby="/g)).toHaveLength(60);
+    expect(html.match(/class="cal-popover" hidden=""/g)).toHaveLength(60);
     expect(html).not.toContain('role="tooltip"');
     expect(html).not.toContain('cal-popover-list');
     expect(html).not.toContain('Assumes you do each day');
@@ -95,7 +95,7 @@ describe('CalendarView compact summary (render smoke test)', () => {
     const state = simulateDay(defaultState(start), start, { bonus: true }).state;
     const html = renderToStaticMarkup(<CalendarView state={state} actions={actions} />);
     expect(html).toContain('class="worked-total"');
-    expect(html).toContain('Program 2/50 · Benchmarks 2/6 · Bonus 2');
+    expect(html).toContain('Program 2/86 · Benchmarks 2/10 · Bonus 2');
     expect(html).toContain('>6</span><span class="worked-total-label">problems worked');
     expect(html).toContain('Reviews never add to it');
     // The program counter is separate and unchanged by the bonus problems.

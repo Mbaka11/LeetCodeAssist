@@ -26,6 +26,7 @@ import { ACTIVITY_LABELS, OUTCOME_LABELS } from '../lib/instructions';
 import { problemHref } from '../lib/route';
 import { useNow } from '../lib/useNow';
 import { LeetCodeStreakCard } from './LeetCodeStreakCard';
+import { RetrospectiveCards } from './RetrospectiveCard';
 
 const ENTRY_LABELS: Record<EntryState, string> = {
   done: 'Done',
@@ -120,11 +121,12 @@ function DayCell({
         {day.kind === 'today' ? <Badge tone="new">Today</Badge> : null}
         {day.isConsolidation ? <Badge tone="resolve">Consolidation</Badge> : null}
         {day.isBenchmark ? <Badge tone="benchmark">Benchmark</Badge> : null}
-        {day.overflow ? <Badge>After day 30</Badge> : null}
+        {day.overflow ? <Badge>After day 60</Badge> : null}
       </span>
       <span className="cal-counts">
         planned {day.plannedCount} · done {day.doneCount}
         {day.carriedCount > 0 ? ` · carried ${day.carriedCount}` : ''}
+        {day.extraCount > 0 ? ` · +${day.extraCount} extra` : ''}
       </span>
       <span className="muted">
         {day.kind === 'future'
@@ -601,6 +603,8 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
       </div>
 
       <DayDetail key={selected.date} day={selected} today={today} actions={actions} />
+
+      <RetrospectiveCards state={state} today={today} />
     </div>
   );
 }

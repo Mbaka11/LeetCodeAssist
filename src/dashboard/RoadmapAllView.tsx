@@ -101,7 +101,7 @@ export function RoadmapAllView({ state, actions, catalog, change }: {
           {select('difficulty', 'Difficulty', options(['Easy', 'Medium', 'Hard']))}
           {select('status', 'Learning status', Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label })))}
           {select('access', 'Access', [{ value: 'free', label: 'Free' }, { value: 'premium', label: 'Premium' }])}
-          {select('scope', 'Program membership', [{ value: 'program', label: '30-day program or benchmark' }, { value: 'bonus', label: 'Bonus' }, { value: 'outside', label: 'Outside program and bonus pool' }])}
+          {select('scope', 'Program membership', [{ value: 'program', label: '60-day program or benchmark' }, { value: 'bonus', label: 'Bonus' }, { value: 'outside', label: 'Outside program and bonus pool' }])}
           {select('technique', 'Technique', hideTechniques ? [] : options(TECHNIQUE_TAGS), hideTechniques)}
           {select('structure', 'Data structure', hideTechniques ? [] : options(DATA_STRUCTURE_TAGS), hideTechniques)}
           {select('company', 'Company evidence', SOURCED_COMPANIES.map((company) => ({ value: company.id, label: company.name })))}

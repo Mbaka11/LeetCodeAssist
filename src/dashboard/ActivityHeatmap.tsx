@@ -5,7 +5,7 @@ import type { AppState } from '../core/types';
 
 export function ActivityHeatmap({ state, today }: { state: AppState; today: string }) {
   const ranges = [
-    { label: 'Program days 1–30', start: state.settings.startDate, count: 30 },
+    { label: 'Program days 1–60', start: state.settings.startDate, count: 60 },
     { label: 'Recent 12 weeks', start: addDays(today, -83), count: 84 },
   ];
   return <Card title="Activity minutes" className="activity-heatmap">

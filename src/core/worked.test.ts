@@ -23,9 +23,9 @@ describe('workedTotals', () => {
   it('is empty for a fresh state and exposes the program and benchmark sizes', () => {
     expect(workedTotals(newState())).toEqual({
       program: 0,
-      programTotal: 50,
+      programTotal: 86,
       benchmark: 0,
-      benchmarkTotal: 6,
+      benchmarkTotal: 10,
       bonus: 0,
       other: 0,
       total: 0,
@@ -55,8 +55,8 @@ describe('workedTotals', () => {
 
   it('classifies a problem with only extra blind or resolve attempts exactly once', () => {
     let state = newState();
-    state = add(state, 'blind', 'trapping-rain-water', { status: 'done', completedAt: day(2), extra: true });
-    state = add(state, 'resolve', 'trapping-rain-water', { status: 'done', completedAt: day(3), extra: true });
+    state = add(state, 'blind', 'encode-and-decode-strings', { status: 'done', completedAt: day(2), extra: true });
+    state = add(state, 'resolve', 'encode-and-decode-strings', { status: 'done', completedAt: day(3), extra: true });
     state = add(state, 'resolve', BONUS_POOL[1]!, { status: 'done', completedAt: day(2), extra: true });
     state = add(state, 'blind', BONUS_POOL[1]!, { status: 'done', completedAt: day(4), extra: true });
     expect(workedTotals(state)).toMatchObject({ program: 0, benchmark: 0, bonus: 1, other: 1, total: 2 });

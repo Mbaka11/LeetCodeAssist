@@ -48,7 +48,7 @@ export function RoadmapProblemList({
             </label>
             <span className="problem-meta">
               <Badge tone={difficultyTone(problem.difficulty)}>{problem.difficulty}</Badge>
-              {PROGRAM_SLUGS.has(problem.slug) ? <Badge>30-day program</Badge> : null}
+              {PROGRAM_SLUGS.has(problem.slug) ? <Badge>60-day program</Badge> : null}
               {BENCHMARK_SLUGS.has(problem.slug) ? <Badge tone="benchmark">Benchmark</Badge> : null}
               {isBonusProblem(problem.slug) ? <Badge tone="warn">Bonus</Badge> : null}
               {isPremiumProblem(problem.slug) ? (

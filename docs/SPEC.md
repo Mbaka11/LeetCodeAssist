@@ -1,13 +1,13 @@
-# LeetCode Assist — Product & Technical Spec (v1; current as of the unreleased post-0.8.0 work)
+# LeetCode Assist — Product & Technical Spec (v1; current as of 0.12.0)
 
-A Chrome extension (Manifest V3) that runs a **30-day LeetCode bootcamp** built on the
+A Chrome extension (Manifest V3) that runs a **60-day LeetCode bootcamp** built on the
 **NeetCode 150** roadmap. You open it and it tells you exactly what to do today:
 new problems, spaced reviews, and how long it should take. It notifies you, sits next
 to LeetCode in a side panel, and tracks progress, notes and timing.
 
 ## 1. Goal (measurable)
 
-Exit criteria on day 30, measured on **unseen** problems:
+Exit criteria on day 30 (repeated on day 60 with a Medium + Hard pair), measured on **unseen** problems:
 
 - **Easy:** solved alone in ≤ 20 min in ≥ 80 % of attempts.
 - **Medium:** approach found in ≤ 15 min and accepted in ≤ 45 min in ≥ 60 % of attempts.
@@ -30,10 +30,10 @@ Benchmark problems are reserved and never appear in the learning queue.
   toolbar badge, reminders, the plan-done ratio or projections, and they never become debt. They are shown even
   when the core plan already fills the cap; the UI states the extra estimated time and warns explicitly when
   starting one would pass the daily target or the cap (`bonusTimeImpact`, `src/lib/bonusTime.ts`).
-- The bonuses come from the **bonus pool** (`BONUS_POOL`, `src/data/bonus.ts`): **46** extra NeetCode 150
+- The bonuses come from the **bonus pool** (`BONUS_POOL`, `src/data/bonus.ts`): **47** extra NeetCode 150
   problems that are not in the program queue or the benchmarks, ordered by roadmap category and
-  difficulty, all Medium except one Hard (every free Easy problem is in the program). The Mediums that did not
-  fit the queue come first in their category.
+  difficulty: 30 Mediums that did not fit the 60-day program and the 17 free Hards (every free Easy problem is in
+  the program, the Premium problems are left out). The Mediums of a category come before its Hards.
 - **Readiness rule.** A pool problem is a candidate only when its category is *ready*: *introduced* (some
   completed activity of any type, or a core item of today's plan, is in that category) or *prerequisite-ready*
   (every prerequisite category of the roadmap graph is introduced). Candidates keep pool order; a problem with a
@@ -91,7 +91,7 @@ Rules:
 - `blind` with `solo` ⇒ status `mastered`. Otherwise ⇒ `consolidating`, `resolve` again at +7.
 - **Merge overlapping reviews**: never more than one review activity per problem on a day;
   keep the strongest (`blind` > `resolve` > `retry` > `rebuild` > `recall`).
-- Reviews continue after day 30 (a problem learned on day 29 gets its resolve on day 36).
+- Reviews continue after day 60 (a problem learned on day 59 gets its resolve on day 66).
 
 ### Completion date and late logging
 
@@ -118,7 +118,7 @@ its minutes, badge and plan-done denominator. Missing fixed pairs are materializ
 due date; done/skipped pairs are not recreated. Starting an old benchmark keeps the existing core-plan
 behaviour for in-progress work. Its completion credits the current training date, never its missed date.
 Legacy backdated records retain their existing calendar presentation (including fulfilled unopened new slots).
-The 50-problem order and review intervals are unchanged, as is LeetCode's public calendar and UTC streak.
+The queue order and review intervals are unchanged, as is LeetCode's public calendar and UTC streak.
 
 ### Correcting completed results
 
@@ -196,26 +196,34 @@ Problem status: `untouched` → `learning` (new done) → `consolidating` (a rev
 
 ## 4. Queue-based planner (no fixed dates for new problems)
 
-- New problems come from an **ordered queue** (50 problems, NeetCode roadmap order, Easy and Medium only,
-  no Hard). Queue = `src/data/program.ts`. It holds every free Easy problem of the NeetCode 150 except the
-  benchmark ones (the Premium-only Easy *Meeting Rooms* is left out) plus the core Mediums of each pattern; the
-  other Mediums are bonus-pool problems. The size is chosen so that, with reviews on time, a user who does the
-  plan has **all queue problems introduced by day 30** (a test projects the whole program day by day and
-  checks it). The optional bonus is not part of the queue (see §2).
+- New problems come from an **ordered queue** of **86** problems in two phases (`PHASE_ONE_QUEUE`,
+  `PHASE_TWO_QUEUE` in `src/data/program.ts`; `PROGRAM_QUEUE` is their concatenation).
+  - **Phase 1 (days 1-30, 50 problems):** NeetCode roadmap order, Easy and Medium only, no Hard. It holds every
+    free Easy problem of the NeetCode 150 except the benchmark ones (the Premium-only Easy *Meeting Rooms* is
+    left out) plus the core Mediums of each pattern. With reviews on time, a user who does the plan has all of
+    phase 1 introduced by day 30 (a test projects the program day by day and checks it).
+  - **Phase 2 (days 31-60, 36 problems):** a second, deeper pass in roadmap category order with the Mediums
+    that matter most, plus `word-search-ii`, the one Hard, as the Tries anchor. It is smaller than phase 1 on
+    purpose: by then the reviews fill about half of the 180-minute cap, so a perfect user fits roughly 1.2 new
+    problems a day (measured with `simulateDay`, no bonus offers).
+  - Consolidation days are 7, 14, 21, 28, 35, 42, 49 and 56. Benchmark pairs are on days 1, 15 and 30
+    (Easy + Medium) and 45 and 60 (Medium + Hard); the `easy` and `medium` fields of `Benchmark` hold the lighter
+    and the harder problem of the pair.
+  - The optional bonus is not part of the queue (see §2).
 - Planner for a day (pure function `planDay(state, date, settings)`):
   1. Overdue + due reviews, sorted by priority: `retry`, `recall`, `rebuild`, `resolve`, `blind`;
      overdue first. Reviews never get dropped; if they exceed the cap, the remainder is
      shown as "carried over" and spread forward (max cap per day).
-  2. Benchmark if it's day 1/15/30.
+  2. Benchmark if it's day 1/15/30/45/60.
   3. Fill remaining budget with the next queue items (2 normally, 0 on consolidation days,
      fewer if reviews fill the budget); a third one when it is Easy and the day stays ≤ cap + 30 (soft
      overflow, §2). A problem postponed today is not offered again today. Then up to two optional bonus
      offers (`DayPlan.bonuses`, §2), outside the budget, with the finished ones in `completedBonuses`.
   4. **Pace indicator**: `actualNewDone - expectedNewDone(dayIndex, queueLength)` ("+2 ahead" /
-     "−1 behind"); `expectedNewDone` is 2 per normal day capped by the real queue length, so it reaches the
-     whole queue by day 30 (the queue stays within 2 × the 26 normal days). Only program-queue problems
+     "−1 behind"); `expectedNewDone` is 2 per normal day of phase 1 plus 5 per 4 normal days of phase 2 (days 31-60),
+     capped by the real queue length (52 by day 30, 84 by day 60). Only program-queue problems
      count, bonus-pool problems do not. The expectation does not count the optional third Easy problem, so
-     a user who follows the plan on those days reads "+1 ahead" until the queue is exhausted (day 30 is "on pace").
+     a user who follows the plan on those days reads "+1 ahead" in phase 1 (day 30 is "on pace").
 - Missing days never produce an impossible day: the cap is always respected.
 - The queue order is `PROGRAM_QUEUE` unless the user postponed problems (`AppState.queue`).
 - History is append-only; past activities are never rewritten.
@@ -647,3 +655,23 @@ Details, quotas and honest limits: [`sync.md`](sync.md).
 
 Automatically saving/completing an activity from a detected "Accepted" (detection opens a confirmation form, section 6a), accounts and servers of our own (optional Chrome-managed sync, section 6f, is the only cross-device path), copying NeetCode/LeetCode
 explanations or solutions (only facts: title, difficulty, category, link).
+
+
+## Retrospectives (0.12)
+
+`src/core/retrospective.ts` builds a read-only summary of each program phase from the activity history only (no stored
+data, no migration, nothing scheduled or changed): **Day 30** (days 1-30) and **Day 60** (days 31-60).
+
+- Shown on the Calendar (`RetrospectiveCards`): a phase appears locked ("Opens on <date>") during the last seven
+  days before its end, and with its numbers once the training day has reached the last day of the phase.
+- Content: problems learned (first finished non-optional `new` attempt of the phase's queue by the end of the window,
+  with how many were solo); days practised, streak days and plan-done days from the Calendar's own day rules; logged
+  minutes; reviews by type (finished, solo, median minutes; optional practice excluded); up to three weakest
+  categories (highest share of attempts that were not solo, at least three attempts); and the benchmark pairs of the
+  phase with outcome and time.
+- Activities are attributed to a phase by their credited training date (`completedAt`), so the 04:00 boundary applies.
+
+## Calendar counting (0.12)
+
+Optional practice (`extra`) is never planned work: it is not in a Calendar day's planned count or planned minutes, and
+the day shows it separately as "+N extra" (`CalendarDay.extraCount`). It still counts as done and as logged time.

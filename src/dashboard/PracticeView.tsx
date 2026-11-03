@@ -149,7 +149,7 @@ function DrillsView({ state, actions, onBusy }: Props & { onBusy: (busy: boolean
   useEffect(() => { if (choice !== null) nextButton.current?.focus(); }, [choice]);
   const clear = () => { setSession(null); setAnswers([]); setChoice(null); setEndedAt(null); setError(null); onBusy(false); };
   return <div className="stack"><h2>Pattern drills</h2>
-    <p className="muted">Drills intentionally reveal hints. Your Hide techniques preference disables them by default, not permanently. Original prompts and outlines cover the fixed 50-program-problem bank. These are useful editorial approaches, not the only possible solutions.</p>
+    <p className="muted">Drills intentionally reveal hints. Your Hide techniques preference disables them by default, not permanently. Original prompts and outlines cover the 50 phase 1 program problems. These are useful editorial approaches, not the only possible solutions.</p>
     {!session ? <div className="card stack">
       <label className="choice"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />Show hint-based drills</label>
       <label className="choice"><input type="checkbox" checked={includeUnworked} onChange={(e) => setIncludeUnworked(e.target.checked)} />Include unworked problems — warning: reveals techniques and data structures</label>

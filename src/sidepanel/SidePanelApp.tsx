@@ -48,7 +48,7 @@ export function SidePanelApp() {
   if (snapshot.status === 'empty') {
     return panel(
       <Card title="Set up your program">
-        <p className="muted">Choose a start date in the dashboard to begin the 30-day program.</p>
+        <p className="muted">Choose a start date in the dashboard to begin the 60-day program.</p>
         <Button variant="primary" onClick={() => open('')}>Open the dashboard</Button>
       </Card>,
     );

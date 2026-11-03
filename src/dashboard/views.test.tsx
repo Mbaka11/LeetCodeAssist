@@ -19,7 +19,7 @@ const today = localDateFromTimestamp(Date.now());
 describe('dashboard views (render smoke tests)', () => {
   it('Today shows the plan, stats and the start button on day 1', () => {
     const html = renderToStaticMarkup(<TodayView state={defaultState(today)} actions={actions} />);
-    expect(html).toContain('Day 1 of 30');
+    expect(html).toContain('Day 1 of 60');
     expect(html).toContain('Benchmark day');
     expect(html).toContain('Start next activity');
     expect(html).toContain('Planned');
@@ -32,7 +32,7 @@ describe('dashboard views (render smoke tests)', () => {
   it('Today shows the distinct worked total and two optional bonus offers outside the core list', () => {
     const html = renderToStaticMarkup(<TodayView state={defaultState(today)} actions={actions} />);
     expect(html).toContain('class="worked-total"');
-    expect(html).toContain('Program 0/50 · Benchmarks 0/6 · Bonus 0');
+    expect(html).toContain('Program 0/86 · Benchmarks 0/10 · Bonus 0');
     expect(html).toContain('Reviews never add to it');
     expect(html).toContain('Optional bonus problems (2 offered)');
     expect(html.match(/class="bonus-offer"/g)).toHaveLength(2);
@@ -106,8 +106,8 @@ describe('dashboard views (render smoke tests)', () => {
     expect(html).toContain('3 hints');
     expect(html).toContain('Hints used');
     expect(html).toContain('Reveal hint 1');
-    const none = renderToStaticMarkup(<ProblemView slug="median-of-two-sorted-arrays" state={base} actions={actions} />);
-    expect(none).toContain('Not in the 30-day program');
+    const none = renderToStaticMarkup(<ProblemView slug="encode-and-decode-strings" state={base} actions={actions} />);
+    expect(none).toContain('Not in the 60-day program');
     expect(none).not.toContain('Reveal hint');
   });
 

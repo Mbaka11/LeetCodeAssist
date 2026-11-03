@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BONUS_POOL } from '../data/bonus';
 import { getProblem } from '../data/neetcode150';
-import { BENCHMARKS, MAX_NEW_PROBLEMS_PER_DAY, NEW_PROBLEMS_PER_DAY, PROGRAM_QUEUE } from '../data/program';
+import { BENCHMARKS, MAX_NEW_PROBLEMS_PER_DAY, NEW_PROBLEMS_PER_DAY, PHASE_ONE_QUEUE, PROGRAM_QUEUE } from '../data/program';
 import { createActivity, estimatedMinutes, isReviewType } from './activities';
 import { diffDays } from './dates';
 import { programProgress } from './calendar';
@@ -57,7 +57,7 @@ describe('planDay: day 1', () => {
   });
 
   it('offers two optional bonus problems from the pool outside the core minutes', () => {
-    expect(plan.bonuses.map((b) => b.activity.slug)).toEqual([BONUS_POOL[0], BONUS_POOL[1]]);
+    expect(plan.bonuses.map((b) => b.activity.slug)).toEqual(['trapping-rain-water', 'evaluate-reverse-polish-notation']);
     expect(plan.plannedMinutes).toBe(110);
     expect(plan.bonuses.every((b) => !b.persisted && !plan.items.includes(b))).toBe(true);
   });
@@ -123,7 +123,7 @@ describe('planDay: materialization and stability', () => {
     expect(news).toEqual(['two-sum', 'valid-anagram']);
     expect(plan.carriedOver).toEqual([]);
     expect(plan.items.every((i) => i.overdue === false)).toBe(true);
-    expect(plan.bonuses.map((b) => b.activity.slug)).toEqual([BONUS_POOL[0], BONUS_POOL[1]]);
+    expect(plan.bonuses.map((b) => b.activity.slug)).toEqual(['trapping-rain-water', 'evaluate-reverse-polish-notation']);
     expect(plan.bonuses.every((b) => b.persisted && !b.overdue)).toBe(true); // the same offers, no duplicates
   });
 
@@ -440,7 +440,7 @@ describe('planDay: pace', () => {
   });
 });
 
-describe('planDay: the 30-day program with a perfect user', () => {
+describe('planDay: the 60-day program with a perfect user', () => {
   function run(days: number, bonus: boolean) {
     let state = newState();
     const plans = [];
@@ -452,7 +452,10 @@ describe('planDay: the 30-day program with a perfect user', () => {
     return { state, plans };
   }
 
-  const { state: finalState, plans } = run(60, true);
+  // A user who also takes the bonus offers (cap and calendar rules), and one who only works the plan long enough
+  // to finish the whole queue (phase 2 fits about 1.2 new problems a day next to the reviews).
+  const { plans } = run(60, true);
+  const { state: finalState, plans: planOnlyPlans } = run(80, false);
 
   it('respects the cap (plus the soft overflow of a third Easy problem) and keeps benchmark and consolidation days right', () => {
     plans.forEach((plan, i) => {
@@ -461,8 +464,8 @@ describe('planDay: the 30-day program with a perfect user', () => {
       const limit = newCount > NEW_PROBLEMS_PER_DAY ? plan.capMinutes + SOFT_OVERFLOW_MIN : plan.capMinutes;
       expect(plan.plannedMinutes, `day ${n}`).toBeLessThanOrEqual(limit);
       const types = plan.items.map((x) => x.activity.type);
-      if ([7, 14, 21, 28].includes(n)) expect(types).not.toContain('new');
-      expect(types.filter((t) => t === 'benchmark').length).toBe([1, 15, 30].includes(n) ? 2 : 0);
+      if ([7, 14, 21, 28, 35, 42, 49, 56].includes(n)) expect(types).not.toContain('new');
+      expect(types.filter((t) => t === 'benchmark').length).toBe([1, 15, 30, 45, 60].includes(n) ? 2 : 0);
     });
   });
 
@@ -474,13 +477,13 @@ describe('planDay: the 30-day program with a perfect user', () => {
     );
     expect(learned.size).toBe(PROGRAM_QUEUE.length);
     for (const slug of PROGRAM_QUEUE) expect(learned.has(slug)).toBe(true);
-    for (const plan of plans) {
+    for (const plan of planOnlyPlans) {
       const news = plan.items.filter((i) => i.activity.type === 'new').map((i) => i.activity.slug);
       expect(news.length).toBeLessThanOrEqual(MAX_NEW_PROBLEMS_PER_DAY);
       // Only an Easy problem may be the third of a day.
       if (news.length > NEW_PROBLEMS_PER_DAY) expect(getProblem(news[2]!)?.difficulty).toBe('Easy');
     }
-    expect(plans[1]!.items.filter((i) => i.activity.type === 'new').length).toBeGreaterThanOrEqual(2);
+    expect(planOnlyPlans[1]!.items.filter((i) => i.activity.type === 'new').length).toBeGreaterThanOrEqual(2);
   });
 
   it('never puts reserved benchmark problems into the learning queue', () => {
@@ -489,18 +492,18 @@ describe('planDay: the 30-day program with a perfect user', () => {
     for (const slug of newSlugs) expect(reserved.has(slug)).toBe(false);
   });
 
-  it('continues reviews after day 30 (learned on day 29 => resolve on day 36)', () => {
-    const day29New = finalState.activities.filter(
-      (a) => a.type === 'new' && a.completedAt === day(29),
+  it('continues reviews after day 60 (learned on day 59 => resolve on day 66)', () => {
+    const day59New = finalState.activities.filter(
+      (a) => a.type === 'new' && a.completedAt === day(59),
     );
-    expect(day29New.length).toBeGreaterThan(0);
-    for (const learned of day29New) {
-      const resolve = activitiesOf(finalState, learned.slug, 'resolve').find((a) => a.dueDate === day(36));
+    expect(day59New.length).toBeGreaterThan(0);
+    for (const learned of day59New) {
+      const resolve = activitiesOf(finalState, learned.slug, 'resolve').find((a) => a.dueDate === day(66));
       expect(resolve, learned.slug).toBeDefined();
-      const shown = plans[35]!.items.map((i) => `${i.activity.type}:${i.activity.slug}`);
+      const shown = planOnlyPlans[65]!.items.map((i) => `${i.activity.type}:${i.activity.slug}`);
       expect(shown).toContain(`resolve:${learned.slug}`);
     }
-    expect(plans.slice(30, 45).some((p) => p.items.length > 0)).toBe(true);
+    expect(planOnlyPlans.slice(60, 75).some((p) => p.items.length > 0)).toBe(true);
   });
 
   it('eventually clears every scheduled review without leaving debt', () => {
@@ -606,7 +609,7 @@ describe('planDay: the soft overflow for a third Easy problem', () => {
   });
 });
 
-describe('planDay: the whole queue by day 30', () => {
+describe('planDay: phase 1 by day 30', () => {
   // A perfect user who works exactly the plan (no bonus), planned day by day like the projection does.
   const projected: { plan: ReturnType<typeof planDay>; learnedSoFar: number }[] = [];
   let state = newState();
@@ -622,9 +625,9 @@ describe('planDay: the whole queue by day 30', () => {
   }
   const day30State = state;
 
-  it('introduces every program problem by day 30', () => {
-    expect(projected[29]!.learnedSoFar).toBe(PROGRAM_QUEUE.length);
-    for (const slug of PROGRAM_QUEUE) {
+  it('introduces every phase 1 problem by day 30', () => {
+    expect(projected[29]!.learnedSoFar).toBeGreaterThanOrEqual(PHASE_ONE_QUEUE.length);
+    for (const slug of PHASE_ONE_QUEUE) {
       expect(activitiesOf(day30State, slug, 'new').some((a) => a.status === 'done'), slug).toBe(true);
     }
   });
@@ -650,10 +653,10 @@ describe('planDay: the whole queue by day 30', () => {
     });
   });
 
-  it('expects the whole queue on day 30 and is on pace after working the plan', () => {
+  it('expects phase 1 on day 30 (with a little of phase 2) and is on pace after working the plan', () => {
     const pace = planDay(day30State, day(30)).pace;
-    expect(pace.expected).toBe(PROGRAM_QUEUE.length);
-    expect(pace.actual).toBe(PROGRAM_QUEUE.length);
+    expect(pace.expected).toBe(52);
+    expect(pace.actual).toBeGreaterThanOrEqual(PHASE_ONE_QUEUE.length);
     expect(pace.label).toBe('on pace');
   });
 });

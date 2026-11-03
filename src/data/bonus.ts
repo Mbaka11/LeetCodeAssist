@@ -1,79 +1,81 @@
 /**
  * The bonus pool: extra NeetCode 150 problems that are not part of the program queue (SPEC §2).
  * The planner keeps two optional offers open at any time, chosen in pool order among the problems whose
- * category is ready (see `src/core/bonus.ts`), also after day 30. Completing one starts a normal review cycle
+ * category is ready (see `src/core/bonus.ts`), also after day 60. Completing one starts a normal review cycle
  * but does not count toward pace or the program counter. All slugs refer to src/data/neetcode150.ts and
  * never overlap with the program queue or the benchmarks.
  */
 
 /**
- * Ordered bonus problems: roadmap category order, then Easy before Medium before Hard. The Mediums that
- * did not fit the program queue are the first bonuses offered within their category.
+ * Ordered bonus problems: roadmap category order, then Easy before Medium before Hard. Since the program
+ * became 60 days (0.12), the most useful of the Mediums that used to be bonuses are phase 2 of the queue; what
+ * remains is the rest of those Mediums and every free Hard.
  */
 export const BONUS_POOL: readonly string[] = [
-  // Arrays & Hashing
-  'valid-sudoku',
   // Two Pointers
-  'container-with-most-water',
+  'trapping-rain-water',
   // Sliding Window
-  'longest-repeating-character-replacement',
   'permutation-in-string',
+  'minimum-window-substring',
+  'sliding-window-maximum',
   // Stack
-  'generate-parentheses',
   'evaluate-reverse-polish-notation',
   'car-fleet',
+  'largest-rectangle-in-histogram',
   // Binary Search
-  'koko-eating-bananas',
-  'search-in-rotated-sorted-array',
   'time-based-key-value-store',
+  'median-of-two-sorted-arrays',
   // Linked List
   'copy-list-with-random-pointer',
   'add-two-numbers',
+  'find-the-duplicate-number',
+  'reverse-nodes-in-k-group',
   // Trees
-  'count-good-nodes-in-binary-tree',
-  'validate-binary-search-tree',
-  'kth-smallest-element-in-a-bst',
   'construct-binary-tree-from-preorder-and-inorder-traversal',
+  'binary-tree-maximum-path-sum',
+  'serialize-and-deserialize-binary-tree',
   // Heap / Priority Queue
-  'kth-largest-element-in-an-array',
-  'task-scheduler',
+  'design-twitter',
+  'find-median-from-data-stream',
   // Backtracking
-  'word-search',
-  'subsets-ii',
   'letter-combinations-of-a-phone-number',
+  'n-queens',
   // Tries
-  'implement-trie-prefix-tree',
   'design-add-and-search-words-data-structure',
-  'word-search-ii',
   // Graphs
-  'clone-graph',
   'pacific-atlantic-water-flow',
-  'rotting-oranges',
-  'course-schedule-ii',
+  'redundant-connection',
+  // Advanced Graphs
+  'min-cost-to-connect-all-points',
+  'cheapest-flights-within-k-stops',
+  'reconstruct-itinerary',
+  'swim-in-rising-water',
   // 1-D Dynamic Programming
-  'house-robber-ii',
-  'longest-palindromic-substring',
   'palindromic-substrings',
-  'decode-ways',
   'maximum-product-subarray',
-  'word-break',
-  'longest-increasing-subsequence',
   'partition-equal-subset-sum',
   // 2-D Dynamic Programming
-  'unique-paths',
-  'longest-common-subsequence',
+  'best-time-to-buy-and-sell-stock-with-cooldown',
+  'target-sum',
+  'interleaving-string',
+  'longest-increasing-path-in-a-matrix',
+  'distinct-subsequences',
+  'burst-balloons',
+  'regular-expression-matching',
   // Greedy
-  'jump-game-ii',
-  'gas-station',
-  'partition-labels',
+  'hand-of-straights',
+  'merge-triplets-to-form-target-triplet',
+  'valid-parenthesis-string',
   // Intervals
-  'insert-interval',
+  'minimum-interval-to-include-each-query',
   // Math & Geometry
-  'rotate-image',
+  'powx-n',
+  'multiply-strings',
+  'detect-squares',
   'spiral-matrix',
   'set-matrix-zeroes',
   // Bit Manipulation
-  'sum-of-two-integers',
+  'reverse-integer',
 ];
 
 const BONUS_SLUGS: ReadonlySet<string> = new Set(BONUS_POOL);

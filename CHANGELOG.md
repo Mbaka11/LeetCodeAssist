@@ -3,6 +3,20 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.12.0
+
+### Changed
+- **The program is now 60 days.** Days 1–30 are unchanged; days 31–60 are a second, deeper pass over the same roadmap categories with 36 more problems (the queue is 86 problems, `PHASE_TWO_QUEUE`), consolidation days every seventh day (35, 42, 49, 56) and benchmark pairs on days 45 and 60 (a Medium and a Hard, unseen). The expected pace from day 31 is 5 new problems per 4 learning days, because the reviews then fill about half of the daily budget. Your start date and history are unchanged; the new problems are appended to the queue automatically.
+- The **bonus pool** is now 47 problems: the Mediums that did not fit the 60 days plus the 17 free Hards. A bonus problem you already finished before 0.12 that is now part of the queue counts as a learned program problem (and as ahead of pace) instead of a bonus.
+- Calendar: **optional practice no longer counts as planned work.** A day with extra re-solves used to show, for example, "planned 17 · ~5h28 planned" when 10 items were planned; it now shows the real plan and a separate "+7 extra". Extras still count as done and as logged time. The "Plan done" ratio is unchanged.
+- The Calendar lists 60 days, with "After day 60" for later review days; the activity heatmap shows program days 1–60; the program counter is *x/86* and benchmarks *x/10*.
+
+### Added
+- **Day 30 and Day 60 retrospectives** on the Calendar: problems learned (and how many solo the first time), days practised, plan-done days, logged time, reviews by type (solo rate, median time), the weakest categories (at least three attempts) and the benchmark pairs. Locked with its date during the last week of each phase, read-only, built from your logs.
+- Hints for the 41 problems that joined the program, the benchmarks or the bonus pool.
+
+No new dependency or permission. The stored data format is unchanged. Update all synced computers: older builds do not know the phase 2 queue, so they would keep treating those problems as bonus.
+
 ## 0.11.0
 
 ### Changed

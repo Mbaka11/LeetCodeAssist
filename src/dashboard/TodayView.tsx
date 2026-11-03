@@ -92,7 +92,7 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
   const dayTitle =
     plan.dayIndex <= PROGRAM_LENGTH_DAYS
       ? `Day ${plan.dayIndex} of ${PROGRAM_LENGTH_DAYS}`
-      : `Day ${plan.dayIndex} (after the 30-day program)`;
+      : `Day ${plan.dayIndex} (after the 60-day program)`;
 
   const startNext = (item: PlanItem): void => {
     const id = item.activity.id;

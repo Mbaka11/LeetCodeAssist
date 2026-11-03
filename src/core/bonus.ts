@@ -7,7 +7,7 @@
  *     of today's plan (new problem, review or benchmark) belongs to that category; or
  *   - prerequisite-ready: every prerequisite of the category in the roadmap graph (`CATEGORIES`) is introduced.
  * So on day 2 of an Arrays & Hashing start only Arrays & Hashing, Two Pointers and Stack are ready; Graphs or
- * Dynamic Programming stay locked until Backtracking is worked. The rule is identical after day 30: the
+ * Dynamic Programming stay locked until Backtracking is worked. The rule is identical after day 60: the
  * remaining categories unlock one prerequisite step at a time.
  *
  * Order rule. Candidates keep the order of the pool (roadmap category order), except that a problem the user

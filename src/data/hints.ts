@@ -760,6 +760,294 @@ export const HINTS: Record<string, Hint> = {
     sketch:
       '1) Use a 32-bit mask. 2) While b is not 0 compute carry = (a & b) << 1, then a = (a ^ b) & mask and b = carry & mask. 3) If a is above the largest positive 32-bit value, convert it back to a negative number with ~(a ^ mask). 4) Return a. Time O(1) (at most 32 rounds), space O(1).',
   },
+  // ---- Phase 2 additions, benchmarks of days 45 and 60 and the remaining bonus pool (0.12) ----
+  'find-the-duplicate-number': {
+    nudge: 'Treat the array as a linked structure: each value points to the index with that number, so a repeat means a cycle.',
+    insight:
+      'With n + 1 values in 1..n, following i -> nums[i] must eventually revisit an index, and the entry point of the cycle is the duplicated value; the array is never changed.',
+    sketch:
+      '1) Start slow and fast at nums[0]; move slow one step and fast two steps until they meet. 2) Put one pointer back at the start. 3) Move both one step at a time until they meet again; that value is the duplicate. Time O(n), space O(1).',
+  },
+  'lru-cache': {
+    nudge: 'You need constant-time lookup and constant-time reordering by recency: which two structures combined give both?',
+    insight:
+      'A hash map finds a node by key, and a doubly linked list keeps nodes ordered from least to most recently used, so moving or removing a node is constant time when you hold the node itself.',
+    sketch:
+      '1) Keep a map key -> node and a doubly linked list with dummy head and tail. 2) get: if present move the node next to the tail and return its value, else -1. 3) put: update and move, or insert at the tail; if size exceeds capacity remove the node after the head and its map entry. Time O(1) per call, space O(capacity).',
+  },
+  'combination-sum-ii': {
+    nudge: 'Like Combination Sum, but each number is usable once and the input has repeats: what must you do to avoid duplicate combinations?',
+    insight:
+      'Sort first so equal values sit together; at one recursion level never start two branches with the same value, but the same value may still appear deeper in the path.',
+    sketch:
+      '1) Sort the numbers. 2) Recurse with a start index and the remaining target. 3) In the loop skip i when i > start and nums[i] equals nums[i-1]; stop when nums[i] exceeds the remainder. 4) Recurse with i + 1 and record the path when the remainder is 0. Time O(2^n), space O(n).',
+  },
+  'surrounded-regions': {
+    nudge: 'Think about which O cells can never be captured, and mark those first instead of judging every region.',
+    insight:
+      'Any O connected to the border is safe, so a search from the border cells marks all safe cells; every other O is surrounded and can be flipped to X.',
+    sketch:
+      '1) Run DFS or BFS from every O on the border, marking reached cells as safe. 2) Scan the grid and flip every unmarked O to X. 3) Turn the safe marks back into O. Time O(m*n), space O(m*n) for the search stack.',
+  },
+  'network-delay-time': {
+    nudge: 'This is a single-source shortest-path question on a weighted directed graph with non-negative edges.',
+    insight:
+      'The time for the signal to reach everyone is the largest shortest distance from the source; if any node is unreachable the answer is -1.',
+    sketch:
+      '1) Build an adjacency list. 2) Run Dijkstra from k with a min-heap of (distance, node). 3) Pop the smallest, skip stale entries, relax each outgoing edge and push improved distances. 4) Return the maximum distance if every node was reached, otherwise -1. Time O(E log V), space O(V + E).',
+  },
+  'edit-distance': {
+    nudge: 'Define a table over prefixes of both words and decide what the last characters allow you to do.',
+    insight:
+      'dp[i][j] is the cost to turn the first i letters of word1 into the first j of word2: equal letters add nothing, otherwise take the cheapest of insert, delete or replace plus one.',
+    sketch:
+      '1) dp[i][0] = i and dp[0][j] = j. 2) If the letters match, dp[i][j] = dp[i-1][j-1]. 3) Otherwise dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]). 4) Return dp[m][n]. Time O(m*n), space O(m*n), reducible to O(n) with two rows.',
+  },
+  'palindrome-partitioning': {
+    nudge: 'Cut the string where a palindrome ends and recurse on the rest: a backtracking search over cut positions.',
+    insight:
+      'Only prefixes that are palindromes can start a valid partition, so extend the path with each palindromic prefix and continue from the next index.',
+    sketch:
+      '1) Recurse with a start index and the current path. 2) If start reaches the end, record a copy of the path. 3) For each end index, if s[start..end] is a palindrome, append it, recurse from end + 1, then remove it. 4) Optionally precompute palindromes in a table. Time O(n * 2^n), space O(n).',
+  },
+  'merge-k-sorted-lists': {
+    nudge: 'You repeatedly need the smallest of k current heads: which structure gives you that quickly?',
+    insight:
+      'Keeping only the current head of each list in a min-heap means every step takes the global smallest in logarithmic time; merging the lists in pairs reaches the same total cost.',
+    sketch:
+      '1) Push the head of every non-empty list into a min-heap keyed by value. 2) Pop the smallest, append it to the result, and push its next node if there is one. 3) Repeat until the heap is empty. Time O(N log k) for N total nodes, space O(k).',
+  },
+  'coin-change-ii': {
+    nudge: 'Count combinations, not sequences: think about how the order in which you consider the coins changes what you count.',
+    insight:
+      'Processing one coin type at a time and letting each amount add the ways from amount - coin counts every multiset exactly once, because a combination is only ever built in coin order.',
+    sketch:
+      '1) ways[0] = 1 and every other entry 0. 2) For each coin in turn, for amount from coin up to the target do ways[amount] += ways[amount - coin]. 3) Return ways[target]. Time O(coins * amount), space O(amount).',
+  },
+  'word-ladder': {
+    nudge: 'Treat words as graph nodes, connect words that differ by one letter, and ask for the shortest path.',
+    insight:
+      'The graph is unweighted, so breadth-first search finds the shortest ladder; generating neighbours by changing one letter at a time avoids comparing every pair of words.',
+    sketch:
+      '1) Put the word list in a set; if the end word is missing return 0. 2) BFS from the begin word with a level counter. 3) For each word try every position and every letter; if the new word is in the set, remove it and enqueue it. 4) Return the level when the end word is reached, else 0. Time O(N * L * 26), space O(N).',
+  },
+  'trapping-rain-water': {
+    nudge: 'Water above a bar depends on the tallest walls to its left and right; how can you know both without rescanning?',
+    insight:
+      'The water above index i is min(maxLeft, maxRight) minus height[i]; two pointers moving inward can rely on the smaller side maximum because the other side is at least as tall.',
+    sketch:
+      '1) Keep left, right, leftMax and rightMax. 2) Advance the pointer whose current height is lower: update that side maximum, then add maximum minus height to the total. 3) Stop when the pointers meet. Time O(n), space O(1).',
+  },
+  'minimum-window-substring': {
+    nudge: 'A window that grows until it is valid and then shrinks as far as possible: a sliding window over letter counts.',
+    insight:
+      'Track how many distinct required letters are fully satisfied; expand right until all are, then move left while the window stays valid to find the shortest one.',
+    sketch:
+      '1) Count the needed letters of t and keep a have/need counter. 2) Expand right, updating window counts and have. 3) While have equals need, record the window if it is the shortest so far and shrink from the left. 4) Return the best window or an empty string. Time O(n + m), space O(m).',
+  },
+  'sliding-window-maximum': {
+    nudge: 'You need the maximum of every window quickly; think of a queue that keeps only the candidates that could still become the maximum.',
+    insight:
+      'A smaller value that sits before a larger one can never be a window maximum again, so a deque of indices with decreasing values keeps the current maximum at the front.',
+    sketch:
+      '1) Keep a deque of indices whose values decrease. 2) For each index pop smaller values from the back, push the index, and drop the front if it left the window. 3) Once the first window is complete, record the front value at every step. Time O(n), space O(k).',
+  },
+  'largest-rectangle-in-histogram': {
+    nudge: 'For each bar, how far can a rectangle that uses this bar as its height extend to the left and to the right?',
+    insight:
+      'A monotonic stack of increasing heights finds the nearest smaller bar on both sides; when a bar is popped its width is fixed by the new top of the stack and the current index.',
+    sketch:
+      '1) Iterate with a stack of (start index, height). 2) For a bar lower than the stack top, pop it, compute height * (i - start) and extend the start of the new bar back. 3) Push the bar. 4) After the loop pop what is left with the end at n. Time O(n), space O(n).',
+  },
+  'median-of-two-sorted-arrays': {
+    nudge: 'Do not merge: think about splitting both arrays so that the left parts together hold half of the elements.',
+    insight:
+      'A correct split has every element on the left no larger than every element on the right; binary search the cut in the shorter array, which determines the cut in the other one.',
+    sketch:
+      '1) Make A the shorter array and binary search a cut i in A; the other cut is j = half - i. 2) Compare A[i-1] with B[j] and B[j-1] with A[i] to test the split. 3) Move the search left or right until it is valid. 4) Build the median from the largest left value and the smallest right value. Time O(log min(m, n)), space O(1).',
+  },
+  'reverse-nodes-in-k-group': {
+    nudge: 'Reverse the list block by block: first check that k nodes exist, then reverse just that block and reconnect it.',
+    insight:
+      'A dummy node before the head and a pointer to the node before each block make reconnecting easy; a last block with fewer than k nodes is left untouched.',
+    sketch:
+      '1) Use a dummy node and keep groupPrev. 2) Find the kth node after groupPrev; if it does not exist stop. 3) Reverse the nodes of the block while pointing the first one to the node after the block. 4) Reconnect groupPrev to the new block head and move it to the old head. Time O(n), space O(1).',
+  },
+  'binary-tree-maximum-path-sum': {
+    nudge: 'A path can bend at one node; think about what each node returns upward versus what it records as a candidate answer.',
+    insight:
+      'At each node the best downward gain is its value plus the larger non-negative child gain, but the best path through the node may use both children, so keep a global maximum for that.',
+    sketch:
+      '1) DFS returns the best downward path that starts at the node: val + max(0, left gain, right gain). 2) At each node update the global answer with val + max(0, left) + max(0, right). 3) Return the downward value to the parent. Time O(n), space O(h).',
+  },
+  'serialize-and-deserialize-binary-tree': {
+    nudge: 'Pick one traversal order and mark the empty children so that the string alone can rebuild the exact shape.',
+    insight:
+      'A preorder walk with a marker for null is enough: when reading it back, the next token is always the next node to build, then its left subtree, then its right.',
+    sketch:
+      '1) Serialize with a preorder DFS, writing values separated by commas and a marker such as N for null. 2) Deserialize by splitting into a queue or using an index. 3) Read the next token: if it is the marker return null, otherwise create the node and build left then right. Time O(n), space O(n).',
+  },
+  'design-twitter': {
+    nudge: 'The hard part is the news feed: combine the recent tweets of several users into the ten newest.',
+    insight:
+      'Store tweets per user with a global timestamp; the feed is a merge of the sorted tweet lists of the user and the followees, so a heap on the newest tweet of each list gives the top ten.',
+    sketch:
+      '1) Keep tweets[user] as a list of (time, id) and following[user] as a set. 2) For the feed push the latest tweet of the user and of each followee into a max-heap. 3) Pop up to ten times, pushing the previous tweet of the same user. 4) follow and unfollow edit the set. Time O(k log k) per feed.',
+  },
+  'find-median-from-data-stream': {
+    nudge: 'Keep the smaller half and the larger half of the numbers separately, so the middle is always at the boundary.',
+    insight:
+      'A max-heap for the lower half and a min-heap for the upper half, kept within one element of each other in size, expose the median at the heap tops in constant time.',
+    sketch:
+      '1) addNum: push to the max-heap, move its top to the min-heap, and if the min-heap becomes larger move its top back. 2) findMedian: if the sizes are equal average the two tops, otherwise return the top of the larger heap. Time O(log n) to add and O(1) to read, space O(n).',
+  },
+  'n-queens': {
+    nudge: 'Place one queen per row and keep track of which columns and diagonals are already attacked.',
+    insight:
+      'Two cells share a diagonal when row - col or row + col match, so three sets (columns and both diagonals) make the safety check constant time while backtracking row by row.',
+    sketch:
+      '1) Recurse over rows with sets for columns, row - col and row + col. 2) For each safe column place the queen, add it to the sets and recurse to the next row. 3) At row n record the board. 4) Undo the placement before trying the next column. Time O(n!), space O(n).',
+  },
+  'redundant-connection': {
+    nudge: 'Edges arrive one by one; which structure tells you quickly whether two nodes are already connected?',
+    insight:
+      'The edge that closes a cycle is exactly the first edge whose endpoints are already in the same component, which a disjoint set union detects in almost constant time.',
+    sketch:
+      '1) Create a parent array and a rank or size array. 2) For each edge find the roots of both endpoints. 3) If the roots are equal, return this edge. 4) Otherwise union the two sets by rank. Time O(n * alpha(n)), space O(n).',
+  },
+  'min-cost-to-connect-all-points': {
+    nudge: 'Connecting all points with the smallest total length is a minimum spanning tree over a complete graph.',
+    insight:
+      'Prim grows one tree by always adding the cheapest edge to a new point, and with Manhattan distances computed on demand no explicit edge list is needed.',
+    sketch:
+      '1) Start from point 0 with a min-heap of (cost, point). 2) Pop the cheapest; if the point is already visited skip it, otherwise add its cost and mark it visited. 3) Push the distance from it to every unvisited point. 4) Stop after n points are connected. Time O(n^2 log n), space O(n^2) worst case.',
+  },
+  'cheapest-flights-within-k-stops': {
+    nudge: 'This is a shortest path with a limit on the number of edges, which plain Dijkstra does not respect directly.',
+    insight:
+      'Relaxing all flights k + 1 times, each round reading only the prices of the previous round, finds the cheapest price that uses at most k stops.',
+    sketch:
+      '1) prices[src] = 0 and infinity elsewhere. 2) Repeat k + 1 times: copy prices, then for each flight (u, v, w) set temp[v] = min(temp[v], prices[u] + w) using the old prices. 3) Replace prices with temp. 4) Return prices[dst], or -1 if it is still infinity. Time O(k * E), space O(n).',
+  },
+  'reconstruct-itinerary': {
+    nudge: 'You must use every ticket exactly once: an Eulerian path where ties are broken alphabetically.',
+    insight:
+      'A Hierholzer-style DFS takes the smallest destination first and adds an airport to the route only when it has no tickets left, so the final route is the reverse of the finishing order.',
+    sketch:
+      '1) Build adjacency lists so the smallest destination is taken first (for example a min-heap per airport). 2) DFS from JFK: while the airport has tickets pop one and recurse. 3) After the loop append the airport to the route. 4) Reverse the route. Time O(E log E), space O(E).',
+  },
+  'swim-in-rising-water': {
+    nudge: 'Minimise the highest cell you have to cross: a shortest-path style search where the cost is a maximum rather than a sum.',
+    insight:
+      'Always expand the reachable cell with the lowest elevation seen so far, because the time needed to reach a cell is the largest elevation along the best path to it.',
+    sketch:
+      '1) Use a min-heap of (max elevation so far, row, col), starting at the top left. 2) Pop the smallest, mark it visited and, if it is the target, return its value. 3) For each unvisited neighbour push max(current value, neighbour elevation). Time O(n^2 log n), space O(n^2) for an n by n grid.',
+  },
+  'best-time-to-buy-and-sell-stock-with-cooldown': {
+    nudge: 'Describe each day by a few states, such as holding, just sold and resting, and decide how you can move between them.',
+    insight:
+      'After a sale you must rest one day, so buying on day i depends on the profit from day i - 2; three states with simple transitions give the answer without a large table.',
+    sketch:
+      '1) Track hold (best profit while holding), sold (best profit having just sold) and rest (best profit while resting). 2) Each day: newHold = max(hold, rest - price), newSold = hold + price, newRest = max(rest, sold). 3) Return max(sold, rest) at the end. Time O(n), space O(1).',
+  },
+  'target-sum': {
+    nudge: 'Every number gets a plus or a minus: count the ways to reach the target instead of listing them.',
+    insight:
+      'Counting ways per running sum, with a map from partial sum to count, avoids exploring all sign choices separately; the same idea can also be turned into a subset-sum count.',
+    sketch:
+      '1) Keep a map from sum to the number of ways, starting with {0: 1}. 2) For each number build a new map where every sum s contributes to s + num and to s - num. 3) Replace the map. 4) Return the count stored for the target. Time O(n * total), space O(total).',
+  },
+  'interleaving-string': {
+    nudge: 'Decide the third string one character at a time; the state is how many characters you took from each of the first two.',
+    insight:
+      'dp[i][j] is true when the first i characters of s1 and the first j of s2 can interleave into the first i + j of s3; the last character of that prefix must come from one of the two.',
+    sketch:
+      '1) If the lengths do not add up return false. 2) dp[0][0] = true. 3) dp[i][j] is true if dp[i-1][j] and s1[i-1] equals s3[i+j-1], or dp[i][j-1] and s2[j-1] equals s3[i+j-1]. 4) Return dp[m][n]. Time O(m*n), space O(n) with a single row.',
+  },
+  'longest-increasing-path-in-a-matrix': {
+    nudge: 'A path that only goes upward cannot cycle, so a memoised DFS from each cell works without a visited set.',
+    insight:
+      'The longest path starting at a cell is one plus the best among strictly larger neighbours, and each cell value is final once computed, so caching it makes the total work linear in the cells.',
+    sketch:
+      '1) Keep memo[r][c] for the longest path starting there. 2) DFS(r, c): if cached return it. 3) Otherwise take 1 plus the maximum DFS of every in-bounds neighbour with a larger value. 4) Store and return it; the answer is the maximum over all cells. Time O(m*n), space O(m*n).',
+  },
+  'distinct-subsequences': {
+    nudge: 'Count the ways the shorter string can be matched inside the longer one, using prefixes of both as the state.',
+    insight:
+      'When the current characters match, you may either use that character or skip it in the source; when they differ you can only skip, so the counts add up in a 2-D table.',
+    sketch:
+      '1) dp[i][j] is the number of ways the first j letters of t appear in the first i letters of s. 2) dp[i][0] = 1. 3) dp[i][j] = dp[i-1][j], plus dp[i-1][j-1] if s[i-1] equals t[j-1]. 4) Return dp[m][n]. Time O(m*n), space O(n) with one row updated right to left.',
+  },
+  'burst-balloons': {
+    nudge: 'Think about which balloon is burst last in a range, not first; that makes the two sides independent.',
+    insight:
+      'If k is the last balloon burst between i and j, its neighbours are the fixed borders i and j, so the best score splits cleanly into the two sub-ranges plus the product for k.',
+    sketch:
+      '1) Pad nums with 1 on both ends. 2) dp[l][r] is the best score from bursting everything strictly between l and r. 3) For each gap length and each k between them: dp[l][r] = max(dp[l][k] + dp[k][r] + nums[l]*nums[k]*nums[r]). 4) Return dp[0][n+1]. Time O(n^3), space O(n^2).',
+  },
+  'regular-expression-matching': {
+    nudge: 'Compare prefixes of text and pattern, and pay special attention to what a star lets you do with the character before it.',
+    insight:
+      'A star means zero or more of the previous element: either skip the starred pair, or, if the previous element matches the current text character, consume one text character and keep the pattern.',
+    sketch:
+      '1) Use memoised recursion dp(i, j) for text[i:] against pattern[j:]. 2) If j is at the end, the answer is whether i is at the end. 3) first = i is in range and (pattern[j] equals text[i] or pattern[j] is a dot). 4) If pattern[j+1] is a star return dp(i, j+2) or (first and dp(i+1, j)); else return first and dp(i+1, j+1). Time O(m*n), space O(m*n).',
+  },
+  'hand-of-straights': {
+    nudge: 'Always start a group from the smallest card still unused: what follows from that choice?',
+    insight:
+      'The smallest remaining card must be the start of some group, so groups are forced greedily; counts per value tell you whether the next consecutive cards are still available.',
+    sketch:
+      '1) If the hand size is not divisible by the group size return false. 2) Count the cards and keep a min-heap or sorted keys. 3) Take the smallest value with a positive count and decrement it and the next groupSize - 1 consecutive values, failing if one is missing. 4) Repeat until empty. Time O(n log n), space O(n).',
+  },
+  'merge-triplets-to-form-target-triplet': {
+    nudge: 'Which triplets can never help because one of their values already exceeds the target?',
+    insight:
+      'A triplet with any value above the target must be discarded because a maximum can never come back down; among the rest you only need each target coordinate to be reached by some usable triplet.',
+    sketch:
+      '1) For each triplet skip it if any value is larger than the corresponding target value. 2) Otherwise note every coordinate where it equals the target. 3) Return true if all three coordinates were matched. Time O(n), space O(1).',
+  },
+  'valid-parenthesis-string': {
+    nudge: 'A star can be three different things, so track a range of possible open counts rather than a single number.',
+    insight:
+      'Keep the lowest and highest possible number of unmatched left parentheses: a star widens the range, a close shrinks it, and the string is valid only if the high never goes negative and the low can end at zero.',
+    sketch:
+      '1) lo = hi = 0. 2) For a left parenthesis lo++ and hi++; for a right one lo-- and hi--; for a star lo-- and hi++. 3) If hi < 0 return false; if lo < 0 set lo = 0. 4) Return lo == 0. Time O(n), space O(1).',
+  },
+  'minimum-interval-to-include-each-query': {
+    nudge: 'Process the queries in sorted order so that you can reuse intervals that already started and may still cover the query.',
+    insight:
+      'Sort intervals by start and queries ascending; a min-heap keyed by interval size holds the intervals that have started, and anything that ended before the current query can be discarded lazily.',
+    sketch:
+      '1) Sort the intervals and the queries (remember the original positions). 2) For each query push all intervals with start <= query into a min-heap of (size, end). 3) Pop from the heap while its end is before the query. 4) The top size is the answer, or -1 if the heap is empty. Time O((n + q) log n), space O(n + q).',
+  },
+  'powx-n': {
+    nudge: 'Avoid multiplying n times: how does squaring let you halve the exponent at every step?',
+    insight:
+      'x^n equals (x^(n/2))^2, with one extra factor of x when n is odd; a negative exponent becomes the reciprocal of the positive power.',
+    sketch:
+      '1) If n is negative, set x = 1 / x and n = -n. 2) Loop while n > 0: if n is odd multiply the result by x; square x; halve n. 3) Return the result. Time O(log n), space O(1).',
+  },
+  'multiply-strings': {
+    nudge: 'Simulate grade-school multiplication, but remember where each digit product lands in the result.',
+    insight:
+      'The product of digit i of one number and digit j of the other contributes to positions i + j and i + j + 1 of the result array, so one pass with carries is enough.',
+    sketch:
+      '1) Allocate an array of length m + n filled with 0. 2) For i and j from the right multiply the digits, add to res[i+j+1], then carry into res[i+j]. 3) Skip leading zeros and join the digits; return 0 if nothing is left. Time O(m*n), space O(m + n).',
+  },
+  'detect-squares': {
+    nudge: 'Counting squares around a query point: store point counts, then look at the stored points that could be the opposite corner.',
+    insight:
+      'A square is fixed by the query point and one diagonal point with equal distance in x and y; the other two corners are then known, and their counts multiply.',
+    sketch:
+      '1) Keep a map from point to count. 2) add: increment the count. 3) count(q): for each stored point p diagonal to q (equal nonzero distance in x and y), multiply count[p] by count[(q.x, p.y)] and count[(p.x, q.y)] and add to the total. Time O(n) per count, space O(n).',
+  },
+  'reverse-integer': {
+    nudge: 'Build the reversed number digit by digit and watch for the moment it would leave the 32-bit range.',
+    insight:
+      'Pop the last digit with a modulo, push it onto the result with a multiplication, and check before each push whether the result would overflow, because the reversed value may not fit even if the input did.',
+    sketch:
+      '1) Remember the sign and work with the absolute value. 2) While x > 0: digit = x % 10, x = x // 10, and if res > (2^31 - 1 - digit) / 10 return 0. 3) res = res * 10 + digit. 4) Return res with the sign. Time O(log x), space O(1).',
+  },
 };
 
 export function getHints(slug: string): Hint | undefined {

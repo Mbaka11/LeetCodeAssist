@@ -62,7 +62,7 @@ export function ProblemView({
           {problem.difficulty}
         </Badge>
         <Badge tone={STATUS_TONES[status]}>{STATUS_LABELS[status]}</Badge>
-        {position !== null ? <Badge>30-day program</Badge> : null}
+        {position !== null ? <Badge>60-day program</Badge> : null}
         {inBenchmark ? <Badge tone="benchmark">Benchmark</Badge> : null}
         {isBonusProblem(slug) ? <Badge tone="warn">Bonus</Badge> : null}
       </div>
@@ -78,8 +78,8 @@ export function ProblemView({
             {position !== null
               ? `${position} of ${programQueue(state).length}`
               : isBonusProblem(slug)
-                ? 'Bonus problem (not in the 30-day program)'
-                : 'Not in the 30-day program'}
+                ? 'Bonus problem (not in the 60-day program)'
+                : 'Not in the 60-day program'}
           </dd>
           <dt>Next review</dt>
           <dd>

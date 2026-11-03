@@ -31,7 +31,7 @@ describe('RoadmapView grid layout (render smoke test)', () => {
     expect(html).toContain('Hard');
     expect(html).toContain('worked 0 · solo in review 0 · consolidating 0');
     expect(html.match(/type="checkbox"/g)).toHaveLength(150);
-    expect(html).toContain('30-day program');
+    expect(html).toContain('60-day program');
     expect(html).toContain('Benchmark');
     expect(html).toContain('href="#/problem/two-sum"');
     expect(html).toContain('https://leetcode.com/problems/two-sum/');
@@ -87,7 +87,7 @@ describe('RoadmapView tree layout (render smoke test)', () => {
     expect(html.match(/type="checkbox"/g)).toHaveLength(9);
     expect(html).toContain('href="#/problem/contains-duplicate"');
     expect(html).toContain('https://leetcode.com/problems/two-sum/');
-    expect(html).toContain('30-day program');
+    expect(html).toContain('60-day program');
     expect(html).toContain('Untouched');
   });
 

@@ -25,7 +25,7 @@ describe('ActivityCard secondary action', () => {
   });
 
   it('labels a bonus-pool problem and offers Skip (not Postpone)', () => {
-    const html = card('new', { slug: 'koko-eating-bananas' });
+    const html = card('new', { slug: 'trapping-rain-water' });
     expect(html).toContain('Bonus');
     expect(html).toContain('>Skip<');
     expect(html).not.toContain('Postpone');

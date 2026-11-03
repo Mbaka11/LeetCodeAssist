@@ -41,7 +41,7 @@ export function InterviewPrepPanel({ state, actions, onStartSimulation }: {
 
   return <div className="stack">
     <h2>Interview prep</h2>
-    <p className="muted">Optional and informational only. It never schedules work, changes your plan, reviews or the 50-problem program, and it
+    <p className="muted">Optional and informational only. It never schedules work, changes your plan, reviews or the 60-day program, and it
       gives no progress, worked-total, streak or weekly-review credit. Pick one company and your interview date to see how your own history lines up
       with that company's documented problems.</p>
     {showForm ? <div className="card stack">

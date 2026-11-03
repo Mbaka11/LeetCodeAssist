@@ -67,10 +67,10 @@ describe('projectDay and the bonus pool', () => {
       .items.filter((i) => i.activity.type === 'new').map((i) => i.activity.slug));
   });
 
-  it('projects a day after day 30 without bonus items and within the cap', () => {
+  it('projects a day in phase 2 with new problems, without bonus items and within the cap', () => {
     const state = newState();
     const projection = projectDay(state, day(40), day(1));
-    expect(projection.items.some((i) => i.type === 'new')).toBe(false);
+    expect(projection.items.some((i) => i.type === 'new')).toBe(true);
     expect(projection.items.some((i) => BONUS_POOL.includes(i.slug))).toBe(false);
     expect(projection.totalMinutes).toBeLessThanOrEqual(state.settings.dailyCapMin);
   });

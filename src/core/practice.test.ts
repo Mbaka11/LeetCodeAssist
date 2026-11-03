@@ -3,7 +3,7 @@ import { DRILL_ALSO_VALID, RELATED_TAG_GROUPS } from '../data/drillAmbiguity';
 import { DRILL_CONTENT } from '../data/drills';
 import { getProblem, NEETCODE_150 } from '../data/neetcode150';
 import { DATA_STRUCTURE_TAGS, PROBLEM_TAGS, TECHNIQUE_TAGS, type MetadataProblemSlug } from '../data/problemMetadata';
-import { PROGRAM_QUEUE } from '../data/program';
+import { PHASE_ONE_QUEUE, PROGRAM_QUEUE } from '../data/program';
 import { defaultState } from './state';
 import { drawSimulation, drillQuestions, simulationPool, tagsNeverOfferedAsWrong, workedSlugs } from './practice';
 
@@ -48,7 +48,7 @@ describe('practice pools (separate from scheduled work)', () => {
 
 describe('original pattern drill bank', () => {
   it('covers exactly the mandatory 50 with distinct original correct/wrong outlines and explanations', () => {
-    expect(Object.keys(DRILL_CONTENT).sort()).toEqual([...PROGRAM_QUEUE].sort());
+    expect(Object.keys(DRILL_CONTENT).sort()).toEqual([...PHASE_ONE_QUEUE].sort());
     for (const [slug, content] of Object.entries(DRILL_CONTENT)) {
       expect(NEETCODE_150.some((p) => p.slug === slug)).toBe(true);
       expect(content).toHaveLength(7);
@@ -143,7 +143,7 @@ describe('drill spoiler boundary for unworked problems', () => {
 
 describe('drill answer keys with several sound answers', () => {
   it('has a curated also-valid entry for every one of the 50 problems, with known tags that exclude the key', () => {
-    expect(Object.keys(DRILL_ALSO_VALID).sort()).toEqual([...PROGRAM_QUEUE].sort());
+    expect(Object.keys(DRILL_ALSO_VALID).sort()).toEqual([...PHASE_ONE_QUEUE].sort());
     const vocab: readonly string[] = [...TECHNIQUE_TAGS, ...DATA_STRUCTURE_TAGS];
     for (const [slug, extra] of Object.entries(DRILL_ALSO_VALID)) {
       expect(extra.every((tag) => vocab.includes(tag)), slug).toBe(true);

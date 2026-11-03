@@ -1790,3 +1790,21 @@ label > select,
   background: var(--surface-2);
   white-space: nowrap;
 }
+
+/* Day 30 / Day 60 retrospectives (Calendar) */
+.retrospective {
+  display: grid;
+  gap: 16px;
+}
+
+.retrospective h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.retro-weak {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 4px;
+}

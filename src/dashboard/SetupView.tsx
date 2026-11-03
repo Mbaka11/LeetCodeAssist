@@ -20,7 +20,7 @@ export function SetupView({ actions }: { actions: AppActions }) {
     <main className="page narrow">
       <Card title="Welcome to LeetCode Assist">
         <p>
-          A 30-day bootcamp on the NeetCode 150 roadmap. Every day you get a short list: new problems,
+          A 60-day bootcamp on the NeetCode 150 roadmap. Every day you get a short list: new problems,
           spaced reviews and how long each should take.
         </p>
         <fieldset className="choice-group">

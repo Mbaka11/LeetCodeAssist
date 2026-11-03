@@ -38,7 +38,7 @@ describe('bonus offers: two optional slots', () => {
     const state = newState();
     const plan = planDay(state, day(1));
     const core = planDay(state, day(1), undefined, { bonusPool: [] });
-    expect(slugsOf(plan)).toEqual([BONUS_POOL[0], BONUS_POOL[1]]);
+    expect(slugsOf(plan)).toEqual(['trapping-rain-water', 'evaluate-reverse-polish-notation']);
     expect(core.bonuses).toEqual([]);
     expect(plan.items.map((i) => i.activity.id)).toEqual(core.items.map((i) => i.activity.id));
     expect(plan.plannedMinutes).toBe(core.plannedMinutes);
@@ -81,7 +81,7 @@ describe('bonus offers: two optional slots', () => {
       state = result.state;
     }
     expect(new Set(seen).size).toBe(10);
-    expect(seen).toEqual(BONUS_POOL.slice(0, 10));
+    for (const slug of seen) expect(BONUS_POOL, slug).toContain(slug);
     expect(planDay(state, day(1)).completedBonuses).toHaveLength(10);
     // Their time is logged on that day, but the core plan did not change.
     expect(planDay(state, day(1)).plannedMinutes).toBe(planDay(newState(), day(1)).plannedMinutes);
@@ -152,12 +152,12 @@ describe('bonus offers: running, paused and legacy activities', () => {
 
   it('migrates one planned bonus stored by 0.5 and fills the second slot', () => {
     const legacy = validateState(
-      JSON.parse(serializeState(withActivity(newState(), 'new', 'generate-parentheses', day(1)))),
+      JSON.parse(serializeState(withActivity(newState(), 'new', 'evaluate-reverse-polish-notation', day(1)))),
     );
     const plan = planDay(legacy, day(1));
     expect(plan.bonuses).toHaveLength(2);
     expect(plan.bonuses[0]).toMatchObject({ persisted: true });
-    expect(plan.bonuses[0]!.activity.id).toBe('new:generate-parentheses:' + day(1));
+    expect(plan.bonuses[0]!.activity.id).toBe('new:evaluate-reverse-polish-notation:' + day(1));
     expect(plan.bonuses[1]!.persisted).toBe(false);
     expect(slugsOf(plan)).not.toContain(plan.items.map((i) => i.activity.slug)[0]);
     expect(new Set(slugsOf(plan)).size).toBe(2);
@@ -165,15 +165,15 @@ describe('bonus offers: running, paused and legacy activities', () => {
 
   it('upgrades several planned pool activities on different dates without duplicates or lost timers', () => {
     let state = newState();
-    state = withActivity(state, 'new', 'generate-parentheses', day(1));
-    state = withActivity(state, 'new', 'generate-parentheses', day(2)); // 0.5 stored one per materialized day
-    state = withActivity(state, 'new', 'evaluate-reverse-polish-notation', day(3), {
+    state = withActivity(state, 'new', 'evaluate-reverse-polish-notation', day(1));
+    state = withActivity(state, 'new', 'evaluate-reverse-polish-notation', day(2)); // 0.5 stored one per materialized day
+    state = withActivity(state, 'new', 'car-fleet', day(3), {
       status: 'in_progress',
       timer: { startedAt: 9000, accumulatedMs: 4000, running: true },
       hintsUsed: 1,
     });
-    state = withActivity(state, 'new', 'car-fleet', day(3));
-    const running = state.activities.find((a) => a.slug === 'evaluate-reverse-polish-notation')!;
+    state = withActivity(state, 'new', 'largest-rectangle-in-histogram', day(3));
+    const running = state.activities.find((a) => a.slug === 'car-fleet')!;
 
     const plan = planDay(state, day(4));
     const withoutPool: AppState = {
@@ -181,9 +181,9 @@ describe('bonus offers: running, paused and legacy activities', () => {
       activities: state.activities.filter((a) => !BONUS_POOL.includes(a.slug)),
     };
     const core = planDay(withoutPool, day(4));
-    expect(slugsOf(plan)).toEqual(['generate-parentheses', 'evaluate-reverse-polish-notation']);
+    expect(slugsOf(plan)).toEqual(['evaluate-reverse-polish-notation', 'car-fleet']);
     expect(plan.bonuses.map((b) => b.activity.id).sort()).toEqual(
-      ['new:evaluate-reverse-polish-notation:' + day(3), 'new:generate-parentheses:' + day(1)].sort(),
+      ['new:car-fleet:' + day(3), 'new:evaluate-reverse-polish-notation:' + day(1)].sort(),
     );
     expect(plan.bonuses.find((b) => b.activity.id === running.id)!.activity).toEqual(running);
     expect(plan.bonuses.every((b) => b.persisted && !b.overdue)).toBe(true);
@@ -197,8 +197,8 @@ describe('bonus offers: running, paused and legacy activities', () => {
     expect(persisted.activities.find((a) => a.id === running.id)).toEqual(running);
 
     // The hidden twin never resurfaces: once the offer is done, the same problem is not offered again.
-    const done = complete(persisted, 'new:generate-parentheses:' + day(1), 'solo', day(4), 30);
-    expect(slugsOf(planDay(done, day(4)))).not.toContain('generate-parentheses');
+    const done = complete(persisted, 'new:evaluate-reverse-polish-notation:' + day(1), 'solo', day(4), 30);
+    expect(slugsOf(planDay(done, day(4)))).not.toContain('evaluate-reverse-polish-notation');
   });
 
   it('loads a state with one bonus per day exactly as before and keeps its history', () => {

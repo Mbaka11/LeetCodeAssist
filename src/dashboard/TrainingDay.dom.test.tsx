@@ -18,7 +18,7 @@ describe('training-day dashboard and side panel', () => {
     vi.setSystemTime(at(31, 1));
     const state = materializeToday(defaultState('2025-01-16'), at(30, 23, 40));
     render(<TodayView state={state} actions={actions} />);
-    expect(screen.getByRole('heading', { name: 'Day 15 of 30' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Day 15 of 60' })).toBeTruthy();
     expect(screen.getByText(/Training day:.*changes at 04:00/)).toBeTruthy();
     const benchmarks = state.activities.filter((a) => a.type === 'benchmark' && a.dueDate === '2025-01-30');
     expect(benchmarks).toHaveLength(2);
@@ -27,7 +27,7 @@ describe('training-day dashboard and side panel', () => {
       expect(within(card).getByRole('button', { name: 'Start' })).toBeTruthy();
     }
     act(() => vi.advanceTimersByTime(3 * 60 * 60_000));
-    expect(screen.getByRole('heading', { name: 'Day 16 of 30' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Day 16 of 60' })).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Missed benchmarks (4)' })).toBeTruthy();
     expect(screen.getByText(/credits the current training day, not its original date/)).toBeTruthy();
   });

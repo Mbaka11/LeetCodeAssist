@@ -52,7 +52,7 @@ describe('CalendarView compact layout structure (DOM)', () => {
     expect(container.querySelector('.activity-heatmap')).toBeNull();
     const summary = root.querySelector('.cal-summary')!;
     expect([...summary.children].map((el) => el.className)).toEqual(['card cal-overview', 'card cal-streak']);
-    expect(container.querySelectorAll('.calendar-grid .cal-day')).toHaveLength(30);
+    expect(container.querySelectorAll('.calendar-grid .cal-day')).toHaveLength(60);
   });
 
   it('shows Refresh, the username, the age and the compact numbers in the streak card', async () => {
@@ -137,6 +137,6 @@ describe('CalendarView compact layout structure (DOM)', () => {
     const { container } = await renderCalendar(profile(), state);
     const total = container.querySelector<HTMLElement>('.cal-overview .worked-total')!;
     expect(total.textContent).toContain('6problems worked');
-    expect(total.textContent).toContain('Program 2/50 · Benchmarks 2/6 · Bonus 2');
+    expect(total.textContent).toContain('Program 2/86 · Benchmarks 2/10 · Bonus 2');
   });
 });

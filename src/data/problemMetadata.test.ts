@@ -6,14 +6,14 @@ import { DATA_STRUCTURE_TAGS, PROBLEM_TAGS, TECHNIQUE_TAGS } from './problemMeta
 import { SIMILAR_PROBLEMS, SIMILAR_RELATIONS } from './similarProblems';
 
 describe('problemMetadata editorial registry', () => {
-  it('covers exactly the existing 150 slugs and retains the 75 subset and fixed 50 program', () => {
+  it('covers exactly the existing 150 slugs and retains the 75 subset and the 86-problem program', () => {
     const slugs = NEETCODE_150.map((problem) => problem.slug);
     expect(Object.keys(PROBLEM_TAGS)).toEqual(slugs);
     expect(Object.keys(SIMILAR_PROBLEMS)).toEqual(slugs);
     expect(catalogProblems('neetcode150')).toBe(NEETCODE_150);
     expect(catalogProblems('neetcode150')).toHaveLength(150);
     expect(catalogProblems('blind75')).toHaveLength(75);
-    expect(PROGRAM_QUEUE).toHaveLength(50);
+    expect(PROGRAM_QUEUE).toHaveLength(86);
     expect(catalogProblems('blind75').every((problem) => slugs.includes(problem.slug))).toBe(true);
     expect(PROGRAM_QUEUE.every((slug) => slugs.includes(slug))).toBe(true);
   });
