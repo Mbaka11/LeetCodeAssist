@@ -7,6 +7,23 @@ import { START, complete, day, newState, simulateDay } from './testing';
 import { applyOutcome } from './reviews';
 import type { Activity, ActivityType, AppState } from './types';
 
+describe('calendarDays: retired duplicate reviews', () => {
+  it('does not count a skipped review as carried when its twin was finished within the week', () => {
+    const base = newState();
+    const twinDone = createActivity(base.activities, { type: 'rebuild', slug: 'merge-two-sorted-lists', dueDate: day(8), createdAt: day(8) });
+    let state: AppState = { ...base, activities: [twinDone] };
+    state = complete(state, twinDone.id, 'hint', day(8), 8);
+    const dup = createActivity(state.activities, { type: 'rebuild', slug: 'merge-two-sorted-lists', dueDate: day(9), createdAt: day(8) });
+    state = { ...state, activities: [...state.activities, { ...dup, status: 'skipped' }] };
+    const lone = createActivity(state.activities, { type: 'recall', slug: 'two-sum', dueDate: day(9), createdAt: day(8) });
+    state = { ...state, activities: [...state.activities, { ...lone, status: 'skipped' }] };
+    const today = calendarDays(state, day(9)).find((d) => d.date === day(9))!;
+    expect(today.entries.find((e) => e.slug === 'merge-two-sorted-lists')?.state).toBe('skipped');
+    expect(today.entries.find((e) => e.slug === 'two-sum')?.state).toBe('carried');
+    expect(today.carriedCount).toBe(1);
+  });
+});
+
 describe('calendarDays', () => {
   it('lists days 1-60 with markers and a highlighted today', () => {
     const days = calendarDays(newState(), day(1));

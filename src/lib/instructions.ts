@@ -13,9 +13,11 @@ export const ACTIVITY_LABELS: Record<ActivityType, string> = {
 export const ACTIVITY_INSTRUCTIONS: Record<ActivityType, string> = {
   new: 'Search, code, understand, write notes. Help ladder: take a hint at 15–20 min without an approach; at 35–45 min read the solution, then re-code it from memory.',
   recall:
-    'Without notes: state the approach, why it works, and the time and space complexity.',
-  rebuild: 'Rebuild the algorithm in pseudocode or code, then check the edge cases.',
-  resolve: 'Solve from a blank editor: no hints, no old solution.',
+    'Retrieval only, no editor and no code: from memory, write 4–5 lines: the approach, why it works, the edge cases, and the time and space complexity. If you cannot, that is the finding: open your notes, then log Hint or Stuck.',
+  rebuild:
+    'Write the solution again from your own notes, not the old code: pseudocode first, then code, then run the edge cases. Stop at the budget and compare with your notes afterwards.',
+  resolve:
+    'Interview conditions: blank editor and a timer, no notes, no hints. Code it, test with your own cases and say the complexity out loud. Solved within the budget counts as Solo.',
   blind: 'Solve with the category hidden. Solved alone means mastered.',
   retry: 'Targeted redo of a review you failed yesterday.',
   benchmark:

@@ -62,9 +62,9 @@ Benchmark problems are reserved and never appear in the learning queue.
 | Type | When | Instruction | Budget Easy / Medium / Hard (min) |
 |---|---|---|---:|
 | `new` | queue | Search, code, understand, write notes. Help ladder: hint at 15–20 min without an approach, read the solution at 35–45 min then **re-code it from memory**. | 25 / 40 / 50 |
-| `recall` | done + 1 day | Without notes: state the approach, why it works, time/space complexity. | 5 / 8 / 10 |
-| `rebuild` | done + 3 days | Rebuild the algorithm in pseudocode or code, check edge cases. | 10 / 15 / 18 |
-| `resolve` | done + 7 days | Solve from a blank editor, no hints, no old solution. | 15 / 25 / 30 |
+| `recall` | done + 1 day | Retrieval only, no code: write the approach, why it works, edge cases, time/space complexity from memory. | 5 / 8 / 10 |
+| `rebuild` | done + 3 days | Write it again from your own notes (pseudocode, then code), run the edge cases. | 10 / 15 / 18 |
+| `resolve` | done + 7 days | Interview conditions: blank editor and a timer, no notes, no hints. | 15 / 25 / 30 |
 | `blind` | done + 21 days | Solve with the category hidden. Solved alone ⇒ **mastered**. | 15 / 20 / 25 |
 | `retry` | next day after a failure | Targeted redo of a failed review. | 10 / 15 / 18 |
 | `benchmark` | days 1, 15, 30 | Timed unseen Easy + Medium. Once done, each problem enters the normal review cycle (D+1/3/7/21) like a `new` problem. | 30 per problem (60 for the pair) |

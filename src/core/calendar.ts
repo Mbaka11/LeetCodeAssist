@@ -8,7 +8,7 @@ import {
   isConsolidationDay,
 } from '../data/program';
 import { estimatedMinutes, expectedNewMinutes, isReviewType } from './activities';
-import { compareDates, dateFromDayIndex, dayIndex } from './dates';
+import { addDays, compareDates, dateFromDayIndex, dayIndex } from './dates';
 import { coreNewCount, planDay } from './planner';
 import { dailyTargetMinutes, dayProgress, isPlanDone } from './state';
 import type { Activity, ActivityType, AppState, BudgetOverrides, Outcome } from './types';
@@ -105,15 +105,25 @@ function entryOf(a: Activity, state: EntryState, budgets: BudgetOverrides | unde
   };
 }
 
+/** Days before a skipped review's due date in which a finished twin counts as the reason it was retired. */
+const REVIEW_TWIN_WINDOW_DAYS = 7;
+
 /** State of a stored activity as seen from `date` (<= today), or null when it does not belong there. */
-function stateOnDate(a: Activity, date: string, today: string, carriedIds: ReadonlySet<string>): EntryState | null {
+function stateOnDate(
+  a: Activity,
+  date: string,
+  today: string,
+  carriedIds: ReadonlySet<string>,
+  retired: ReadonlySet<string>,
+): EntryState | null {
   if (a.status === 'done') {
     if (a.completedAt === date) return 'done';
     // Due here but finished later: carried. Finished before its due date: it belongs to that earlier day.
     return a.completedAt !== undefined && compareDates(a.completedAt, date) > 0 ? 'carried' : null;
   }
   const review = isReviewType(a.type) && !a.extra;
-  if (a.status === 'skipped') return review ? 'carried' : 'skipped';
+  // A review retired because the same review was already done (or is planned again) is not a carried one.
+  if (a.status === 'skipped') return review && !retired.has(a.id) ? 'carried' : 'skipped';
   if (date < today) return review ? 'carried' : 'missed';
   return carriedIds.has(a.id) ? 'carried' : 'open';
 }
@@ -180,6 +190,17 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
   const supersededNewPlans = new Set(state.activities.filter((a) => a.type === 'new' && a.status === 'planned' &&
     !a.extra && committedNewSlugs.has(a.slug)).map((a) => a.id));
 
+  // Skipped reviews whose twin (same problem and type) was finished within the week before their due date: the
+  // planner retired them as duplicates, so they are not "carried over".
+  const retired = new Set<string>();
+  for (const a of state.activities) {
+    if (a.status !== 'skipped' || a.extra || !isReviewType(a.type)) continue;
+    const from = addDays(a.dueDate, -REVIEW_TWIN_WINDOW_DAYS);
+    const twinDone = state.activities.some((b) => b.id !== a.id && b.slug === a.slug && b.type === a.type &&
+      b.status === 'done' && b.completedAt !== undefined && compareDates(b.completedAt, from) >= 0);
+    if (twinDone) retired.add(a.id);
+  }
+
   for (const a of state.activities) {
     if (fulfilledPlans.has(a.id) || supersededNewPlans.has(a.id)) continue;
     if (isBonusActivity(a)) {
@@ -192,7 +213,7 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
     const dueHere = a.dueDate === date;
     if (!dueHere && !(a.status === 'done' && a.completedAt === date)) continue;
     if (a.extra && a.status === 'planned') continue; // optional practice that was never started
-    const entryState = stateOnDate(a, date, today, carriedIds);
+    const entryState = stateOnDate(a, date, today, carriedIds, retired);
     if (entryState === null) continue;
     const isBonus = bonus.has(a.id);
     drafts.set(a.id, {

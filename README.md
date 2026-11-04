@@ -86,9 +86,9 @@ are counted from the day the `new` activity was actually completed.
 | Type | When | What to do | Budget Easy / Medium / Hard (min) |
 |---|---|---|---:|
 | `new` | from the queue | Search, code, understand, write notes. Hint at 15–20 min without an approach; read the solution at 35–45 min, then re-code it from memory. | 25 / 40 / 50 |
-| `recall` | done + 1 day | Without notes: state the approach, why it works, time and space complexity. | 5 / 8 / 10 |
-| `rebuild` | done + 3 days | Rebuild the algorithm in pseudocode or code, check edge cases. | 10 / 15 / 18 |
-| `resolve` | done + 7 days | Solve from a blank editor: no hints, no old solution. | 15 / 25 / 30 |
+| `recall` | done + 1 day | Retrieval only, no code: write the approach, why it works, edge cases, time and space complexity from memory. | 5 / 8 / 10 |
+| `rebuild` | done + 3 days | Write it again from your own notes (pseudocode, then code), run the edge cases. | 10 / 15 / 18 |
+| `resolve` | done + 7 days | Interview conditions: blank editor and a timer, no notes, no hints. | 15 / 25 / 30 |
 | `blind` | done + 21 days | Solve with the category hidden. Solved alone means **mastered**. | 15 / 20 / 25 |
 | `retry` | the day after a failed review | Targeted redo. | 10 / 15 / 18 |
 | `benchmark` | days 1, 15, 30 | Timed, unseen Easy + Medium. | 30 per problem (60) |

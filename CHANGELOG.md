@@ -3,6 +3,14 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.13.1
+
+### Fixed
+- The Calendar no longer counts a retired duplicate review as "carried". A skipped review whose twin (same problem and type) was finished within the previous 7 days is shown as skipped, so a day no longer shows "carried 2" for reviews that had nothing left to do.
+
+### Changed
+- Recall, Rebuild and Re-solve now have distinct instructions: Recall is retrieval only (no editor, write the approach, edge cases and complexity from memory), Rebuild rewrites the solution from your own notes, Re-solve is interview conditions (blank editor, timer, no notes). Intervals and budgets are unchanged.
+
 ## 0.13.0
 
 ### Added
