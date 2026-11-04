@@ -99,102 +99,125 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
     report(item.activity.status === 'in_progress' ? actions.resume(id) : actions.startActivity(id));
   };
 
+  // A problem stays in the open list while any of its activities is open, so its attempts stay on one card.
+  const openSlugs = new Set(plan.items.filter(isOpen).map((item) => item.activity.slug));
+  const openItems = plan.items.filter((item) => openSlugs.has(item.activity.slug));
+  const finishedItems = plan.items.filter((item) => !openSlugs.has(item.activity.slug));
+  const budgets = state.settings.budgets;
+
   return (
-    <div className="stack">
-      <div className="day-header">
+    <div className="today-layout">
+      <header className="day-header today-header">
         <h1>{dayTitle}</h1>
         <span className="muted">{formatDate(today)}</span>
         {plan.isConsolidationDay ? <Badge tone="resolve">Consolidation day</Badge> : null}
         {plan.isBenchmarkDay ? <Badge tone="benchmark">Benchmark day</Badge> : null}
+        <span className="muted small" role="note" title="Results are dated automatically when you save.">
+          Training day changes at 04:00
+        </span>
+      </header>
+
+      <aside className="today-aside stack">
+        <Card className="today-stats">
+          <div className="stats stats-compact">
+            <Stat
+              label="Logged"
+              value={formatMinutes(loggedMin)}
+              hint={loggedMin >= target ? 'daily goal met' : `${formatMinutes(target - loggedMin)} to the goal`}
+              {...(loggedMin >= target ? { tone: 'good' as const } : {})}
+            />
+            <Stat
+              label="Planned"
+              value={formatMinutes(plan.plannedMinutes)}
+              hint={`target ${formatMinutes(target)} · cap ${formatMinutes(plan.capMinutes)}`}
+            />
+            <Stat
+              label="Pace"
+              value={plan.pace.label}
+              hint={`${plan.pace.actual} new done · ${plan.pace.expected} expected`}
+              {...(paceTone ? { tone: paceTone } : {})}
+            />
+            <Stat
+              label="Streak"
+              value={`${streak.current} ${streak.current === 1 ? 'day' : 'days'}`}
+              hint={`longest ${streak.longest} · needs 30 min logged`}
+            />
+          </div>
+          <ProgressBar value={loggedMin} max={target} done={loggedMin >= target} />
+          <WorkedTotal totals={worked} />
+        </Card>
+      </aside>
+
+      <div className="today-main stack">
+        <Card
+          title={`Today's activities (${plan.items.length - remaining}/${plan.items.length} done)`}
+          actions={
+            runningItem ? (
+              <span className="muted">
+                Timer running: {plan.bonuses.includes(runningItem) ? 'Optional bonus · ' : ''}
+                {titleOf(runningItem)}
+              </span>
+            ) : nextItem ? (
+              <Button variant="primary" onClick={() => startNext(nextItem)} title={`Next: ${titleOf(nextItem)}`}>
+                Start next activity
+              </Button>
+            ) : null
+          }
+        >
+          {actionError ? <p className="error">{actionError}</p> : null}
+          {plan.items.length === 0 ? (
+            <p className="muted">Nothing is scheduled today.</p>
+          ) : (
+            <div className="stack-tight">
+              {nextItem && !runningItem ? <p className="muted">Next: {titleOf(nextItem)}</p> : null}
+              {openItems.length > 0 ? (
+                <ProblemActivities items={openItems} history={state.activities} now={now} unfinishedFirst
+                  actions={actions} budgets={budgets} />
+              ) : (
+                <p className="tone-good">All planned activities are done.</p>
+              )}
+              {finishedItems.length > 0 ? (
+                <details className="done-section" open={openItems.length === 0}>
+                  <summary>
+                    Finished today ({finishedItems.length})
+                  </summary>
+                  <ProblemActivities items={finishedItems} history={state.activities} now={now}
+                    actions={actions} budgets={budgets} />
+                </details>
+              ) : null}
+            </div>
+          )}
+        </Card>
+
+        <BonusOffers
+          plan={plan}
+          targetMinutes={target}
+          now={now}
+          actions={actions}
+          budgets={budgets}
+        />
+
+        {plan.missedBenchmarks.length > 0 ? (
+          <Card title={`Missed benchmarks (${plan.missedBenchmarks.length})`}>
+            <p className="muted">These benchmarks are still available outside today&apos;s core plan. Finishing one credits the current training day, not its original date.</p>
+            <ProblemActivities items={plan.missedBenchmarks.map((item) => ({ ...item, variant: 'carried' as const }))}
+              history={state.activities} now={now} actions={actions} budgets={budgets} unfinishedFirst />
+          </Card>
+        ) : null}
+
+        {plan.carriedOver.length > 0 ? (
+          <Card title={`Carried over (${plan.carriedOver.length})`}>
+            <p className="muted">
+              Reviews that did not fit under today&apos;s cap. They are planned again tomorrow; start one
+              now if you have spare time.
+            </p>
+            <div className="stack-tight">
+              <ProblemActivities items={plan.carriedOver.map((item) => ({ ...item, variant: 'carried' as const }))}
+                history={state.activities} now={now} actions={actions} budgets={budgets} unfinishedFirst />
+            </div>
+          </Card>
+        ) : null}
       </div>
-
-      <p className="muted" role="note">Training day: {formatDate(today)} · changes at 04:00 local time. Results are dated automatically when you save.</p>
-
-      <Card>
-        <div className="stats">
-          <Stat
-            label="Planned"
-            value={formatMinutes(plan.plannedMinutes)}
-            hint={`target ${formatMinutes(target)} · cap ${formatMinutes(plan.capMinutes)}`}
-          />
-          <Stat
-            label="Logged"
-            value={formatMinutes(loggedMin)}
-            hint={loggedMin >= target ? 'daily goal met' : `${formatMinutes(target - loggedMin)} to the goal`}
-            {...(loggedMin >= target ? { tone: 'good' as const } : {})}
-          />
-          <Stat
-            label="Pace"
-            value={plan.pace.label}
-            hint={`${plan.pace.actual} new done · ${plan.pace.expected} expected`}
-            {...(paceTone ? { tone: paceTone } : {})}
-          />
-          <Stat
-            label="Streak"
-            value={`${streak.current} ${streak.current === 1 ? 'day' : 'days'}`}
-            hint={`longest ${streak.longest} · needs 30 min logged`}
-          />
-        </div>
-        <ProgressBar value={loggedMin} max={target} done={loggedMin >= target} />
-        <WorkedTotal totals={worked} />
-      </Card>
-
-      <Card
-        title={`Today's activities (${plan.items.length - remaining}/${plan.items.length} done)`}
-        actions={
-          runningItem ? (
-            <span className="muted">
-              Timer running: {plan.bonuses.includes(runningItem) ? 'Optional bonus · ' : ''}
-              {titleOf(runningItem)}
-            </span>
-          ) : nextItem ? (
-            <Button variant="primary" onClick={() => startNext(nextItem)}>
-              Start next activity
-            </Button>
-          ) : null
-        }
-      >
-        {actionError ? <p className="error">{actionError}</p> : null}
-        {plan.items.length === 0 ? (
-          <p className="muted">Nothing is scheduled today.</p>
-        ) : (
-          <div className="stack-tight">
-            {nextItem && !runningItem ? <p className="muted">Next: {titleOf(nextItem)}</p> : null}
-            <ProblemActivities items={plan.items} history={state.activities} now={now} unfinishedFirst
-              actions={actions} budgets={state.settings.budgets} />
-            {remaining === 0 ? <p className="tone-good">All planned activities are done.</p> : null}
-          </div>
-        )}
-      </Card>
-
-      <BonusOffers
-        plan={plan}
-        targetMinutes={target}
-        now={now}
-        actions={actions}
-        budgets={state.settings.budgets}
-      />
-
-      {plan.missedBenchmarks.length > 0 ? (
-        <Card title={`Missed benchmarks (${plan.missedBenchmarks.length})`}>
-          <p className="muted">These benchmarks are still available outside today&apos;s core plan. Finishing one credits the current training day, not its original date.</p>
-          <ProblemActivities items={plan.missedBenchmarks.map((item) => ({ ...item, variant: 'carried' as const }))}
-            history={state.activities} now={now} actions={actions} budgets={state.settings.budgets} unfinishedFirst />
-        </Card>
-      ) : null}
-
-      {plan.carriedOver.length > 0 ? (
-        <Card title={`Carried over (${plan.carriedOver.length})`}>
-          <p className="muted">
-            Reviews that did not fit under today&apos;s cap. They are planned again tomorrow; start one
-            now if you have spare time.
-          </p>
-          <div className="stack-tight">
-            <ProblemActivities items={plan.carriedOver.map((item) => ({ ...item, variant: 'carried' as const }))}
-              history={state.activities} now={now} actions={actions} budgets={state.settings.budgets} unfinishedFirst />
-          </div>
-        </Card>
-      ) : null}
     </div>
   );
 }

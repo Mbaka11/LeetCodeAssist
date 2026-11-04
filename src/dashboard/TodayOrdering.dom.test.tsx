@@ -26,7 +26,9 @@ describe('Today unfinished-first display', () => {
     const open = groups.filter((g) => g.items.some((i) => i.activity.status !== 'done'));
     const done = groups.filter((g) => g.items.every((i) => i.activity.status === 'done'));
     const { container } = render(<TodayView state={state} actions={actions} />);
-    const shown = [...container.querySelectorAll('.problem-groups')][0]!;
+    // Open problems first, then the folded "Finished today" list, both in the day's card.
+    const shown = container.querySelector('.today-main .card')!;
+    expect(shown.querySelector('details.done-section')).not.toBeNull();
     const slugs = [...shown.querySelectorAll('.activity-title')].map((a) => decodeURIComponent(a.getAttribute('href')!.split('/').at(-1)!));
     expect(slugs).toEqual([...open, ...done].map((g) => g.slug));
     expect(done.length).toBeGreaterThan(0);

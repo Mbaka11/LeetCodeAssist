@@ -36,10 +36,13 @@ export function BonusOffers({
 
   return (
     <Card title={`Optional bonus problems (${bonuses.length} offered)`} className="bonus-offers">
-      <p className="muted">
-        Optional: not included in today&apos;s core plan time, pace or reminders, and never debt. Finishing one
-        adds its own later reviews (day +1, +3, +7, +21). Skip freely: another one takes its place.
-      </p>
+      <details className="explain">
+        <summary>Optional extra work, never debt. How bonuses work</summary>
+        <p>
+          Optional: not included in today&apos;s core plan time, pace or reminders, and never debt. Finishing one
+          adds its own later reviews (day +1, +3, +7, +21). Skip freely: another one takes its place.
+        </p>
+      </details>
       {bonuses.length > 0 ? (
         <div className="stack-tight">
           {bonuses.map((item) => {

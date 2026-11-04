@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type FocusEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type FocusEvent } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
@@ -527,6 +527,16 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [startDateMessage, setStartDateMessage] = useState<StartDateMessage | null>(null);
   const [startDateOpen, setStartDateOpen] = useState(false);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const pickedRef = useRef(false);
+
+  // After a click on a day, bring its detail into view (it sits under the 60-day grid).
+  useEffect(() => {
+    if (!pickedRef.current) return;
+    pickedRef.current = false;
+    // The day detail is the card right after the grid.
+    gridRef.current?.nextElementSibling?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+  }, [selectedDate]);
 
   // Today is the default detail; picking another day is a single click on its cell.
   const selected =
@@ -589,13 +599,13 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
         <LeetCodeStreakCard now={now} compact />
       </div>
 
-      <div className="calendar-grid">
+      <div className="calendar-grid" ref={gridRef}>
         {days.map((day) => (
           <DayCellWithPopover
             key={day.date}
             day={day}
             selected={day.date === selected.date}
-            onSelect={() => setSelectedDate(day.date)}
+            onSelect={() => { pickedRef.current = true; setSelectedDate(day.date); }}
             state={state}
             today={today}
           />

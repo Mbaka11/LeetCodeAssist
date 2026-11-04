@@ -1,3 +1,4 @@
+import { Explain } from '../components/Explain';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../components/Button';
 import { ConfirmButton } from '../components/ConfirmButton';
@@ -29,7 +30,7 @@ export function PracticeView({ state, actions }: Props) {
   }, [busy]);
   return <section className="stack" aria-label="Optional practice">
     <h1>Practice</h1>
-    <p className="muted">Voluntary, separate practice. No scheduled reviews, problem-status changes, program progress, worked totals, streak or weekly-review credit. Results appear only here, in JSON backups and as a separate, labelled series in the Logs pace chart.</p>
+    <Explain><p>Voluntary, separate practice. No scheduled reviews, problem-status changes, program progress, worked totals, streak or weekly-review credit. Results appear only here, in JSON backups and as a separate, labelled series in the Logs pace chart.</p></Explain>
     {busy ? <p className="muted">Session in progress. Leaving this view discards unsaved practice; finish here to keep a result.</p> : null}
     <div className="row" role="group" aria-label="Practice mode">
       <Button disabled={busy} aria-pressed={tab === 'simulation'} onClick={() => { setPresetCompany(''); setTab('simulation'); }}>Interview simulation</Button>
@@ -75,8 +76,8 @@ function SimulationView({ state, actions, onBusy, initialCompany }: Props & { on
       </select></label>
       {company ? <div className="stack-tight">
         <p>{COMPANY_EVIDENCE_DISCLAIMER}</p>
-        <p className="muted">Company pools include unworked documented topics and qualified variants. Exact-topic associations receive more sampling weight (3:1), an editorial practice choice, not interview frequency or a hiring prediction. No pattern-similar fallback is used.</p>
-        <p className="muted">Reports may be mirrored or AI-reworded; identity and employer confirmation are unverified. Systems/firmware reports may not generalize to other roles. Per-topic sources and qualifications appear after saving, not during the interview.</p>
+        <Explain><p>Company pools include unworked documented topics and qualified variants. Exact-topic associations receive more sampling weight (3:1), an editorial practice choice, not interview frequency or a hiring prediction. No pattern-similar fallback is used.</p>
+        <p>Reports may be mirrored or AI-reworded; identity and employer confirmation are unverified. Systems/firmware reports may not generalize to other roles. Per-topic sources and qualifications appear after saving, not during the interview.</p></Explain>
       </div> : <label className="choice"><input type="checkbox" checked={includeUnworked} onChange={(e) => setIncludeUnworked(e.target.checked)} />Include unworked catalog problems (may reveal a new problem; no progress credit)</label>}
       <div className="row">
         <label>Difficulty<select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}><option value="">Any</option>{['Easy', 'Medium', 'Hard'].map((d) => <option key={d}>{d}</option>)}</select></label>
@@ -94,8 +95,8 @@ function SimulationView({ state, actions, onBusy, initialCompany }: Props & { on
       }}>Start interview</Button>
       <div className="stack-tight" role="group" aria-label="Two-problem session">
         <h3>Two-problem session</h3>
-        <p className="muted">Two different problems back to back from this pool, each with its own timer and a reminder banner at {SESSION_REMINDER_MINUTES} minutes (the timer keeps running; the interview length above applies to a single interview only).
-          Each problem gets a checklist and self-rating, then a final summary is saved as two linked records. The second problem stays hidden until it starts.</p>
+        <Explain><p>Two different problems back to back from this pool, each with its own timer and a reminder banner at {SESSION_REMINDER_MINUTES} minutes (the timer keeps running; the interview length above applies to a single interview only).
+          Each problem gets a checklist and self-rating, then a final summary is saved as two linked records. The second problem stays hidden until it starts.</p></Explain>
         <label className="choice"><input type="checkbox" checked={withBreak} onChange={(e) => setWithBreak(e.target.checked)} />{SESSION_BREAK_MINUTES}-minute break between the problems (skippable)</label>
         {pool.length === 1 ? <p role="status">A two-problem session needs at least two eligible problems.</p> : null}
         <Button disabled={pool.length < 2} onClick={() => {
@@ -149,7 +150,7 @@ function DrillsView({ state, actions, onBusy }: Props & { onBusy: (busy: boolean
   useEffect(() => { if (choice !== null) nextButton.current?.focus(); }, [choice]);
   const clear = () => { setSession(null); setAnswers([]); setChoice(null); setEndedAt(null); setError(null); onBusy(false); };
   return <div className="stack"><h2>Pattern drills</h2>
-    <p className="muted">Drills intentionally reveal hints. Your Hide techniques preference disables them by default, not permanently. Original prompts and outlines cover the 50 phase 1 program problems. These are useful editorial approaches, not the only possible solutions.</p>
+    <Explain><p>Drills intentionally reveal hints. Your Hide techniques preference disables them by default, not permanently. Original prompts and outlines cover the 50 phase 1 program problems. These are useful editorial approaches, not the only possible solutions.</p></Explain>
     {!session ? <div className="card stack">
       <label className="choice"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />Show hint-based drills</label>
       <label className="choice"><input type="checkbox" checked={includeUnworked} onChange={(e) => setIncludeUnworked(e.target.checked)} />Include unworked problems — warning: reveals techniques and data structures</label>

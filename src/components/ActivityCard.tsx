@@ -178,7 +178,13 @@ export function ActivityCard({
         )}
       </div>
 
-      {open ? <p className="instruction">{ACTIVITY_INSTRUCTIONS[activity.type]}</p> : null}
+      {open ? (
+        inProgress || focused ? (
+          <p className="instruction">{ACTIVITY_INSTRUCTIONS[activity.type]}</p>
+        ) : (
+          <InstructionSummary text={ACTIVITY_INSTRUCTIONS[activity.type]} />
+        )
+      ) : null}
 
       {activity.status === 'done' && !grouped ? (
         <p className="muted">
@@ -316,5 +322,28 @@ export function ActivityCard({
 
       {error ? <p className="error">{error}</p> : null}
     </article>
+  );
+}
+
+/**
+ * A planned card shows the gist of its instruction (up to the first colon or sentence end) and keeps the rest one
+ * click away; a started card shows the whole instruction.
+ */
+export function splitInstruction(text: string): [string, string] {
+  const colon = text.indexOf(':');
+  const stop = text.indexOf('. ');
+  const cut = [colon, stop].filter((i) => i > 0 && i < 80).sort((x, y) => x - y)[0] ?? -1;
+  if (cut < 0) return [text, ''];
+  return [text.slice(0, cut + 1).replace(/:$/, '.'), text.slice(cut + 1).trim()];
+}
+
+function InstructionSummary({ text }: { text: string }) {
+  const [head, rest] = splitInstruction(text);
+  if (!rest) return <p className="instruction">{text}</p>;
+  return (
+    <details className="instruction instruction-toggle">
+      <summary>{head}</summary>
+      <span>{rest}</span>
+    </details>
   );
 }

@@ -3,6 +3,19 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.14.0
+
+### Changed (UI/UX)
+- **Today** has two columns on wide screens: the activities in the main column, the day's numbers (logged, planned, pace, streak, worked total) in a sticky column beside them. On narrow screens it stays one column.
+- **Finished activities fold away** under *Finished today (n)*, so the open work is what you see first. A problem with an open attempt stays in the open list with all its attempts.
+- **Shorter cards:** a planned card shows the gist of its instruction (for example "Retrieval only, no editor and no code.") with *more* for the rest. A started card, and the side panel's focus mode, show the whole instruction.
+- **Bonus offers:** the time notes are an amber line instead of a red banner (the offers are optional), and the explanation folds under *How bonuses work*.
+- **Calendar:** clicking a day scrolls its detail into view.
+- **Roadmap** and Today use a wider page (1240 px instead of 900 px).
+- Long explanations on Weekly review, Practice, the Logs pace chart and the Settings time budgets fold under *How this works*.
+
+No data or behaviour change.
+
 ## 0.13.1
 
 ### Fixed

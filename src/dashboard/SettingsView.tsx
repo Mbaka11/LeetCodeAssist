@@ -1,3 +1,4 @@
+import { Explain } from '../components/Explain';
 import { useRef, useState, type FormEvent } from 'react';
 import { SyncSettings, SyncBackups, useSyncInfo } from './SyncSettings';
 import { NotesMarkdownExport } from '../components/NotesMarkdownExport';
@@ -438,13 +439,15 @@ export function SettingsView({ state, actions }: { state: AppState; actions: App
         />
       </Card>
       <Card title="Time budgets (minutes)">
-        <p className="muted">
+        <Explain summary="What the budgets do">
+        <p>
           How long each activity should take, by problem difficulty. The planner, the calendar, the
           reminders and the cards all use these. Benchmarks stay at 30 min per problem. Estimates that are
           higher than your real times make the planner think days are full and fit fewer new problems:
           <em> Calibrate from my logs</em> fills the table with your own median times plus a 25% margin (nothing
           is saved until you press Save budgets).
         </p>
+        </Explain>
         <BudgetsForm
           key={JSON.stringify(state.settings.budgets ?? null)}
           state={state}

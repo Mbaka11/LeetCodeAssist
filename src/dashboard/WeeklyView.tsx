@@ -1,3 +1,4 @@
+import { Explain } from '../components/Explain';
 import { useMemo, useState } from 'react';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
@@ -41,9 +42,9 @@ export function WeeklyView({ state }: { state: AppState }) {
       <Stat label="Time logged" value={formatMs(current.totalMs)} hint={`previous ${formatMs(previous.totalMs)}`} />
     </div></Card>
     <Card title="Category evidence">
-      <p className="muted">Progress is shown as first-worked problems and distinct problems with an independent scheduled
+      <Explain><p>Progress is shown as first-worked problems and distinct problems with an independent scheduled
         review (Solo with no recorded hints). Immediate extra repeats do not inflate that review count. Help means
-        a Hint/Solution outcome or a recorded hint; rates use rated attempts, not guesses about external help.</p>
+        a Hint/Solution outcome or a recorded hint; rates use rated attempts, not guesses about external help.</p></Explain>
       {summary.categories.length === 0 ? <p>No completed activities in either period.</p> : <div className="table-scroll"><table className="table">
         <thead><tr><th>Category</th><th>Activities</th><th>First worked</th><th>Independent review problems</th><th>Help / rated attempts</th></tr></thead>
         <tbody>{summary.categories.map((c) => <tr key={c.category}>
@@ -55,9 +56,9 @@ export function WeeklyView({ state }: { state: AppState }) {
       </table></div>}
     </Card>
     <Card title={`Still fragile · ${summary.fragile.length}`}>
-      <p className="muted">As of {end}: the latest rated scheduled review needed help or was Stuck; if none exists, initial
+      <Explain><p>As of {end}: the latest rated scheduled review needed help or was Stuck; if none exists, initial
         completion evidence is used. An optional immediate re-solve does not erase that signal. Absence from this
-        list is not proof of mastery; missing outcomes cannot establish success.</p>
+        list is not proof of mastery; missing outcomes cannot establish success.</p></Explain>
       {fragile.length === 0 ? <p>No help-dependent or failed eligible attempts recorded.</p> : <ul className="weekly-fragile">
         {fragile.map(({ slug, evidence, reason }) => <li key={slug}>
           <a href={problemHref(slug)}>{getProblem(slug)?.title ?? slug}</a>

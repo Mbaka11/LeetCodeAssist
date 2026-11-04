@@ -1808,3 +1808,75 @@ label > select,
   display: grid;
   gap: 4px;
 }
+
+/* ---- 0.14 layout and flow ---- */
+
+/* Today: activities in the main column, the day's numbers beside them on wide screens. */
+.page.page-today { max-width: 1240px; }
+.today-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+.today-header { grid-column: 1 / -1; }
+.today-header .small { font-size: 0.82rem; }
+@media (min-width: 1100px) {
+  .today-layout {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-areas: "head head" "main aside";
+    align-items: start;
+  }
+  .today-header { grid-area: head; }
+  .today-main { grid-area: main; }
+  .today-aside { grid-area: aside; position: sticky; top: 64px; }
+  .today-aside .stats-compact { grid-template-columns: 1fr 1fr; gap: 14px 12px; }
+  .today-aside .worked-total { flex-wrap: wrap; }
+}
+
+/* Finished activities fold away under the open ones. */
+.done-section > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 6px 2px;
+  list-style-position: inside;
+}
+.done-section > summary:hover { color: var(--text); }
+.done-section[open] > summary { margin-bottom: 8px; }
+.done-section .activity { opacity: 0.85; }
+
+/* Instructions: the gist is always visible, the rest one click away. */
+.instruction-toggle > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.instruction-toggle > summary::-webkit-details-marker { display: none; }
+.instruction-toggle > summary::after {
+  content: ' more';
+  color: var(--accent);
+  font-size: 0.85em;
+}
+.instruction-toggle[open] > summary::after { content: ' less'; }
+.instruction-toggle > span { display: block; margin-top: 4px; }
+
+/* Bonus time notes: informative, not alarming (the offers are optional). */
+.bonus-impact.bonus-impact-over-target,
+.bonus-impact.bonus-impact-over-cap {
+  background: transparent;
+  color: var(--timer-warn-fg);
+  font-weight: 400;
+  padding: 0 2px;
+}
+
+/* Roadmap: the category graph gets the room it needs. */
+.page.page-roadmap { max-width: 1240px; }
+
+/* Long explanations fold into "How this works". */
+.explain > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.explain > summary:hover { color: var(--text); }
+.explain[open] > summary { margin-bottom: 6px; }
+.explain > :not(summary) { color: var(--muted); font-size: 0.9rem; }

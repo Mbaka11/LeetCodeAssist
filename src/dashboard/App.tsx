@@ -20,6 +20,8 @@ import { PracticeView } from './PracticeView';
 const PAGE_CLASSES: Partial<Record<Route['view'], string>> = {
   logs: 'page page-wide',
   calendar: 'page page-calendar',
+  today: 'page page-today',
+  roadmap: 'page page-roadmap',
 };
 
 function useHashRoute(): Route {

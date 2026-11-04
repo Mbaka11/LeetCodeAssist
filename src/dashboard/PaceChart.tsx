@@ -1,3 +1,4 @@
+import { Explain } from '../components/Explain';
 import { useMemo } from 'react';
 import { Card } from '../components/Card';
 import { PACE_FEW_SAMPLES, PACE_MAX_MONTHS, paceData, type PacePanel, type PaceRow, type PaceSample } from '../core/pace';
@@ -76,8 +77,8 @@ function PanelChart({ panel, months }: { panel: PacePanel; months: string[] }) {
 export function PaceChart({ state }: { state: AppState }) {
   const data = useMemo(() => paceData(state), [state]);
   return <Card title="Pace by month">
-    <p className="muted">Median logged minutes of completed activities with logged time, by completion month and problem difficulty. Reviews include optional
-      extra repeats; benchmarks are excluded. Independent of the filters above and never used for scheduling or budgets.</p>
+    <Explain><p>Median logged minutes of completed activities with logged time, by completion month and problem difficulty. Reviews include optional
+      extra repeats; benchmarks are excluded. Independent of the filters above and never used for scheduling or budgets.</p></Explain>
     {!data.hasData ? <p role="status">No completed activities with logged time yet. The chart appears after you log time on a catalog problem.</p> : <>
       <p>Showing at most the last {PACE_MAX_MONTHS} months ({data.months[0]} to {data.months.at(-1)}). First attempts: {samples(data.counts.first)}; reviews: {samples(data.counts.review)}{data.counts.simulation > 0 ? `; simulations: ${samples(data.counts.simulation)}` : ''}.</p>
       <ul className="pace-legend row" aria-label="Chart legend">
@@ -87,8 +88,8 @@ export function PaceChart({ state }: { state: AppState }) {
         <li><svg width="22" height="12" aria-hidden="true"><line className="pace-guide" x1="1" x2="21" y1="6" y2="6" /></svg> Editorial guideline (not data)</li>
         <li><svg width="16" height="12" aria-hidden="true"><circle className="pace-first pace-few" cx="8" cy="6" r="3.6" /></svg> Hollow marker: fewer than {PACE_FEW_SAMPLES} samples</li>
       </ul>
-      <p className="muted">Guideline lines (Easy 15, Medium 30, Hard 45 minutes) are an editorial reference for interview-style pacing, not measured data and not a target
-        the program enforces. Lines connect only consecutive months that both have samples; there is no trend or forecast. Medians of one or two samples are weak signals.</p>
+      <Explain><p>Guideline lines (Easy 15, Medium 30, Hard 45 minutes) are an editorial reference for interview-style pacing, not measured data and not a target
+        the program enforces. Lines connect only consecutive months that both have samples; there is no trend or forecast. Medians of one or two samples are weak signals.</p></Explain>
       <div className="pace-panels">{data.panels.map((panel) => <PanelChart key={panel.difficulty} panel={panel} months={data.months} />)}</div>
     </>}
   </Card>;
