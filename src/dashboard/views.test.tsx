@@ -32,7 +32,7 @@ describe('dashboard views (render smoke tests)', () => {
   it('Today shows the distinct worked total and two optional bonus offers outside the core list', () => {
     const html = renderToStaticMarkup(<TodayView state={defaultState(today)} actions={actions} />);
     expect(html).toContain('class="worked-total"');
-    expect(html).toContain('Program 0/86 · Benchmarks 0/10 · Bonus 0');
+    expect(html).toContain('Program 0/104 · Benchmarks 0/10 · Bonus 0');
     expect(html).toContain('Reviews never add to it');
     expect(html).toContain('Optional bonus problems (2 offered)');
     expect(html.match(/class="bonus-offer"/g)).toHaveLength(2);

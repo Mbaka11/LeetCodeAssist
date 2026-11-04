@@ -30,9 +30,9 @@ Benchmark problems are reserved and never appear in the learning queue.
   toolbar badge, reminders, the plan-done ratio or projections, and they never become debt. They are shown even
   when the core plan already fills the cap; the UI states the extra estimated time and warns explicitly when
   starting one would pass the daily target or the cap (`bonusTimeImpact`, `src/lib/bonusTime.ts`).
-- The bonuses come from the **bonus pool** (`BONUS_POOL`, `src/data/bonus.ts`): **47** extra NeetCode 150
+- The bonuses come from the **bonus pool** (`BONUS_POOL`, `src/data/bonus.ts`): **29** extra NeetCode 150
   problems that are not in the program queue or the benchmarks, ordered by roadmap category and
-  difficulty: 30 Mediums that did not fit the 60-day program and the 17 free Hards (every free Easy problem is in
+  difficulty: 12 Mediums that did not fit the 60-day program and the 17 free Hards (every free Easy problem is in
   the program, the Premium problems are left out). The Mediums of a category come before its Hards.
 - **Readiness rule.** A pool problem is a candidate only when its category is *ready*: *introduced* (some
   completed activity of any type, or a core item of today's plan, is in that category) or *prerequisite-ready*
@@ -196,16 +196,20 @@ Problem status: `untouched` → `learning` (new done) → `consolidating` (a rev
 
 ## 4. Queue-based planner (no fixed dates for new problems)
 
-- New problems come from an **ordered queue** of **86** problems in two phases (`PHASE_ONE_QUEUE`,
+- New problems come from an **ordered queue** of **104** problems in two phases (`PHASE_ONE_QUEUE`,
   `PHASE_TWO_QUEUE` in `src/data/program.ts`; `PROGRAM_QUEUE` is their concatenation).
   - **Phase 1 (days 1-30, 50 problems):** NeetCode roadmap order, Easy and Medium only, no Hard. It holds every
     free Easy problem of the NeetCode 150 except the benchmark ones (the Premium-only Easy *Meeting Rooms* is
     left out) plus the core Mediums of each pattern. With reviews on time, a user who does the plan has all of
     phase 1 introduced by day 30 (a test projects the program day by day and checks it).
-  - **Phase 2 (days 31-60, 36 problems):** a second, deeper pass in roadmap category order with the Mediums
-    that matter most, plus `word-search-ii`, the one Hard, as the Tries anchor. It is smaller than phase 1 on
-    purpose: by then the reviews fill about half of the 180-minute cap, so a perfect user fits roughly 1.2 new
-    problems a day (measured with `simulateDay`, no bonus offers).
+  - **Phase 2 (days 31-60, 54 problems):** a second, deeper pass in roadmap category order with the Mediums that
+    follow the core ones, plus `word-search-ii`, the one Hard, as the Tries anchor: two a day on the 26 learning
+    days plus two. How many really fit depends on the time budgets (§3): with the default estimates the reviews
+    fill about half of the 180-minute cap and a perfect user fits roughly 1.2 new problems a day (measured with
+    `simulateDay`, no bonus offers; 85 of the 104 by day 60), so the **expected pace** is lower than the queue
+    supply; with budgets calibrated to the user's own times (below) two a day fit and the whole queue is
+    done by day 60 (checked on a real export). The queue is longer than the baseline pace needs on purpose, so a
+    fast user is never starved.
   - Consolidation days are 7, 14, 21, 28, 35, 42, 49 and 56. Benchmark pairs are on days 1, 15 and 30
     (Easy + Medium) and 45 and 60 (Medium + Hard); the `easy` and `medium` fields of `Benchmark` hold the lighter
     and the harder problem of the pair.
@@ -675,3 +679,13 @@ data, no migration, nothing scheduled or changed): **Day 30** (days 1-30) and **
 
 Optional practice (`extra`) is never planned work: it is not in a Calendar day's planned count or planned minutes, and
 the day shows it separately as "+N extra" (`CalendarDay.extraCount`). It still counts as done and as logged time.
+
+## Calibrating the time budgets (0.13)
+
+Settings → Time budgets has **Calibrate from my logs** (`calibrateBudgets`, `src/core/calibration.ts`). For every
+activity type and difficulty with at least 5 finished, non-optional activities with a measured time (30 s or more;
+benchmarks and optional practice excluded), it suggests the **median logged minutes plus a 25 % margin**, rounded up and
+kept within the 1-180 minute budget limits. Cells without enough samples keep their current value. The button only
+fills the form and lists each calibrated cell (median, sample count, new and old value); nothing is stored until the
+user presses *Save budgets*, and *Reset to defaults* still restores the SPEC §3 table. The default budgets are not
+changed for anyone.

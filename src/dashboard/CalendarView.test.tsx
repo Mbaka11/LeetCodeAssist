@@ -95,7 +95,7 @@ describe('CalendarView compact summary (render smoke test)', () => {
     const state = simulateDay(defaultState(start), start, { bonus: true }).state;
     const html = renderToStaticMarkup(<CalendarView state={state} actions={actions} />);
     expect(html).toContain('class="worked-total"');
-    expect(html).toContain('Program 2/86 · Benchmarks 2/10 · Bonus 2');
+    expect(html).toContain('Program 2/104 · Benchmarks 2/10 · Bonus 2');
     expect(html).toContain('>6</span><span class="worked-total-label">problems worked');
     expect(html).toContain('Reviews never add to it');
     // The program counter is separate and unchanged by the bonus problems.

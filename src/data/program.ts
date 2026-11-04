@@ -3,7 +3,7 @@
  * the reserved benchmark problems. All slugs refer to src/data/neetcode150.ts.
  *
  * Phase 1 (days 1-30) learns the 50 core problems; phase 2 (days 31-60) is a second, deeper pass over the same
- * categories with 36 more problems. The remaining Mediums and the Hards stay in the optional bonus pool.
+ * categories with 54 more problems. The remaining Mediums and the Hards stay in the optional bonus pool.
  */
 
 /**
@@ -80,11 +80,13 @@ export const PHASE_ONE_QUEUE: readonly string[] = [
 ];
 
 /**
- * Phase 2 queue (36 problems, days 31-60): a second, deeper pass in roadmap category order with the Mediums
- * that matter most (plus `word-search-ii`, the one Hard, as the Tries anchor). No Easy is left: phase 1 holds
- * them all. It is smaller than phase 1 on purpose: from day 31 reviews fill about half of the daily budget, so
- * a perfect user fits roughly 1.2 new problems a day (see `PHASE_TWO_NEW_PER_LEARNING_DAY`). The other Mediums
- * and the Hards are in `BONUS_POOL`.
+ * Phase 2 queue (54 problems, days 31-60): a second, deeper pass in roadmap category order with the Mediums that
+ * follow the core ones (plus `word-search-ii`, the one Hard, as the Tries anchor). That is two a day on the 26
+ * learning days plus two. No Easy is left: phase 1 holds them all. Whether a user really gets two a day depends on
+ * the time budgets: with the default estimates the reviews fill about half of the daily cap and roughly 1.2 new
+ * problems fit, so the expected pace is lower (`PHASE_TWO_NEW_PER_LEARNING_DAY`); with budgets calibrated to the
+ * user's own times (Settings -> Calibrate from my logs) two a day fit. The other Mediums and the Hards are in
+ * `BONUS_POOL`.
  */
 export const PHASE_TWO_QUEUE: readonly string[] = [
   // Arrays & Hashing
@@ -93,44 +95,60 @@ export const PHASE_TWO_QUEUE: readonly string[] = [
   'container-with-most-water',
   // Sliding Window
   'longest-repeating-character-replacement',
+  'permutation-in-string',
   // Stack
   'generate-parentheses',
+  'evaluate-reverse-polish-notation',
+  'car-fleet',
   // Binary Search
   'koko-eating-bananas',
   'search-in-rotated-sorted-array',
+  'time-based-key-value-store',
   // Linked List
+  'copy-list-with-random-pointer',
+  'add-two-numbers',
+  'find-the-duplicate-number',
   'lru-cache',
   // Trees
   'count-good-nodes-in-binary-tree',
   'validate-binary-search-tree',
   'kth-smallest-element-in-a-bst',
+  'construct-binary-tree-from-preorder-and-inorder-traversal',
   // Heap / Priority Queue
   'kth-largest-element-in-an-array',
   'task-scheduler',
   // Backtracking
   'word-search',
   'subsets-ii',
+  'letter-combinations-of-a-phone-number',
   'combination-sum-ii',
   // Tries
   'implement-trie-prefix-tree',
+  'design-add-and-search-words-data-structure',
   'word-search-ii',
   // Graphs
   'clone-graph',
+  'pacific-atlantic-water-flow',
   'rotting-oranges',
   'course-schedule-ii',
   'surrounded-regions',
+  'redundant-connection',
   // Advanced Graphs
   'network-delay-time',
   // 1-D Dynamic Programming
   'house-robber-ii',
   'longest-palindromic-substring',
+  'palindromic-substrings',
   'decode-ways',
+  'maximum-product-subarray',
   'word-break',
   'longest-increasing-subsequence',
+  'partition-equal-subset-sum',
   // 2-D Dynamic Programming
   'unique-paths',
   'longest-common-subsequence',
   'edit-distance',
+  'target-sum',
   // Greedy
   'jump-game-ii',
   'gas-station',
@@ -139,11 +157,13 @@ export const PHASE_TWO_QUEUE: readonly string[] = [
   'insert-interval',
   // Math & Geometry
   'rotate-image',
+  'spiral-matrix',
+  'set-matrix-zeroes',
   // Bit Manipulation
   'sum-of-two-integers',
 ];
 
-/** The whole program queue: phase 1 then phase 2 (86 problems). */
+/** The whole program queue: phase 1 then phase 2 (104 problems). */
 export const PROGRAM_QUEUE: readonly string[] = [...PHASE_ONE_QUEUE, ...PHASE_TWO_QUEUE];
 
 export interface Benchmark {
@@ -178,8 +198,9 @@ export const PROGRAM_LENGTH_DAYS = 60;
 export const NEW_PROBLEMS_PER_DAY = 2;
 
 /**
- * Expected new problems per learning day in phase 2 (days 31-60), as a fraction (5 per 4 days). Reviews take about
- * half of the budget by then, so the expected pace is lower than in phase 1.
+ * Expected new problems per learning day in phase 2 (days 31-60), as a fraction (5 per 4 days). With the default time
+ * estimates the reviews take about half of the budget by then, so the baseline is lower than in phase 1. The queue is
+ * longer than this baseline needs, so a user with calibrated budgets who does two a day is never starved.
  */
 export const PHASE_TWO_NEW_PER_LEARNING_DAY = { numerator: 5, denominator: 4 } as const;
 
@@ -221,33 +242,33 @@ const FOCUS_BY_DAY: Record<number, readonly string[]> = {
   27: ['1-D Dynamic Programming', 'Arrays & Hashing'],
   29: ['Stack', 'Backtracking'],
   30: ['Two Pointers', 'Linked List'],
-  // Phase 2: a second, deeper pass in roadmap order (about 1-2 new problems a day).
+  // Phase 2: a second, deeper pass in roadmap order (two new problems a day when the time budgets allow).
   31: ['Arrays & Hashing', 'Two Pointers'],
   32: ['Sliding Window'],
-  33: ['Stack', 'Binary Search'],
-  34: ['Binary Search'],
-  36: ['Linked List', 'Trees'],
-  37: ['Trees'],
-  38: ['Trees', 'Heap / Priority Queue'],
-  39: ['Heap / Priority Queue'],
-  40: ['Backtracking'],
-  41: ['Backtracking'],
-  43: ['Tries'],
-  44: ['Graphs'],
-  45: ['Graphs'],
-  46: ['Graphs'],
-  47: ['Advanced Graphs', '1-D Dynamic Programming'],
-  48: ['1-D Dynamic Programming'],
-  50: ['1-D Dynamic Programming'],
+  33: ['Stack'],
+  34: ['Stack', 'Binary Search'],
+  36: ['Binary Search'],
+  37: ['Linked List'],
+  38: ['Linked List'],
+  39: ['Trees'],
+  40: ['Trees'],
+  41: ['Heap / Priority Queue'],
+  43: ['Backtracking'],
+  44: ['Backtracking'],
+  45: ['Tries'],
+  46: ['Tries', 'Graphs'],
+  47: ['Graphs'],
+  48: ['Graphs'],
+  50: ['Graphs', 'Advanced Graphs'],
   51: ['1-D Dynamic Programming'],
-  52: ['2-D Dynamic Programming'],
-  53: ['2-D Dynamic Programming'],
-  54: ['Greedy'],
-  55: ['Greedy'],
-  57: ['Intervals', 'Math & Geometry'],
-  58: ['Bit Manipulation'],
-  59: ['Graphs', '1-D Dynamic Programming'],
-  60: ['Trees', 'Backtracking'],
+  52: ['1-D Dynamic Programming'],
+  53: ['1-D Dynamic Programming'],
+  54: ['1-D Dynamic Programming'],
+  55: ['2-D Dynamic Programming'],
+  57: ['2-D Dynamic Programming'],
+  58: ['Greedy'],
+  59: ['Greedy', 'Intervals'],
+  60: ['Math & Geometry', 'Bit Manipulation'],
 };
 
 /** The 60-day skeleton (days 1-60). The queue, not the skeleton, decides which problems come next. */

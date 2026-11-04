@@ -137,6 +137,6 @@ describe('CalendarView compact layout structure (DOM)', () => {
     const { container } = await renderCalendar(profile(), state);
     const total = container.querySelector<HTMLElement>('.cal-overview .worked-total')!;
     expect(total.textContent).toContain('6problems worked');
-    expect(total.textContent).toContain('Program 2/86 · Benchmarks 2/10 · Bonus 2');
+    expect(total.textContent).toContain('Program 2/104 · Benchmarks 2/10 · Bonus 2');
   });
 });

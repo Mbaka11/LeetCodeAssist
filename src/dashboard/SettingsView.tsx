@@ -6,6 +6,7 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { ConfirmButton } from '../components/ConfirmButton';
 import { BUDGETED_TYPES, DEFAULT_BUDGETS, DIFFICULTIES, effectiveBudgets } from '../core/activities';
+import { CALIBRATION_MARGIN, CALIBRATION_MIN_SAMPLES, calibrateBudgets, type CalibrationCell } from '../core/calibration';
 import { localDateFromTimestamp } from '../core/dates';
 import { BUDGET_MAX_MINUTES, BUDGET_MIN_MINUTES } from '../core/state';
 import type { AppState, BudgetOverrides, BudgetedType, Difficulty } from '../core/types';
@@ -152,6 +153,25 @@ function BudgetsForm({
   setMessage: (message: Message | null) => void;
 }) {
   const [inputs, setInputs] = useState<BudgetInputs>(() => inputsFrom(state.settings.budgets));
+  const [calibrated, setCalibrated] = useState<CalibrationCell[]>([]);
+
+  const calibrate = (): void => {
+    const result = calibrateBudgets(state);
+    if (result.cells.length === 0) {
+      setCalibrated([]);
+      setMessage({
+        tone: 'error',
+        text: `Not enough finished activities yet: a type and difficulty needs at least ${CALIBRATION_MIN_SAMPLES} with a logged time.`,
+      });
+      return;
+    }
+    setInputs(inputsFrom(result.table));
+    setCalibrated(result.cells);
+    setMessage({
+      tone: 'good',
+      text: `Filled ${result.cells.length} cell${result.cells.length === 1 ? '' : 's'} from ${result.sampleCount} finished activities. Review them, then press Save budgets.`,
+    });
+  };
 
   const save = (event: FormEvent): void => {
     event.preventDefault();
@@ -218,6 +238,9 @@ function BudgetsForm({
         <Button type="submit" variant="primary">
           Save budgets
         </Button>
+        <Button onClick={calibrate}>
+          Calibrate from my logs
+        </Button>
         <Button onClick={reset}>
           Reset to defaults
         </Button>
@@ -225,6 +248,16 @@ function BudgetsForm({
           <span className={message.tone === 'good' ? 'tone-good' : 'error'}>{message.text}</span>
         ) : null}
       </div>
+      {calibrated.length > 0 ? (
+        <ul className="muted calibration-notes" aria-label="Calibrated cells">
+          {calibrated.map((cell) => (
+            <li key={`${cell.type}/${cell.difficulty}`}>
+              {ACTIVITY_LABELS[cell.type]} · {cell.difficulty}: median {Math.round(cell.medianMinutes * 10) / 10} min over {cell.samples}{' '}
+              finished, +{Math.round((CALIBRATION_MARGIN - 1) * 100)}% margin → {cell.suggested} min (was {cell.current})
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </form>
   );
 }
@@ -407,7 +440,10 @@ export function SettingsView({ state, actions }: { state: AppState; actions: App
       <Card title="Time budgets (minutes)">
         <p className="muted">
           How long each activity should take, by problem difficulty. The planner, the calendar, the
-          reminders and the cards all use these. Benchmarks stay at 30 min per problem.
+          reminders and the cards all use these. Benchmarks stay at 30 min per problem. Estimates that are
+          higher than your real times make the planner think days are full and fit fewer new problems:
+          <em> Calibrate from my logs</em> fills the table with your own median times plus a 25% margin (nothing
+          is saved until you press Save budgets).
         </p>
         <BudgetsForm
           key={JSON.stringify(state.settings.budgets ?? null)}

@@ -18,11 +18,11 @@ import {
 const PREMIUM_ONLY: ReadonlySet<string> = new Set(['meeting-rooms']);
 
 describe('PROGRAM_QUEUE', () => {
-  it('has 48-52 problems in phase 1 and 30-40 in phase 2, all unique and in the NeetCode 150', () => {
+  it('has 48-52 problems in phase 1 and 50-56 in phase 2, all unique and in the NeetCode 150', () => {
     expect(PHASE_ONE_QUEUE.length).toBeGreaterThanOrEqual(48);
     expect(PHASE_ONE_QUEUE.length).toBeLessThanOrEqual(52);
-    expect(PHASE_TWO_QUEUE.length).toBeGreaterThanOrEqual(30);
-    expect(PHASE_TWO_QUEUE.length).toBeLessThanOrEqual(40);
+    expect(PHASE_TWO_QUEUE.length).toBeGreaterThanOrEqual(50);
+    expect(PHASE_TWO_QUEUE.length).toBeLessThanOrEqual(56);
     expect(PROGRAM_QUEUE).toEqual([...PHASE_ONE_QUEUE, ...PHASE_TWO_QUEUE]);
     expect(new Set(PROGRAM_QUEUE).size).toBe(PROGRAM_QUEUE.length);
     for (const slug of PROGRAM_QUEUE) {
@@ -77,10 +77,12 @@ describe('PROGRAM_QUEUE', () => {
     }
   });
 
-  it('is reachable at the expected pace by day 60 (2 a day in phase 1, 5 per 4 days in phase 2)', () => {
-    expect(PROGRAM_LENGTH_DAYS - CONSOLIDATION_DAYS.length).toBe(52);
-    expect(expectedNewDone(PROGRAM_LENGTH_DAYS, 1000)).toBeGreaterThanOrEqual(PROGRAM_QUEUE.length - 2);
-    expect(expectedNewDone(PROGRAM_LENGTH_DAYS, 1000)).toBeLessThanOrEqual(PROGRAM_QUEUE.length + 2);
+  it('has room for two new problems on every learning day, and never needs fewer than the expected pace', () => {
+    const learningDays = PROGRAM_LENGTH_DAYS - CONSOLIDATION_DAYS.length;
+    expect(learningDays).toBe(52);
+    expect(PROGRAM_QUEUE.length).toBeLessThanOrEqual(learningDays * 2);
+    expect(PROGRAM_QUEUE.length).toBeGreaterThanOrEqual(learningDays * 2 - 2);
+    expect(expectedNewDone(PROGRAM_LENGTH_DAYS, 1000)).toBeLessThanOrEqual(PROGRAM_QUEUE.length);
   });
 });
 
@@ -150,7 +152,7 @@ describe('expectedNewDone', () => {
     expect(expectedNewDone(31)).toBe(53);
     expect(expectedNewDone(34)).toBe(52 + 5);
     expect(expectedNewDone(60, 1000)).toBe(52 + 32);
-    expect(expectedNewDone(60)).toBe(Math.min(PROGRAM_QUEUE.length, 52 + 32));
+    expect(expectedNewDone(60)).toBe(52 + 32); // the queue is longer than the baseline pace needs
     expect(expectedNewDone(90)).toBe(expectedNewDone(60));
   });
 });

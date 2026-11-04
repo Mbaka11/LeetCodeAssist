@@ -102,7 +102,7 @@ describe('interviewPrepView', () => {
     expect(withPrep).toEqual(snapshot);
     const view = (s: AppState) => ({ queue: programQueue(s), plan: planDay(s, TODAY), worked: workedTotals(s), streak: computeStreak(s, TODAY), logged: loggedTotals(s, TODAY), weekly: weeklySummary(s, TODAY) });
     expect(view(withPrep)).toEqual(view(state));
-    expect(programQueue(withPrep)).toHaveLength(86);
+    expect(programQueue(withPrep)).toHaveLength(104);
   });
 });
 

@@ -71,18 +71,18 @@ describe('selectBonusSlugs', () => {
   it('takes the first ready pool problems in pool order', () => {
     const selection = selectBonusSlugs(newState(), { pool: BONUS_POOL, count: BONUS_SLOTS, coreSlugs: ['two-sum'], exclude: NONE });
     // Two Pointers and Stack are ready after Arrays & Hashing; Sliding Window still waits for Two Pointers.
-    expect(selection).toEqual({ slugs: ['trapping-rain-water', 'evaluate-reverse-polish-notation'], hold: null });
+    expect(selection).toEqual({ slugs: ['trapping-rain-water', 'largest-rectangle-in-histogram'], hold: null });
   });
 
   it('skips excluded and already worked problems and never repeats them', () => {
-    const state = workedState('two-sum', 'evaluate-reverse-polish-notation');
+    const state = workedState('two-sum', 'valid-palindrome', 'minimum-window-substring');
     const selection = selectBonusSlugs(state, {
       pool: BONUS_POOL,
       count: 2,
       coreSlugs: [],
       exclude: new Set(['trapping-rain-water']),
     });
-    expect(selection.slugs).toEqual(['car-fleet', 'largest-rectangle-in-histogram']);
+    expect(selection.slugs).toEqual(['sliding-window-maximum', 'largest-rectangle-in-histogram']);
   });
 
   it('puts a skipped problem behind the ones that were never skipped, without dropping it', () => {
@@ -129,12 +129,12 @@ describe('openBonusOffers', () => {
     };
     add('new', 'trapping-rain-water', day(1), 'planned');
     add('new', 'trapping-rain-water', day(2), 'planned');
-    add('new', 'permutation-in-string', day(2), 'skipped');
-    add('new', 'evaluate-reverse-polish-notation', day(2), 'planned');
-    add('new', 'car-fleet', day(3), 'in_progress');
+    add('new', 'minimum-window-substring', day(2), 'skipped');
+    add('new', 'largest-rectangle-in-histogram', day(2), 'planned');
+    add('new', 'median-of-two-sorted-arrays', day(3), 'in_progress');
     const pool = new Set(BONUS_POOL);
-    expect(openBonusOffers(state, pool, 2).map((a) => a.slug)).toEqual(['trapping-rain-water', 'car-fleet']);
-    expect(openBonusOffers(state, pool, 3).map((a) => a.slug)).toEqual(['trapping-rain-water', 'evaluate-reverse-polish-notation', 'car-fleet']);
-    expect(openBonusOffers(state, pool, 0).map((a) => a.slug)).toEqual(['car-fleet']);
+    expect(openBonusOffers(state, pool, 2).map((a) => a.slug)).toEqual(['trapping-rain-water', 'median-of-two-sorted-arrays']);
+    expect(openBonusOffers(state, pool, 3).map((a) => a.slug)).toEqual(['trapping-rain-water', 'largest-rectangle-in-histogram', 'median-of-two-sorted-arrays']);
+    expect(openBonusOffers(state, pool, 0).map((a) => a.slug)).toEqual(['median-of-two-sorted-arrays']);
   });
 });

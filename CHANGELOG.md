@@ -3,6 +3,17 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.13.0
+
+### Added
+- **Calibrate from my logs** (Settings → Time budgets): fills the budget table with your own median times plus a 25% margin for every activity type and difficulty with at least 5 finished activities, and lists each calibrated cell (median, samples, old and new value). Nothing is saved until you press Save budgets; the defaults are unchanged. The default estimates are about twice what many people need, which made the planner think days were full: on the author's logs, running the program forward to day 60 reaches 85 of the 104 queue problems with the defaults and all 104 with calibrated budgets.
+
+### Changed
+- **Phase 2 (days 31–60) now has 54 problems** instead of 36, so the program queue is **104 problems** (114 with the benchmark problems): the 18 Mediums that were bonus offers move into the queue, in roadmap order. The expected pace for days 31–60 stays 5 new problems per 4 learning days (the baseline with the default estimates), so the longer queue only gives faster users more to work on. The bonus pool is now **29 problems** (12 Mediums and the 17 free Hards). A bonus problem you finished before and that is now in the queue counts as a learned program problem.
+- Program counter *x/104*; benchmarks *x/10*.
+
+No new dependency or permission. The stored data format is unchanged. Update all synced computers.
+
 ## 0.12.0
 
 ### Changed

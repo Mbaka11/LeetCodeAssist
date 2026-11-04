@@ -5,8 +5,8 @@ import { isPremiumProblem } from './premium';
 import { BENCHMARKS, PROGRAM_QUEUE } from './program';
 
 describe('BONUS_POOL', () => {
-  it('has 47 unique problems that all exist in the NeetCode 150', () => {
-    expect(BONUS_POOL).toHaveLength(47);
+  it('has 29 unique problems that all exist in the NeetCode 150', () => {
+    expect(BONUS_POOL).toHaveLength(29);
     expect(new Set(BONUS_POOL).size).toBe(BONUS_POOL.length);
     for (const slug of BONUS_POOL) {
       expect(PROBLEMS_BY_SLUG.has(slug), slug).toBe(true);
@@ -24,7 +24,7 @@ describe('BONUS_POOL', () => {
     const count = (difficulty: string): number =>
       BONUS_POOL.filter((slug) => PROBLEMS_BY_SLUG.get(slug)!.difficulty === difficulty).length;
     expect(count('Easy')).toBe(0);
-    expect(count('Medium')).toBe(30);
+    expect(count('Medium')).toBe(12);
     expect(count('Hard')).toBe(17);
   });
 

@@ -8,55 +8,36 @@
 
 /**
  * Ordered bonus problems: roadmap category order, then Easy before Medium before Hard. Since the program
- * became 60 days (0.12), the most useful of the Mediums that used to be bonuses are phase 2 of the queue; what
- * remains is the rest of those Mediums and every free Hard.
+ * became 60 days (0.12), the Mediums that used to be bonuses are phase 2 of the queue; what remains is the last
+ * free Mediums and every free Hard.
  */
 export const BONUS_POOL: readonly string[] = [
   // Two Pointers
   'trapping-rain-water',
   // Sliding Window
-  'permutation-in-string',
   'minimum-window-substring',
   'sliding-window-maximum',
   // Stack
-  'evaluate-reverse-polish-notation',
-  'car-fleet',
   'largest-rectangle-in-histogram',
   // Binary Search
-  'time-based-key-value-store',
   'median-of-two-sorted-arrays',
   // Linked List
-  'copy-list-with-random-pointer',
-  'add-two-numbers',
-  'find-the-duplicate-number',
   'reverse-nodes-in-k-group',
   // Trees
-  'construct-binary-tree-from-preorder-and-inorder-traversal',
   'binary-tree-maximum-path-sum',
   'serialize-and-deserialize-binary-tree',
   // Heap / Priority Queue
   'design-twitter',
   'find-median-from-data-stream',
   // Backtracking
-  'letter-combinations-of-a-phone-number',
   'n-queens',
-  // Tries
-  'design-add-and-search-words-data-structure',
-  // Graphs
-  'pacific-atlantic-water-flow',
-  'redundant-connection',
   // Advanced Graphs
   'min-cost-to-connect-all-points',
   'cheapest-flights-within-k-stops',
   'reconstruct-itinerary',
   'swim-in-rising-water',
-  // 1-D Dynamic Programming
-  'palindromic-substrings',
-  'maximum-product-subarray',
-  'partition-equal-subset-sum',
   // 2-D Dynamic Programming
   'best-time-to-buy-and-sell-stock-with-cooldown',
-  'target-sum',
   'interleaving-string',
   'longest-increasing-path-in-a-matrix',
   'distinct-subsequences',
@@ -72,8 +53,6 @@ export const BONUS_POOL: readonly string[] = [
   'powx-n',
   'multiply-strings',
   'detect-squares',
-  'spiral-matrix',
-  'set-matrix-zeroes',
   // Bit Manipulation
   'reverse-integer',
 ];

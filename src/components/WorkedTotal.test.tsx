@@ -10,7 +10,7 @@ describe('WorkedTotal', () => {
     const html = renderToStaticMarkup(<WorkedTotal totals={workedTotals(newState())} />);
     expect(html).toContain('>0</span>');
     expect(html).toContain('problems worked');
-    expect(html).toContain('Program 0/86 · Benchmarks 0/10 · Bonus 0');
+    expect(html).toContain('Program 0/104 · Benchmarks 0/10 · Bonus 0');
     expect(html).not.toContain('Other');
     expect(html).toContain('Reviews never add to it');
     expect(html).toContain('a bonus never replaces a program problem');
@@ -19,11 +19,11 @@ describe('WorkedTotal', () => {
   it('counts program, benchmark and bonus problems once each', () => {
     const state = simulateDay(newState(), day(1), { bonus: true }).state;
     const totals = workedTotals(state);
-    expect(workedBreakdown(totals)).toBe('Program 2/86 · Benchmarks 2/10 · Bonus 2');
+    expect(workedBreakdown(totals)).toBe('Program 2/104 · Benchmarks 2/10 · Bonus 2');
     expect(totals.total).toBe(6);
     const html = renderToStaticMarkup(<WorkedTotal totals={totals} />);
     expect(html).toContain('>6</span>');
-    expect(html).toContain('Program 2/86 · Benchmarks 2/10 · Bonus 2');
+    expect(html).toContain('Program 2/104 · Benchmarks 2/10 · Bonus 2');
   });
 
   it('does not increase when reviews of the same problems are completed', () => {

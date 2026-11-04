@@ -94,7 +94,7 @@ describe('TodayView bonus offers (DOM)', () => {
     }
     const worked = container.querySelector('.worked-total')!;
     expect(within(worked as HTMLElement).getByText(/Bonus 2/)).toBeTruthy();
-    expect(within(worked as HTMLElement).getByText(/Program 0\/86/)).toBeTruthy();
+    expect(within(worked as HTMLElement).getByText(/Program 0\/104/)).toBeTruthy();
     const state = mock.data[STORAGE_KEY] as AppState;
     const doneSlugs = state.activities.filter((a) => a.status === 'done').map((a) => a.slug);
     expect(new Set(doneSlugs).size).toBe(2);

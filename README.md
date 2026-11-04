@@ -38,10 +38,14 @@ learning queue. A **Day 30 retrospective** and a **Day 60 retrospective** on the
 ### Two phases
 
 - **Days 1–30:** the 50 core problems (every free Easy plus the core Mediums), two new problems a day.
-- **Days 31–60:** a second, deeper pass over the same categories with 36 more problems (Mediums plus
-  `word-search-ii`), again in roadmap order, with consolidation days every seventh day (35, 42, 49, 56). From
-  day 31 the reviews fill about half of the daily budget, so the expected pace is 5 new problems per 4 learning
-  days instead of 2 a day. The remaining Mediums and the Hard problems stay in the optional bonus pool.
+- **Days 31–60:** a second, deeper pass over the same categories with 54 more problems (Mediums plus
+  `word-search-ii`), again in roadmap order, with consolidation days every seventh day (35, 42, 49, 56). That is
+  104 program problems and, with the 10 benchmark problems, 114 in the plan. From day 31 the reviews fill a large
+  share of the daily budget, and the default time estimates are about twice what most people need, so with the
+  defaults only about 1.2 new problems fit per day and the expected pace is 5 per 4 learning days. Press
+  **Calibrate from my logs** in Settings → Time budgets to replace the estimates with your own median times plus a
+  25% margin (nothing is saved until you press Save budgets); two new problems a day then fit. The remaining
+  Mediums and the Hard problems stay in the optional bonus pool.
 - Existing data is unchanged: the start date and history stay, and days 31–60 are added after day 30.
 
 ### Daily budget
@@ -54,8 +58,8 @@ learning queue. A **Day 30 retrospective** and a **Day 60 retrospective** on the
   optional bonus problems** are always on offer. They are outside the core plan time, pace, reminders and
   the toolbar badge, never become debt, and stay on offer even when the core plan already fills the cap:
   each card shows how much time it adds and warns when that passes your target or the cap.
-- The bonuses come from a separate **bonus pool** of 47 extra NeetCode 150 problems outside the
-  86-problem program (30 Mediums that did not fit the 60 days and the 17 free Hards), in a fixed order with
+- The bonuses come from a separate **bonus pool** of 29 extra NeetCode 150 problems outside the
+  104-problem program (12 Mediums that did not fit the 60 days and the 17 free Hards), in a fixed order with
   hints. The two offers are stored, so they
   survive reloads and days, and a started one keeps its timer. Finishing or skipping one refills the slot
   at once. A problem is only offered when its category is ready (something of it was already worked or is in
@@ -66,11 +70,11 @@ learning queue. A **Day 30 retrospective** and a **Day 60 retrospective** on the
   work, though: finishing many bonus problems fills later days' cap with reviews, which can leave less room
   for new program problems. A skipped bonus is dated to the day it was skipped.
 - **Problems worked** (Today and Calendar): the number of distinct problems with at least one finished
-  attempt, split into *Program x/86 · Benchmarks x/10 · Bonus x* (*Other* appears only when needed). Each
+  attempt, split into *Program x/104 · Benchmarks x/10 · Bonus x* (*Other* appears only when needed). Each
   problem counts once: reviews never add to it and a bonus never replaces a program problem. The program
-  counter *x/86* is separate.
-- New problems come from an ordered queue (86 problems: 50 in phase 1, **every free Easy problem**,
-  no Hard; 36 in phase 2, in NeetCode roadmap order), not
+  counter *x/104* is separate.
+- New problems come from an ordered queue (104 problems: 50 in phase 1, **every free Easy problem**,
+  no Hard; 54 in phase 2, in NeetCode roadmap order), not
   from fixed dates, so a missed day never produces an impossible day. Reviews are never dropped:
   what does not fit under the cap is carried over to the next days.
 
@@ -183,7 +187,7 @@ Other completed/started attempts and optional extra practice are protected. Date
 or reorder this problem's completed attempts, and logged time cannot be less than its recorded approach time.
 The preview is rejected if related data or the local date changes before confirmation. Previous values are
 kept in the activity's optional correction audit, preserved in JSON backups. Export a backup before major
-changes. The daily planner can rebalance later work under the same cap; the 86-problem queue is unchanged.
+changes. The daily planner can rebalance later work under the same cap; the 104-problem queue is unchanged.
 
 ### Weekly learning review
 
@@ -368,7 +372,7 @@ conjunctive title, category, difficulty, learning-status, Free/Premium, program-
 data-structure and company-evidence filters. Program membership includes benchmarks; Outside excludes
 both the program/benchmarks and the bonus pool. **Showing N of 150/75** counts matches, not progress.
 Live filters are temporary (named saved filters persist), reset on catalog/layout changes, and never change either catalog counter, shared
-checks/statuses, scheduled work or the fixed 86-problem program. **Clear filters** restores the catalog.
+checks/statuses, scheduled work or the fixed 104-problem program. **Clear filters** restores the catalog.
 
 Detailed rows add original editorial tags and qualified company evidence. **Hide techniques / solution
 hints** removes tags and clears/disables their filters. The layout, row detail and hide-hints preference

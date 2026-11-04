@@ -57,7 +57,7 @@ describe('planDay: day 1', () => {
   });
 
   it('offers two optional bonus problems from the pool outside the core minutes', () => {
-    expect(plan.bonuses.map((b) => b.activity.slug)).toEqual(['trapping-rain-water', 'evaluate-reverse-polish-notation']);
+    expect(plan.bonuses.map((b) => b.activity.slug)).toEqual(['trapping-rain-water', 'largest-rectangle-in-histogram']);
     expect(plan.plannedMinutes).toBe(110);
     expect(plan.bonuses.every((b) => !b.persisted && !plan.items.includes(b))).toBe(true);
   });
@@ -123,7 +123,7 @@ describe('planDay: materialization and stability', () => {
     expect(news).toEqual(['two-sum', 'valid-anagram']);
     expect(plan.carriedOver).toEqual([]);
     expect(plan.items.every((i) => i.overdue === false)).toBe(true);
-    expect(plan.bonuses.map((b) => b.activity.slug)).toEqual(['trapping-rain-water', 'evaluate-reverse-polish-notation']);
+    expect(plan.bonuses.map((b) => b.activity.slug)).toEqual(['trapping-rain-water', 'largest-rectangle-in-histogram']);
     expect(plan.bonuses.every((b) => b.persisted && !b.overdue)).toBe(true); // the same offers, no duplicates
   });
 
