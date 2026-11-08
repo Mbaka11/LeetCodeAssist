@@ -96,8 +96,8 @@ describe('app actions on a chrome.storage mock', () => {
     const after = await state();
     expect(after.problemStatus['median-of-two-sorted-arrays']).toBe('learning');
     expect(
-      after.activities.filter((a) => a.slug === 'median-of-two-sorted-arrays' && a.type === 'recall'),
-    ).toHaveLength(1);
+      after.activities.filter((a) => a.slug === 'median-of-two-sorted-arrays' && a.type === 'rebuild'),
+    ).toHaveLength(2);
     await expect(actions.startExtraPractice('nope')).rejects.toThrow(/NeetCode 150/);
   });
 

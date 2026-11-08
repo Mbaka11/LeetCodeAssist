@@ -98,9 +98,10 @@ describe('LeetCodeStreakBody compact mode', () => {
   it('keeps Refresh, the username link and the data age visible next to compact numbers and a 16-week grid', () => {
     const html = compact();
     expect(html).toContain('streak-compact');
+    // One number; longest and active days are in its tooltip.
     expect(html).toContain('>Current<');
-    expect(html).toContain('>Longest<');
-    expect(html).toContain('>Active days<');
+    expect(html).toContain('Longest');
+    expect(html).toContain('active days this year');
     expect(html).toContain('3 days');
     expect((html.match(/class="heat-week"/g) ?? []).length).toBe(16);
     expect(html).toContain('heat-grid heat-grid-compact');
@@ -108,7 +109,6 @@ describe('LeetCodeStreakBody compact mode', () => {
     expect(html).toContain('>@neo ↗<');
     expect(html).toContain('https://leetcode.com/u/neo/');
     expect(html).toContain('Updated 5 min ago');
-    expect(html).toContain('UTC days');
     expect(html).toContain('including today');
     // The long stat hints are not repeated in the compact layout.
     expect(html).not.toContain('Current streak');

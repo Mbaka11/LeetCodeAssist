@@ -134,15 +134,11 @@ export function LeetCodeStreakBody({
           <>
             <div className="streak-main">
               <div className="streak-numbers">
-                <Stat label="Current" value={days(stats.current)} />
-                <Stat label="Longest" value={days(stats.longest)} />
-                <Stat label="Active days" value={stats.activeDaysThisYear} />
+                <Stat label="Current" value={days(stats.current)}
+                  title={`Longest ${days(stats.longest)} · ${stats.activeDaysThisYear} active days this year (UTC) · ${currentStreakHint(stats)}`} />
               </div>
               <HeatGrid cache={current} now={now} compact />
             </div>
-            <p className="muted heat-legend">
-              <HeatLegend /> · {currentStreakHint(stats)}
-            </p>
           </>
         ) : (
           noData

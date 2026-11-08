@@ -5,6 +5,7 @@ import {
   NEW_PROBLEMS_PER_DAY,
   PROGRAM_LENGTH_DAYS,
   PROGRAM_QUEUE,
+  programGoal,
   isConsolidationDay,
 } from '../data/program';
 import { estimatedMinutes, expectedNewMinutes, isReviewType } from './activities';
@@ -195,6 +196,11 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
   const retired = new Set<string>();
   for (const a of state.activities) {
     if (a.status !== 'skipped' || a.extra || !isReviewType(a.type)) continue;
+    // The recall, resolve and blind of a bonus problem were retired when bonuses moved to two rebuilds.
+    if (isBonusProblem(a.slug) && (a.type === 'recall' || a.type === 'resolve' || a.type === 'blind')) {
+      retired.add(a.id);
+      continue;
+    }
     const from = addDays(a.dueDate, -REVIEW_TWIN_WINDOW_DAYS);
     const twinDone = state.activities.some((b) => b.id !== a.id && b.slug === a.slug && b.type === a.type &&
       b.status === 'done' && b.completedAt !== undefined && compareDates(b.completedAt, from) >= 0);
@@ -213,6 +219,8 @@ function draftsUpToToday(state: AppState, date: string, today: string): Draft[] 
     const dueHere = a.dueDate === date;
     if (!dueHere && !(a.status === 'done' && a.completedAt === date)) continue;
     if (a.extra && a.status === 'planned') continue; // optional practice that was never started
+    // A retired duplicate is not work of any day: leave it out of the lists (Logs shows it as Replaced).
+    if (retired.has(a.id)) continue;
     const entryState = stateOnDate(a, date, today, carriedIds, retired);
     if (entryState === null) continue;
     const isBonus = bonus.has(a.id);
@@ -373,7 +381,7 @@ export function programProgress(state: AppState, today: string): ProgramProgress
   const index = dayIndex(state.settings.startDate, today);
   return {
     learned: learned.size,
-    totalProblems: PROGRAM_QUEUE.length,
+    totalProblems: programGoal(),
     daysElapsed: Math.min(Math.max(index, 0), PROGRAM_LENGTH_DAYS),
     totalDays: PROGRAM_LENGTH_DAYS,
   };

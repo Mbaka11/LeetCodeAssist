@@ -1,4 +1,6 @@
+import { isBonusProblem } from '../data/bonus';
 import {
+  BONUS_REBUILD_OFFSETS,
   REVIEW_OFFSETS,
   REVIEW_STRENGTH,
   createActivity,
@@ -132,10 +134,15 @@ export function applyOutcome(state: AppState, activityId: string, completion: Co
       activities = skipPlanned(activities, slug, (a) =>
         (CYCLE_TYPES as readonly ActivityType[]).includes(a.type),
       );
-      schedule('recall', REVIEW_OFFSETS.recall);
-      schedule('rebuild', REVIEW_OFFSETS.rebuild);
-      schedule('resolve', REVIEW_OFFSETS.resolve);
-      schedule('blind', REVIEW_OFFSETS.blind);
+      if (activity.type === 'new' && isBonusProblem(slug)) {
+        // A bonus problem is optional work: two rebuilds and nothing else (no recall, resolve or blind).
+        for (const days of BONUS_REBUILD_OFFSETS) schedule('rebuild', days);
+      } else {
+        schedule('recall', REVIEW_OFFSETS.recall);
+        schedule('rebuild', REVIEW_OFFSETS.rebuild);
+        schedule('resolve', REVIEW_OFFSETS.resolve);
+        schedule('blind', REVIEW_OFFSETS.blind);
+      }
       if ((next.problemStatus[slug] ?? 'untouched') === 'untouched') {
         next = withStatus(next, slug, 'learning');
       }
@@ -146,6 +153,10 @@ export function applyOutcome(state: AppState, activityId: string, completion: Co
       if (isFailure(outcome)) {
         schedule('retry', 1);
         next = withStatus(next, slug, 'consolidating');
+      } else if (activity.type === 'rebuild' && isBonusProblem(slug) && outcome === 'solo' &&
+        !hasPlanned(activities, slug, 'rebuild') && next.problemStatus[slug] !== 'mastered') {
+        // The last rebuild of a bonus problem, done solo: the problem counts as reviewed.
+        next = withStatus(next, slug, 'reviewed');
       }
       break;
     }
@@ -228,4 +239,43 @@ export function backfillBenchmarkReviews(state: AppState): AppState {
     }
   }
   return next;
+}
+
+const FULL_CYCLE_ONLY: readonly ActivityType[] = ['recall', 'resolve', 'blind'];
+
+/** Finished bonus problems that still have the old full review cycle planned (recall, resolve or blind). */
+function bonusProblemsToSimplify(state: AppState): string[] {
+  const slugs = new Set<string>();
+  for (const a of state.activities) {
+    if (a.status !== 'planned' || a.extra || !FULL_CYCLE_ONLY.includes(a.type) || !isBonusProblem(a.slug)) continue;
+    if (state.activities.some((b) => b.slug === a.slug && b.type === 'new' && b.status === 'done')) slugs.add(a.slug);
+  }
+  return [...slugs];
+}
+
+export function needsBonusSimplify(state: AppState): boolean {
+  return bonusProblemsToSimplify(state).length > 0;
+}
+
+/**
+ * Moves bonus problems finished under the old rule (recall, rebuild, resolve, blind) to the two-rebuild rule:
+ * the planned recall, resolve and blind are retired (marked skipped, never deleted) and the rebuilds are topped
+ * up to two, counted from the completion date. Rebuilds already planned or done are kept.
+ */
+export function simplifyBonusReviews(state: AppState): AppState {
+  let activities = state.activities;
+  for (const slug of bonusProblemsToSimplify(state)) {
+    const completed = activities
+      .filter((a) => a.slug === slug && a.type === 'new' && a.status === 'done' && a.completedAt !== undefined)
+      .map((a) => a.completedAt!)
+      .sort()
+      .at(-1)!;
+    activities = skipPlanned(activities, slug, (a) => !a.extra && FULL_CYCLE_ONLY.includes(a.type));
+    const have = activities.filter((a) => a.slug === slug && a.type === 'rebuild' && !a.extra &&
+      (a.status === 'planned' || a.status === 'in_progress' || (a.status === 'done' && (a.completedAt ?? '') >= completed))).length;
+    for (const days of BONUS_REBUILD_OFFSETS.slice(have)) {
+      activities = scheduleReview(activities, { type: 'rebuild', slug, dueDate: addDays(completed, days), createdAt: completed });
+    }
+  }
+  return activities === state.activities ? state : { ...state, activities };
 }

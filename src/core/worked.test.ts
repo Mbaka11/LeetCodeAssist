@@ -23,7 +23,7 @@ describe('workedTotals', () => {
   it('is empty for a fresh state and exposes the program and benchmark sizes', () => {
     expect(workedTotals(newState())).toEqual({
       program: 0,
-      programTotal: 104,
+      programTotal: 100,
       benchmark: 0,
       benchmarkTotal: 10,
       bonus: 0,

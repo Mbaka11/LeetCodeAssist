@@ -1,3 +1,4 @@
+import { Explain } from '../components/Explain';
 import { useId, useState } from 'react';
 import { Button } from '../components/Button';
 import { CompanyLogo } from '../components/CompanyLogo';
@@ -93,7 +94,7 @@ export function RoadmapAllView({ state, actions, catalog, change }: {
             change({ roadmapHideTechniques: event.target.checked });
           }} />Hide techniques / solution hints</label>
         </div>
-        <p className="muted">Hide hints removes data-structure and technique tags and clears/disables their filters. Company filters include only documented reports (including qualified variants), not a complete interview history.</p>
+        <Explain summary="About these filters"><p className="muted">Hide hints removes data-structure and technique tags and clears/disables their filters. Company filters include only documented reports (including qualified variants), not a complete interview history.</p></Explain>
         <div className="roadmap-filters" role="group" aria-label="Filter problems">
           <label htmlFor={`${id}-search`}>Search titles<input id={`${id}-search`} type="search" value={filters.search}
             onChange={(event) => setFilters((current) => ({ ...current, search: event.target.value }))} /></label>

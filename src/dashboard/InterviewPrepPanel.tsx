@@ -45,15 +45,15 @@ export function InterviewPrepPanel({ state, actions, onStartSimulation }: {
       gives no progress, worked-total, streak or weekly-review credit. Pick one company and your interview date to see how your own history lines up
       with that company's documented problems.</p>
     {showForm ? <div className="card stack">
-      <label>Company<select value={company} onChange={(e) => setCompany(e.target.value as '' | CompanyId)}>
+      <label className="field"><span>Company</span><select value={company} onChange={(e) => setCompany(e.target.value as '' | CompanyId)}>
         <option value="">Choose a company</option>
         {COMPANIES.map((c) => <option key={c.id} value={c.id} disabled={!companyInterviewEnabled(c.id)}>{c.name} — {companyInterviewEnabled(c.id)
           ? `${companyInterviewSlugs(c.id).length} documented topics` : 'Not enough documented data'}</option>)}
       </select></label>
-      <label>Interview date<input type="date" value={date} min={range.min} max={range.max} onChange={(e) => setDate(e.target.value)} /></label>
+      <label className="field"><span>Interview date</span><input type="date" value={date} min={range.min} max={range.max} onChange={(e) => setDate(e.target.value)} /></label>
       <p className="muted">From today ({range.min}) up to 365 days ahead ({range.max}).</p>
       <div className="row">
-        <Button disabled={saving || !company || !dateOk} onClick={() => {
+        <Button variant="primary" disabled={saving || !company || !dateOk} onClick={() => {
           if (!company) return;
           setSaving(true); setError(null);
           void actions.saveInterviewPrep({ companyId: company, date })

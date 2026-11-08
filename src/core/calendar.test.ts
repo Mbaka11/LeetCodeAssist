@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { PROGRAM_QUEUE } from '../data/program';
+import { PROGRAM_QUEUE, programGoal } from '../data/program';
 import { calendarDays, programProgress } from './calendar';
 import { createActivity } from './activities';
 import { materializePlan, planDay } from './planner';
@@ -8,7 +8,7 @@ import { applyOutcome } from './reviews';
 import type { Activity, ActivityType, AppState } from './types';
 
 describe('calendarDays: retired duplicate reviews', () => {
-  it('does not count a skipped review as carried when its twin was finished within the week', () => {
+  it('leaves out a skipped review whose twin was finished within the week', () => {
     const base = newState();
     const twinDone = createActivity(base.activities, { type: 'rebuild', slug: 'merge-two-sorted-lists', dueDate: day(8), createdAt: day(8) });
     let state: AppState = { ...base, activities: [twinDone] };
@@ -18,7 +18,8 @@ describe('calendarDays: retired duplicate reviews', () => {
     const lone = createActivity(state.activities, { type: 'recall', slug: 'two-sum', dueDate: day(9), createdAt: day(8) });
     state = { ...state, activities: [...state.activities, { ...lone, status: 'skipped' }] };
     const today = calendarDays(state, day(9)).find((d) => d.date === day(9))!;
-    expect(today.entries.find((e) => e.slug === 'merge-two-sorted-lists')?.state).toBe('skipped');
+    // A retired duplicate is left out of the day's list entirely.
+    expect(today.entries.find((e) => e.slug === 'merge-two-sorted-lists')).toBeUndefined();
     expect(today.entries.find((e) => e.slug === 'two-sum')?.state).toBe('carried');
     expect(today.carriedCount).toBe(1);
   });
@@ -170,7 +171,7 @@ describe('programProgress', () => {
   it('counts learned program problems and elapsed program days', () => {
     expect(programProgress(newState(), day(1))).toEqual({
       learned: 0,
-      totalProblems: PROGRAM_QUEUE.length,
+      totalProblems: programGoal(),
       daysElapsed: 1,
       totalDays: 60,
     });

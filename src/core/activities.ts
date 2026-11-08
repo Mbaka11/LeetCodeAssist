@@ -40,6 +40,12 @@ export const PLAN_PRIORITY: Record<ActivityType, number> = {
 /** Review offsets in days from the completion of the `new` activity (SPEC §3). */
 export const REVIEW_OFFSETS = { recall: 1, rebuild: 3, resolve: 7, blind: 21 } as const;
 
+/**
+ * A finished bonus problem does not go through the full cycle: it comes back as `rebuild` twice, this many days
+ * after it was finished, and that is all (SPEC §2).
+ */
+export const BONUS_REBUILD_OFFSETS = [2, 6] as const;
+
 /** Flat budget of a benchmark problem in minutes (a pair is 2 x 30 = 60). */
 export const BENCHMARK_BUDGET_MIN = 30;
 
@@ -49,7 +55,7 @@ export const DIFFICULTIES: readonly Difficulty[] = ['Easy', 'Medium', 'Hard'];
 
 /** Default time budgets in minutes per activity type and difficulty (SPEC §3). */
 export const DEFAULT_BUDGETS: Readonly<Record<BudgetedType, Readonly<Record<Difficulty, number>>>> = {
-  new: { Easy: 25, Medium: 40, Hard: 50 },
+  new: { Easy: 15, Medium: 25, Hard: 30 },
   recall: { Easy: 5, Medium: 8, Hard: 10 },
   rebuild: { Easy: 10, Medium: 15, Hard: 18 },
   retry: { Easy: 10, Medium: 15, Hard: 18 },

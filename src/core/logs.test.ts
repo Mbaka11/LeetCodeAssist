@@ -5,6 +5,8 @@ import {
   filterLogRows,
   logRowsToCsv,
   summarizeLogRows,
+  logMonths,
+  replacedReviewIds,
   type LogRow,
 } from './logs';
 import { START, day, newState, planAndComplete, simulateDay } from './testing';
@@ -38,6 +40,8 @@ function sampleState(): AppState {
     type: 'new',
     postponed: true,
   });
+  // The planned recall of two-sum would be a live twin of the skipped one: drop it so this is a real skip.
+  state = { ...state, activities: state.activities.filter((a) => !(a.slug === 'two-sum' && a.type === 'recall')) };
   state = withActivity(state, {
     id: 'recall:two-sum:skipped',
     slug: 'two-sum',
@@ -74,8 +78,8 @@ describe('buildLogRows', () => {
       category: 'Arrays & Hashing',
       programDay: 1,
       loggedMinutes: 30,
-      budgetMinutes: 25,
-      deltaMinutes: 5,
+      budgetMinutes: 15,
+      deltaMinutes: 15,
       outcome: 'hint',
       hintsUsed: 0,
       status: 'done',
@@ -117,7 +121,7 @@ describe('buildLogRows', () => {
       title: 'made-up',
       approachMinutes: 0.5,
       hintsUsed: 2,
-      budgetMinutes: 40,
+      budgetMinutes: 25,
       programDay: 3,
     });
     expect(row?.difficulty).toBeUndefined();
@@ -172,8 +176,8 @@ describe('summarizeLogRows', () => {
     expect(summary.doneCount).toBe(2);
     expect(summary.totalMinutes).toBe(50);
     expect(summary.averageMinutes).toBe(25);
-    expect(summary.averageBudgetMinutes).toBe(25);
-    expect(summary.averageDeltaMinutes).toBe(0);
+    expect(summary.averageBudgetMinutes).toBe(15);
+    expect(summary.averageDeltaMinutes).toBe(10);
     expect(summary.soloRate).toBe(0.5);
   });
 
@@ -197,7 +201,7 @@ describe('summarizeLogRows', () => {
       count: 1,
       totalMinutes: 20,
       soloRate: 1,
-      averageDeltaMinutes: -5,
+      averageDeltaMinutes: 5,
     });
   });
 });
@@ -209,7 +213,7 @@ describe('logRowsToCsv', () => {
     expect(lines).toHaveLength(1 + 4 + 1); // header, four rows, empty tail after the final CRLF
     expect(lines[lines.length - 1]).toBe('');
     expect(lines).toContain(
-      `${day(1)},1,new,Valid Anagram,valid-anagram,Easy,Arrays & Hashing,30,,25,5,hint,0,done`,
+      `${day(1)},1,new,Valid Anagram,valid-anagram,Easy,Arrays & Hashing,30,,15,15,hint,0,done`,
     );
     expect(lines).toContain(`${day(2)},2,recall,Two Sum,two-sum,Easy,Arrays & Hashing,,,5,,,0,skipped`);
   });
@@ -261,5 +265,38 @@ describe('logs of a simulated program', () => {
     const total = state.activities.reduce((n, a) => n + (a.totalMs ?? 0), 0) / 60_000;
     expect(summarizeLogRows(rows).totalMinutes).toBeCloseTo(total);
     expect(summarizeLogRows(rows).soloRate).toBe(1);
+  });
+});
+
+describe('replaced reviews', () => {
+  const stateWithTwin = (): AppState => {
+    let state = planAndComplete(newState(), day(1), 'two-sum', 'new', 'solo', 20);
+    // A skipped recall of two-sum while another recall of it is still planned: the app retired the old one.
+    state = withActivity(state, { id: 'recall:two-sum:old', slug: 'two-sum', type: 'recall', dueDate: day(3) });
+    // A skipped bonus offer has no twin: the user skipped it.
+    state = withActivity(state, { id: 'new:trapping-rain-water:skip', slug: 'trapping-rain-water', type: 'new' });
+    return state;
+  };
+
+  it('marks a skipped review with a live twin as replaced, and keeps real skips', () => {
+    const state = stateWithTwin();
+    expect([...replacedReviewIds(state.activities)]).toEqual(['recall:two-sum:old']);
+    const rows = buildLogRows(state);
+    expect(rows.find((r) => r.id === 'recall:two-sum:old')?.status).toBe('replaced');
+    expect(rows.find((r) => r.id === 'new:trapping-rain-water:skip')?.status).toBe('skipped');
+  });
+
+  it('hides replaced rows unless asked', () => {
+    const rows = buildLogRows(stateWithTwin());
+    expect(filterLogRows(rows, {}).some((r) => r.status === 'replaced')).toBe(false);
+    expect(filterLogRows(rows, { showReplaced: true }).some((r) => r.status === 'replaced')).toBe(true);
+  });
+
+  it('filters by month and lists the months newest first', () => {
+    const rows = buildLogRows(stateWithTwin());
+    const month = rows[0]!.date.slice(0, 7);
+    expect(logMonths(rows)[0]).toBe(month);
+    expect(filterLogRows(rows, { month }).length).toBe(filterLogRows(rows, {}).length);
+    expect(filterLogRows(rows, { month: '1999-01' })).toEqual([]);
   });
 });

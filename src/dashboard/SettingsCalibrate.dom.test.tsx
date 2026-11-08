@@ -31,15 +31,15 @@ describe('Settings: Calibrate from my logs', () => {
     render(<SettingsView state={state} actions={createActions(app.store)} />);
 
     const input = screen.getByLabelText('New Easy budget in minutes') as HTMLInputElement;
-    expect(input.value).toBe('25');
+    expect(input.value).toBe('15');
     fireEvent.click(screen.getByRole('button', { name: 'Calibrate from my logs' }));
     expect(input.value).toBe('13'); // median 10 min + 25 % margin
     expect(screen.getByText(/Filled 1 cell from 6 finished activities/)).toBeTruthy();
-    expect(screen.getByLabelText('Calibrated cells').textContent).toContain('New · Easy: median 10 min over 6 finished, +25% margin → 13 min (was 25)');
+    expect(screen.getByLabelText('Calibrated cells').textContent).toContain('New · Easy: median 10 min over 6 finished, +25% margin → 13 min (was 15)');
     // Nothing is stored yet.
     expect((app.mock.data[STORAGE_KEY] as AppState).settings.budgets).toBeUndefined();
     // Cells without enough data keep their value.
-    expect((screen.getByLabelText('New Hard budget in minutes') as HTMLInputElement).value).toBe('50');
+    expect((screen.getByLabelText('New Hard budget in minutes') as HTMLInputElement).value).toBe('30');
 
     fireEvent.click(screen.getByRole('button', { name: 'Save budgets' }));
     await waitFor(() => expect((app.mock.data[STORAGE_KEY] as AppState).settings.budgets).toEqual({ new: { Easy: 13 } }));
@@ -52,6 +52,6 @@ describe('Settings: Calibrate from my logs', () => {
     render(<SettingsView state={state} actions={createActions(app.store)} />);
     fireEvent.click(screen.getByRole('button', { name: 'Calibrate from my logs' }));
     expect(screen.getByText(/Not enough finished activities yet/)).toBeTruthy();
-    expect((screen.getByLabelText('New Easy budget in minutes') as HTMLInputElement).value).toBe('25');
+    expect((screen.getByLabelText('New Easy budget in minutes') as HTMLInputElement).value).toBe('15');
   });
 });

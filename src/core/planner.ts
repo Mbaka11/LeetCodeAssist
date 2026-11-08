@@ -60,6 +60,8 @@ export interface Pace {
   actual: number;
   /** New problems expected to be complete by the end of this program day. */
   expected: number;
+  /** New problems the previous days required (`expected` of the day before): the "behind" figure is measured against it. */
+  due: number;
   delta: number;
   /** "+2 ahead", "−1 behind" or "on pace". */
   label: string;
@@ -201,6 +203,7 @@ export function planDay(
   const pace: Pace = {
     actual: doneNew.size,
     expected,
+    due: expectedBeforeToday,
     delta: paceDelta,
     label: paceLabel(paceDelta),
   };

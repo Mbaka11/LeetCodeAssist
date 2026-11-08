@@ -17,16 +17,14 @@ export function workedBreakdown(totals: WorkedTotals): string {
  */
 export function WorkedTotal({ totals }: { totals: WorkedTotals }) {
   return (
-    <div className="worked-total" role="group" aria-label="Distinct problems worked">
+    <div className="worked-total" role="group" aria-label="Distinct problems worked"
+      title="Each problem counts once. Reviews never add to it, and a bonus never replaces a program problem. Benchmarks are separate from the 100 program problems.">
       <div className="worked-total-main">
         <span className="worked-total-value">{totals.total}</span>
         <span className="worked-total-label">{totals.total === 1 ? 'problem worked' : 'problems worked'}</span>
       </div>
       <div className="worked-total-detail">
         <span className="worked-total-breakdown">{workedBreakdown(totals)}</span>
-        <span className="muted worked-total-note">
-          Each problem counts once. Reviews never add to it, and a bonus never replaces a program problem.
-        </span>
       </div>
     </div>
   );

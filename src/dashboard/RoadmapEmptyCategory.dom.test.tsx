@@ -50,6 +50,6 @@ describe('RoadmapView with categories that have no problem in the catalog', () =
     const { container } = render(<RoadmapView state={emptyCatalogState('grid')} actions={actions} />);
     expect(container.querySelectorAll('section.category')).toHaveLength(CATEGORIES.length);
     expect(screen.getAllByText(/No Blind 75 problem is in this category/)).toHaveLength(CATEGORIES.length - 1);
-    expect(container.querySelectorAll('details')).toHaveLength(1);
+    expect(container.querySelectorAll('section.category details')).toHaveLength(1);
   });
 });

@@ -42,7 +42,7 @@ learning queue. A **Day 30 retrospective** and a **Day 60 retrospective** on the
   `word-search-ii`), again in roadmap order, with consolidation days every seventh day (35, 42, 49, 56). That is
   104 program problems and, with the 10 benchmark problems, 114 in the plan. From day 31 the reviews fill a large
   share of the daily budget, and the default time estimates are about twice what most people need, so with the
-  defaults only about 1.2 new problems fit per day and the expected pace is 5 per 4 learning days. Press
+  defaults a daily cap of about 210 minutes is needed to reach the 100 problems that the pace expects by day 60 (at the 180 cap it reads behind). Press
   **Calibrate from my logs** in Settings → Time budgets to replace the estimates with your own median times plus a
   25% margin (nothing is saved until you press Save budgets); two new problems a day then fit. The remaining
   Mediums and the Hard problems stay in the optional bonus pool.
@@ -65,12 +65,12 @@ learning queue. A **Day 30 retrospective** and a **Day 60 retrospective** on the
   at once. A problem is only offered when its category is ready (something of it was already worked or is in
   today's plan, or all its prerequisite categories were introduced), so Graphs or DP stay locked until
   Backtracking is worked; the card explains when fewer than two can be offered. Finishing one starts the
-  normal review cycle (day +1/3/7/21) and counts as worked in the roadmap, but it does **not** count toward
-  your pace or the program counter, and it never uses up the program queue. Its four reviews are real core
-  work, though: finishing many bonus problems fills later days' cap with reviews, which can leave less room
-  for new program problems. A skipped bonus is dated to the day it was skipped.
+  light review plan, not the full cycle: it comes back **twice as a rebuild**, about 2 and 6 days later, and that
+  is all (no recall, resolve or blind). It counts as worked in the roadmap, but it does **not** count toward
+  your pace or the program counter, and it never uses up the program queue. The two rebuilds are real core
+  work, though, so finishing many bonus problems still adds some review time. A skipped bonus is dated to the day it was skipped.
 - **Problems worked** (Today and Calendar): the number of distinct problems with at least one finished
-  attempt, split into *Program x/104 · Benchmarks x/10 · Bonus x* (*Other* appears only when needed). Each
+  attempt, split into *Program x/100 · Benchmarks x/10 · Bonus x* (*Other* appears only when needed). Each
   problem counts once: reviews never add to it and a bonus never replaces a program problem. The program
   counter *x/104* is separate.
 - New problems come from an ordered queue (104 problems: 50 in phase 1, **every free Easy problem**,
@@ -85,7 +85,7 @@ are counted from the day the `new` activity was actually completed.
 
 | Type | When | What to do | Budget Easy / Medium / Hard (min) |
 |---|---|---|---:|
-| `new` | from the queue | Search, code, understand, write notes. Hint at 15–20 min without an approach; read the solution at 35–45 min, then re-code it from memory. | 25 / 40 / 50 |
+| `new` | from the queue | Search, code, understand, write notes. Hint at 15–20 min without an approach; read the solution at 35–45 min, then re-code it from memory. | 15 / 25 / 30 |
 | `recall` | done + 1 day | Retrieval only, no code: write the approach, why it works, edge cases, time and space complexity from memory. | 5 / 8 / 10 |
 | `rebuild` | done + 3 days | Write it again from your own notes (pseudocode, then code), run the edge cases. | 10 / 15 / 18 |
 | `resolve` | done + 7 days | Interview conditions: blank editor and a timer, no notes, no hints. | 15 / 25 / 30 |

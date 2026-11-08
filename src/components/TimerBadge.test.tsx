@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { createActivity } from '../core/activities';
-import type { Activity } from '../core/types';
+import type { Activity, BudgetOverrides } from '../core/types';
 import type { AppActions } from '../lib/actions';
 import { acceptedPrompt, type SubmissionEvent } from '../lib/leetcodeSubmissions';
 import { ActivityCard } from './ActivityCard';
@@ -43,14 +43,14 @@ describe('TimerBadge', () => {
   });
 });
 
-function openCard(type: 'new' | 'recall', accepted?: ReturnType<typeof acceptedPrompt>, patch: Partial<Activity> = {}): string {
+function openCard(type: 'new' | 'recall', accepted?: ReturnType<typeof acceptedPrompt>, patch: Partial<Activity> = {}, budgets?: BudgetOverrides): string {
   const activity: Activity = {
     ...createActivity([], { type, slug: 'two-sum', dueDate: '2025-01-06', createdAt: '2025-01-06' }),
     status: 'in_progress',
     timer: { startedAt: now - min(20), accumulatedMs: 0, running: true },
     ...patch,
   };
-  return renderToStaticMarkup(<ActivityCard activity={activity} now={now} actions={actions} accepted={accepted ?? undefined} />);
+  return renderToStaticMarkup(<ActivityCard activity={activity} now={now} actions={actions} accepted={accepted ?? undefined} budgets={budgets} />);
 }
 
 describe('ActivityCard timer and Accepted prompt', () => {
@@ -67,7 +67,7 @@ describe('ActivityCard timer and Accepted prompt', () => {
   const at = new Date(2025, 0, 6, 23, 14).getTime();
 
   it('uses the budget shown on the card: 20 min of the 25 min Easy budget is near the limit, with help-ladder cues', () => {
-    const html = openCard('new');
+    const html = openCard('new', undefined, {}, { new: { Easy: 25 } });
     expect(html).toContain('~25 min');
     expect(html).toContain('near limit');
     expect(html).toContain('consider a hint');

@@ -73,11 +73,11 @@ function SettingsForm({
       </label>
       <label className="field">
         <span>Daily target (min)</span>
-        <input type="number" min={1} step={5} required value={target} onChange={(e) => setTarget(e.target.value)} />
+        <input type="number" min={1} step={1} required value={target} onChange={(e) => setTarget(e.target.value)} />
       </label>
       <label className="field">
         <span>Daily cap (min)</span>
-        <input type="number" min={1} step={5} required value={cap} onChange={(e) => setCap(e.target.value)} />
+        <input type="number" min={1} step={1} required value={cap} onChange={(e) => setCap(e.target.value)} />
       </label>
       <label className="field">
         <span>Morning summary</span>

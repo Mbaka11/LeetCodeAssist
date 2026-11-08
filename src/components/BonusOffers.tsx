@@ -1,10 +1,12 @@
-import type { DayPlan } from '../core/planner';
+import type { DayPlan, PlanItem } from '../core/planner';
 import type { BudgetOverrides } from '../core/types';
 import { getProblem } from '../data/neetcode150';
 import type { AppActions } from '../lib/actions';
 import { bonusTimeImpact } from '../lib/bonusTime';
 import { OUTCOME_LABELS } from '../lib/instructions';
+import type { Activity } from '../core/types';
 import { ActivityCard } from './ActivityCard';
+import { ProblemActivities } from './ProblemActivities';
 import { Card } from './Card';
 
 /**
@@ -19,20 +21,33 @@ export function BonusOffers({
   now,
   actions,
   budgets,
+  reviews = [],
+  history = [],
 }: {
   plan: DayPlan;
   targetMinutes: number;
   now: number;
   actions: AppActions;
   budgets: BudgetOverrides | undefined;
+  /** Due reviews of finished bonus problems: still scheduled and counted in the plan time, listed here. */
+  reviews?: readonly PlanItem[];
+  history?: readonly Activity[];
 }) {
   const { bonuses, completedBonuses, bonusHold } = plan;
-  if (bonuses.length === 0 && completedBonuses.length === 0 && !bonusHold) return null;
+  if (bonuses.length === 0 && completedBonuses.length === 0 && !bonusHold && reviews.length === 0) return null;
   const doneMinutes = completedBonuses.reduce((sum, item) => sum + item.minutes, 0);
   const startedMinutes = bonuses
     .filter((item) => item.activity.status !== 'planned')
     .reduce((sum, item) => sum + item.minutes, 0);
   const countedMinutes = plan.plannedMinutes + doneMinutes + startedMinutes;
+  const impacts = bonuses.map((item) =>
+    item.activity.status === 'planned'
+      ? bonusTimeImpact({ countedMinutes, offerMinutes: item.minutes, targetMinutes, capMinutes: plan.capMinutes })
+      : null,
+  );
+  // When every offer has the same time note, say it once above them instead of once per offer.
+  const first = impacts[0];
+  const sharedImpact = first && impacts.every((i) => i !== null && i.message === first.message && i.level === first.level) ? first : null;
 
   return (
     <Card title={`Optional bonus problems (${bonuses.length} offered)`} className="bonus-offers">
@@ -40,21 +55,19 @@ export function BonusOffers({
         <summary>Optional extra work, never debt. How bonuses work</summary>
         <p>
           Optional: not included in today&apos;s core plan time, pace or reminders, and never debt. Finishing one
-          adds its own later reviews (day +1, +3, +7, +21). Skip freely: another one takes its place.
+          comes back twice as a rebuild (about 2 and 6 days later) and that is all. Skip freely: another one takes its place.
         </p>
       </details>
       {bonuses.length > 0 ? (
         <div className="stack-tight">
-          {bonuses.map((item) => {
-            const impact =
-              item.activity.status === 'planned'
-                ? bonusTimeImpact({
-                    countedMinutes,
-                    offerMinutes: item.minutes,
-                    targetMinutes,
-                    capMinutes: plan.capMinutes,
-                  })
-                : null;
+          {sharedImpact ? (
+            <p className={`bonus-impact bonus-impact-${sharedImpact.level}`}>
+              <span aria-hidden="true">{sharedImpact.level === 'within-target' ? '○' : '⚠'}</span>{' '}
+              {bonuses.length > 1 ? `Each: ${sharedImpact.message}` : sharedImpact.message}
+            </p>
+          ) : null}
+          {bonuses.map((item, index) => {
+            const impact = sharedImpact ? null : impacts[index];
             return (
               <div key={item.activity.id} className="bonus-offer">
                 {impact ? (
@@ -68,6 +81,7 @@ export function BonusOffers({
                   now={now}
                   actions={actions}
                   variant="bonus"
+                  inOptionalSection
                   budgets={budgets}
                 />
               </div>
@@ -87,6 +101,13 @@ export function BonusOffers({
             .join(', ')}
           . They stay in Logs and the Calendar.
         </p>
+      ) : null}
+      {reviews.length > 0 ? (
+        <div className="stack-tight bonus-reviews">
+          <h3 className="small">Reviews of finished bonus problems ({reviews.length})</h3>
+          <p className="muted small">Still part of today&apos;s planned time; kept here so the core list stays program-only.</p>
+          <ProblemActivities items={reviews} history={history} now={now} actions={actions} budgets={budgets} unfinishedFirst />
+        </div>
       ) : null}
     </Card>
   );

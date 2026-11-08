@@ -128,7 +128,7 @@ describe('bonus offers through the commands', () => {
     expect(open.every((o) => o.persisted)).toBe(true);
     expect(new Set([a!.slug, b!.slug, ...open.map((o) => o.activity.slug)]).size).toBe(4);
     for (const done of [a!, b!]) {
-      expect(next.activities.filter((x) => x.slug === done.slug && x.type === 'recall' && x.status === 'planned')).toHaveLength(1);
+      expect(next.activities.filter((x) => x.slug === done.slug && x.type === 'rebuild' && x.status === 'planned')).toHaveLength(2);
     }
   });
 

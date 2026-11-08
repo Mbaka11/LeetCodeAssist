@@ -3,6 +3,30 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.16.0
+
+### Changed
+- **Bonus problems have a light review plan.** A finished bonus now comes back **twice as a rebuild**, 2 and 6 days later, and that is all: no recall, resolve or blind. The last rebuild done solo marks the problem as reviewed; a failed rebuild still plans a retry. A bonus finished earlier is migrated once: its planned recall, resolve and blind are retired (shown as *Replaced* in Logs and not as carried work in the Calendar) and the rebuilds are topped up to two.
+
+### Changed (UI/UX)
+- **Logs:** the summary and all filters are one toolbar card, and the table follows right away. *Activity minutes* and *Pace by month* moved below the table into collapsible sections. The table is denser: date with program day ("Nov 7 · D23"), time against budget with the delta in one cell, category under the problem, hints next to the outcome. The "Saved at ..." text is gone from the date (the timestamp is a tooltip), which only some old rows had. New **Month** filter with previous/next.
+- **Replaced reviews are no longer "Skipped".** When a review is done late or early or a result is corrected, the app retires the old scheduled review. Those rows (22 on the author's export) now read *Replaced* and are hidden unless *Show replaced* is ticked; only reviews you really skipped stay *Skipped*.
+- **Weekly review** has charts: KPI tiles with the change against the previous week, minutes per day against the previous week, an outcome mix bar and category bars (amber = needed help).
+- **Practice:** segmented tabs, aligned setup forms (pool, difficulty, category and length in one row), primary actions, and drill answers as full-width options that show correct and wrong.
+- **Calendar:** the 60 days are split into *Days 1–30* and *Days 31–60*. Every cell has the same layout: day, date, then **"8/9 done" and the minutes logged**; planned, carried and extra counts moved to the tooltip. Future cells show the same forecast as their popover ("~9 activities · ~2h50"), from one forward run of the planner, instead of only the reviews already scheduled (which made late days look nearly empty and consolidation days show 0). Replaced reviews are no longer listed as *Skipped* in a day. The overview no longer repeats the worked total (it is on Today) and its hints moved to tooltips; the LeetCode streak shows one number (longest and active days on hover).
+- **Today:** less text. The 04:00 training-day note, the planned target/cap, the pace explanation, the streak rule and the worked-total note are tooltips now; pace reads "37/38 new problems". The duplicate "Next: ..." line is gone, and the bonus card states its time note once instead of under every offer, without the repeated *Optional* badge.
+- **Roadmap:** a lighter look (quieter borders and fills, tighter nodes), and the long explanations are folded under *How this works*. No layout changes.
+
+## 0.15.0
+
+### Changed
+- **The expected pace now ends at 100 problems on day 60** (it was 84): phase 2 expects 24 new problems per 13 learning days. The queue stays at 104 problems. On a real export, running the program forward to day 60 gives 88 problems with the 180-minute cap, 96 with 195, 100 with 210 and 104 with 240, so raise the daily cap to about 210 minutes; below that the pace reads behind, which is the intended warning.
+- **Lower default time budget for new problems:** 15 / 25 / 30 minutes (Easy / Medium / Hard) instead of 25 / 40 / 50, the same as a re-solve. Recall, rebuild, resolve and blind are unchanged. Custom budgets are untouched.
+- **Counters show the plan, not the queue:** the Calendar's *Problems learned* and Today's *Program* counter now read x/100, the 100 problems the 60-day calendar plans, instead of the 104-problem queue (which stays a little longer for faster users).
+- **Settings:** the daily target and cap inputs accepted only 1, 6, 11, ... 146, 151, 156 (step 5 counted from 1), so 150 or 180 failed with "Please enter a valid value. The two nearest values are ...". Any whole number of minutes is accepted now.
+- **Today, Pace:** the hint now reads "37 new done · 38 expected by yesterday (2 due today)", the figure the "behind" label is measured against, instead of the end-of-today expectation.
+- **Reviews of finished bonus problems** are listed in the *Optional bonus problems* card, not in the main checklist. They are still scheduled and still count toward the planned time and the cap.
+
 ## 0.14.0
 
 ### Changed (UI/UX)

@@ -28,11 +28,11 @@ export function PracticeView({ state, actions }: Props) {
     setUnsavedWorkGuard('Leave Practice? The unsaved interview or drill session will be discarded.');
     return () => { window.removeEventListener('beforeunload', warn); setUnsavedWorkGuard(null); };
   }, [busy]);
-  return <section className="stack" aria-label="Optional practice">
+  return <section className="stack practice-page" aria-label="Optional practice">
     <h1>Practice</h1>
     <Explain><p>Voluntary, separate practice. No scheduled reviews, problem-status changes, program progress, worked totals, streak or weekly-review credit. Results appear only here, in JSON backups and as a separate, labelled series in the Logs pace chart.</p></Explain>
     {busy ? <p className="muted">Session in progress. Leaving this view discards unsaved practice; finish here to keep a result.</p> : null}
-    <div className="row" role="group" aria-label="Practice mode">
+    <div className="segmented practice-tabs" role="group" aria-label="Practice mode">
       <Button disabled={busy} aria-pressed={tab === 'simulation'} onClick={() => { setPresetCompany(''); setTab('simulation'); }}>Interview simulation</Button>
       <Button disabled={busy} aria-pressed={tab === 'prep'} onClick={() => setTab('prep')}>Interview prep</Button>
       <Button disabled={busy} aria-pressed={tab === 'drills'} onClick={() => setTab('drills')}>Pattern drills</Button>
@@ -70,7 +70,7 @@ function SimulationView({ state, actions, onBusy, initialCompany }: Props & { on
     <h2>Interview simulation</h2>
     {pair ? <TwoProblemSession problems={pair.problems} {...(pair.companyId ? { companyId: pair.companyId } : {})} withBreak={pair.withBreak} actions={actions}
       onClose={() => { setPair(null); onBusy(false); }} /> : !session ? <div className="card stack">
-      <label>Interview pool<select value={company} onChange={(e) => setCompany(e.target.value as '' | CompanyId)}>
+      <label className="field"><span>Interview pool</span><select value={company} onChange={(e) => setCompany(e.target.value as '' | CompanyId)}>
         <option value="">Global — worked problems by default</option>
         {COMPANIES.map((c) => <option key={c.id} value={c.id} disabled={!companyInterviewEnabled(c.id)}>{c.name} — {companyInterviewEnabled(c.id) ? `${companyInterviewSlugs(c.id).length} documented topics` : 'Not enough documented data'}</option>)}
       </select></label>
@@ -79,27 +79,27 @@ function SimulationView({ state, actions, onBusy, initialCompany }: Props & { on
         <Explain><p>Company pools include unworked documented topics and qualified variants. Exact-topic associations receive more sampling weight (3:1), an editorial practice choice, not interview frequency or a hiring prediction. No pattern-similar fallback is used.</p>
         <p>Reports may be mirrored or AI-reworded; identity and employer confirmation are unverified. Systems/firmware reports may not generalize to other roles. Per-topic sources and qualifications appear after saving, not during the interview.</p></Explain>
       </div> : <label className="choice"><input type="checkbox" checked={includeUnworked} onChange={(e) => setIncludeUnworked(e.target.checked)} />Include unworked catalog problems (may reveal a new problem; no progress credit)</label>}
-      <div className="row">
-        <label>Difficulty<select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}><option value="">Any</option>{['Easy', 'Medium', 'Hard'].map((d) => <option key={d}>{d}</option>)}</select></label>
-        <label>Category<select value={category} onChange={(e) => setCategory(e.target.value)}><option value="">Any</option>{CATEGORY_NAMES.map((c) => <option key={c}>{c}</option>)}</select></label>
-        <label>Interview length<select value={minutes} onChange={(e) => setMinutes(Number(e.target.value) as 25 | 35 | 45)}>{[25, 35, 45].map((n) => <option key={n} value={n}>{n} minutes</option>)}</select></label>
+      <div className="practice-grid">
+        <label className="field"><span>Difficulty</span><select value={difficulty} onChange={(e) => setDifficulty(e.target.value)}><option value="">Any</option>{['Easy', 'Medium', 'Hard'].map((d) => <option key={d}>{d}</option>)}</select></label>
+        <label className="field"><span>Category</span><select value={category} onChange={(e) => setCategory(e.target.value)}><option value="">Any</option>{CATEGORY_NAMES.map((c) => <option key={c}>{c}</option>)}</select></label>
+        <label className="field"><span>Interview length</span><select value={minutes} onChange={(e) => setMinutes(Number(e.target.value) as 25 | 35 | 45)}>{[25, 35, 45].map((n) => <option key={n} value={n}>{n} minutes</option>)}</select></label>
       </div>
-      <p>{pool.length} eligible problems. Worked means started/completed program or bonus work, a learned status, or a solved check. Tags and similar questions stay hidden throughout the session.</p>
+      <p className="practice-pool"><strong>{pool.length}</strong> eligible problems. <span className="muted">Worked means started/completed program or bonus work, a learned status, or a solved check. Tags and similar questions stay hidden throughout the session.</span></p>
       {!pool.length ? <p role="status">No matching problems. Work or check a problem first, or explicitly include unworked problems.</p> : null}
-      <Button disabled={!pool.length} onClick={() => {
+      <Button variant="primary" className="practice-cta" disabled={!pool.length} onClick={() => {
         const problem = drawSimulation(pool, company || undefined);
         if (!problem) return;
         const now = Date.now();
         setSession({ id: crypto.randomUUID(), createdAt: now, slug: problem.slug, mode: company ? 'company' : 'global', ...(company ? { companyId: company } : {}), checklist: emptyChecklist(), targetMinutes: minutes });
         setClock(now); setEndedAt(null); setOutcome('partial'); setError(null); onBusy(true);
       }}>Start interview</Button>
-      <div className="stack-tight" role="group" aria-label="Two-problem session">
+      <div className="stack-tight practice-sub" role="group" aria-label="Two-problem session">
         <h3>Two-problem session</h3>
         <Explain><p>Two different problems back to back from this pool, each with its own timer and a reminder banner at {SESSION_REMINDER_MINUTES} minutes (the timer keeps running; the interview length above applies to a single interview only).
           Each problem gets a checklist and self-rating, then a final summary is saved as two linked records. The second problem stays hidden until it starts.</p></Explain>
         <label className="choice"><input type="checkbox" checked={withBreak} onChange={(e) => setWithBreak(e.target.checked)} />{SESSION_BREAK_MINUTES}-minute break between the problems (skippable)</label>
         {pool.length === 1 ? <p role="status">A two-problem session needs at least two eligible problems.</p> : null}
-        <Button disabled={pool.length < 2} onClick={() => {
+        <Button className="practice-cta" disabled={pool.length < 2} onClick={() => {
           const drawn = drawSimulationPair(pool, company || undefined);
           if (!drawn) return;
           setPair({ problems: drawn, ...(company ? { companyId: company } : {}), withBreak }); setError(null); onBusy(true);
@@ -114,11 +114,11 @@ function SimulationView({ state, actions, onBusy, initialCompany }: Props & { on
       <fieldset disabled={endedAt !== null || saving} className="stack-tight"><legend>Interview checklist</legend>
         {(Object.entries(INTERVIEW_STEPS) as [InterviewStep, string][]).map(([step, label]) => <label className="choice" key={step}><input type="checkbox" checked={session.checklist[step]} onChange={(e) => setSession({ ...session, checklist: { ...session.checklist, [step]: e.target.checked } })} />{label}</label>)}
       </fieldset>
-      {endedAt === null ? <Button onClick={() => setEndedAt(Math.max(session.createdAt, Date.now()))}>End interview</Button> : <div className="stack">
+      {endedAt === null ? <Button variant="primary" onClick={() => setEndedAt(Math.max(session.createdAt, Date.now()))}>End interview</Button> : <div className="stack">
         <p>Elapsed: {time(endedAt - session.createdAt)} · Checklist: {Object.values(session.checklist).filter(Boolean).length}/8</p>
-        <label>Self-rating<select value={outcome} onChange={(e) => setOutcome(e.target.value as SimulationOutcome)}><option value="solved">Solved</option><option value="partial">Partial</option><option value="not">Not solved</option></select></label>
-        <label>Short reflection<textarea maxLength={1000} value={reflection} onChange={(e) => setReflection(e.target.value)} /></label>
-        <Button disabled={saving} onClick={() => {
+        <label className="field"><span>Self-rating</span><select value={outcome} onChange={(e) => setOutcome(e.target.value as SimulationOutcome)}><option value="solved">Solved</option><option value="partial">Partial</option><option value="not">Not solved</option></select></label>
+        <label className="field"><span>Short reflection</span><textarea maxLength={1000} value={reflection} onChange={(e) => setReflection(e.target.value)} /></label>
+        <Button variant="primary" disabled={saving} onClick={() => {
           setSaving(true); setError(null);
           void actions.saveSimulation({ ...session, endedAt, outcome, reflection, durationMs: endedAt - session.createdAt })
             .then(clear).catch((e: unknown) => setError(message(e))).finally(() => setSaving(false));
@@ -155,17 +155,19 @@ function DrillsView({ state, actions, onBusy }: Props & { onBusy: (busy: boolean
       <label className="choice"><input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />Show hint-based drills</label>
       <label className="choice"><input type="checkbox" checked={includeUnworked} onChange={(e) => setIncludeUnworked(e.target.checked)} />Include unworked problems — warning: reveals techniques and data structures</label>
       <p className="muted">Pseudo-code questions are always restricted to worked problems, even with this toggle. Practice results never unlock more spoilers.</p>
-      <label>Question kind<select value={kind} onChange={(e) => setKind(e.target.value as DrillKind | 'mixed')}><option value="mixed">Mixed</option>{Object.entries(QUESTION_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
-      <label>Questions per session<select value={count} onChange={(e) => setCount(Number(e.target.value))}>{[5, 10, 20].map((n) => <option key={n}>{n}</option>)}</select></label>
+      <div className="practice-grid practice-grid-2">
+      <label className="field"><span>Question kind</span><select value={kind} onChange={(e) => setKind(e.target.value as DrillKind | 'mixed')}><option value="mixed">Mixed</option>{Object.entries(QUESTION_LABELS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
+      <label className="field"><span>Questions per session</span><select value={count} onChange={(e) => setCount(Number(e.target.value))}>{[5, 10, 20].map((n) => <option key={n}>{n}</option>)}</select></label>
+      </div>
       <p>Up to {count} questions; {available.length} available for this session (no repeated question). A small pool produces a shorter session.</p>
-      <Button disabled={!enabled || !available.length} onClick={() => {
+      <Button variant="primary" className="practice-cta" disabled={!enabled || !available.length} onClick={() => {
         setSession({ id: crypto.randomUUID(), createdAt: Date.now(), includeUnworked, questions: drillQuestions(state, { includeUnworked, kind, count }) });
         setAnswers([]); setChoice(null); setEndedAt(null); setError(null); onBusy(true);
       }}>Start drills</Button>
     </div> : <div className="card stack" aria-label="Active drills">
       {question ? <>
         <p>Question {answers.length + 1}/{session.questions.length}</p><h3>{question.title}</h3><p>{question.summary}</p><h4>{QUESTION_LABELS[question.kind]}</h4>
-        <div className="stack-tight" role="group" aria-label="Answer choices">{question.choices.map((option, index) => <Button key={index} disabled={choice !== null} onClick={() => setChoice(index)}>{option.text}</Button>)}</div>
+        <div className="option-list" role="group" aria-label="Answer choices">{question.choices.map((option, index) => <Button key={index} className={`option-btn${choice !== null ? (option.correct ? ' option-correct' : index === choice ? ' option-wrong' : '') : ''}`} disabled={choice !== null} onClick={() => setChoice(index)}>{option.text}</Button>)}</div>
         {choice !== null ? <div role="status" className="stack-tight"><strong>{question.choices[choice]!.correct ? 'Correct' : 'Not quite'}</strong>
           <p>{question.choices[choice]!.explanation}</p>
           {!question.choices[choice]!.correct ? <p>Intended answer: {question.choices.find((c) => c.correct)!.text}</p> : null}
@@ -176,7 +178,7 @@ function DrillsView({ state, actions, onBusy }: Props & { onBusy: (busy: boolean
           }}>{answers.length + 1 === session.questions.length ? 'Finish drills' : 'Next question'}</Button>
         </div> : null}
       </> : <><h3>Session score: {answers.filter((a) => a.correct).length}/{answers.length}</h3>
-        <Button disabled={saving || endedAt === null} onClick={() => {
+        <Button variant="primary" disabled={saving || endedAt === null} onClick={() => {
           if (endedAt === null) return;
           setSaving(true); setError(null);
           const record: DrillSessionRecord = { id: session.id, createdAt: session.createdAt, endedAt, includeUnworked: session.includeUnworked, answers, score: answers.filter((a) => a.correct).length, total: answers.length };

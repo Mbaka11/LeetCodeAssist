@@ -71,6 +71,6 @@ describe('side-panel-only bonus persistence', () => {
     const final = mock.data[STORAGE_KEY] as AppState;
     expect(final.activities.filter((a) => a.type === 'new' && isBonusProblem(a.slug))).toHaveLength(3);
     expect(final.activities.filter((a) => a.slug === first[0]!.slug && a.status === 'done')).toHaveLength(1);
-    expect(final.activities.filter((a) => a.slug === first[0]!.slug && a.type === 'recall')).toHaveLength(1);
+    expect(final.activities.filter((a) => a.slug === first[0]!.slug && a.type === 'rebuild')).toHaveLength(2);
   });
 });

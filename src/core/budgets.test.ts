@@ -26,7 +26,7 @@ describe('review budgets by difficulty', () => {
       expect(Easy).toBeLessThan(Medium);
       expect(Medium).toBeLessThan(Hard);
     }
-    expect(DEFAULT_BUDGETS.new).toEqual({ Easy: 25, Medium: 40, Hard: 50 });
+    expect(DEFAULT_BUDGETS.new).toEqual({ Easy: 15, Medium: 25, Hard: 30 });
     expect(DEFAULT_BUDGETS.recall).toEqual({ Easy: 5, Medium: 8, Hard: 10 });
     expect(DEFAULT_BUDGETS.rebuild).toEqual({ Easy: 10, Medium: 15, Hard: 18 });
     expect(DEFAULT_BUDGETS.retry).toEqual({ Easy: 10, Medium: 15, Hard: 18 });
@@ -41,7 +41,7 @@ describe('review budgets by difficulty', () => {
     expect(estimatedMinutes('recall', 'two-sum', overrides)).toBe(5);
     expect(estimatedMinutes('recall', 'trapping-rain-water', overrides)).toBe(10);
     expect(estimatedMinutes('new', 'trapping-rain-water', overrides)).toBe(60);
-    expect(estimatedMinutes('new', '3sum', overrides)).toBe(40);
+    expect(estimatedMinutes('new', '3sum', overrides)).toBe(25);
     expect(estimatedMinutes('recall', 'made-up', overrides)).toBe(7); // unknown problem = Medium
   });
 
@@ -58,7 +58,7 @@ describe('review budgets by difficulty', () => {
   });
 
   it('averages the Easy and Medium new budgets for the expected new problems', () => {
-    expect(expectedNewMinutes()).toBe(33); // (25 + 40) / 2 rounded
+    expect(expectedNewMinutes()).toBe(20); // (15 + 25) / 2
     expect(expectedNewMinutes({ new: { Easy: 10, Medium: 20 } })).toBe(15);
   });
 });
@@ -71,7 +71,7 @@ describe('budget overrides apply everywhere', () => {
     const news = plan.items.filter((i) => i.activity.type === 'new');
     expect(news.map((i) => i.minutes)).toEqual([10, 10]); // two-sum, valid-anagram (Easy)
     expect(plan.plannedMinutes).toBe(30 + 30 + 10 + 10);
-    expect(planDay(newState(), day(1)).plannedMinutes).toBe(110);
+    expect(planDay(newState(), day(1)).plannedMinutes).toBe(90);
   });
 
   it('larger budgets leave room for fewer problems under the cap', () => {
@@ -107,14 +107,14 @@ describe('budget overrides apply everywhere', () => {
     const today = days.find((d) => d.date === day(1))!;
     expect(today.entries.filter((e) => e.type === 'new').map((e) => e.minutes)).toEqual([10, 10]);
     const defaults = calendarDays(newState(), day(1)).find((d) => d.date === day(1))!;
-    expect(defaults.plannedMinutes - today.plannedMinutes).toBe(30);
+    expect(defaults.plannedMinutes - today.plannedMinutes).toBe(10);
   });
 
   it('reminders sum the overridden budgets', () => {
     const noon = new Date(2025, 0, 6, 12).getTime(); // program day 1
     const defaults = summarizeToday(newState(), noon)!;
     const custom = summarizeToday(withBudgets(overrides), noon)!;
-    expect(defaults.remainingMinutes - custom.remainingMinutes).toBe(30);
+    expect(defaults.remainingMinutes - custom.remainingMinutes).toBe(10);
     expect(morningNotification(withBudgets({ new: { Easy: 10 } }), noon)?.message).toContain('~1h20');
   });
 

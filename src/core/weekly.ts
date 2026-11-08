@@ -1,6 +1,6 @@
 import { isReviewType } from './activities';
 import { addDays, isValidDateString } from './dates';
-import type { Activity, AppState } from './types';
+import type { Activity, AppState, Outcome } from './types';
 import { getProblem } from '../data/neetcode150';
 
 export interface WeeklyCategory {
@@ -16,9 +16,15 @@ export interface WeeklyPeriod {
   from: string; to: string; attempts: number; distinct: number; totalMs: number; firstWorked: number;
 }
 export interface FragileProblem { slug: string; evidence: Activity; reason: string }
+/** One day of the chosen week with the same weekday of the previous week (minutes logged). */
+export interface WeeklyDay { date: string; minutes: number; previousDate: string; previousMinutes: number }
+/** Completed activities by outcome; `unrated` have none recorded. */
+export type OutcomeCounts = Record<Outcome | 'unrated', number>;
 export interface WeeklySummary {
   current: WeeklyPeriod;
   previous: WeeklyPeriod;
+  days: WeeklyDay[];
+  outcomes: { current: OutcomeCounts; previous: OutcomeCounts };
   categories: WeeklyCategory[];
   fragile: FragileProblem[];
 }
@@ -71,5 +77,20 @@ export function weeklySummary(state: AppState, end: string): WeeklySummary {
     fragile.push({ slug, evidence, reason });
   }
   fragile.sort((a, b) => b.evidence.completedAt!.localeCompare(a.evidence.completedAt!) || a.slug.localeCompare(b.slug));
-  return { current: period(current, start, end), previous: period(previous, previousStart, previousEnd), categories, fragile };
+  const minutesOn = (items: Activity[], date: string): number =>
+    items.filter((a) => a.completedAt === date).reduce((sum, a) => sum + (a.totalMs ?? 0), 0) / 60_000;
+  const days: WeeklyDay[] = Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(start, i);
+    const previousDate = addDays(previousStart, i);
+    return { date, minutes: minutesOn(current, date), previousDate, previousMinutes: minutesOn(previous, previousDate) };
+  });
+  const outcomeCounts = (items: Activity[]): OutcomeCounts => {
+    const counts: OutcomeCounts = { solo: 0, hint: 0, solution: 0, stuck: 0, unrated: 0 };
+    for (const a of items) counts[a.outcome ?? 'unrated'] += 1;
+    return counts;
+  };
+  return {
+    current: period(current, start, end), previous: period(previous, previousStart, previousEnd),
+    days, outcomes: { current: outcomeCounts(current), previous: outcomeCounts(previous) }, categories, fragile,
+  };
 }

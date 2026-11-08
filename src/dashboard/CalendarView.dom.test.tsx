@@ -48,11 +48,14 @@ describe('CalendarView compact layout structure (DOM)', () => {
     const { container } = await renderCalendar(profile());
     const root = container.firstElementChild!;
     const children = [...root.children].map((el) => el.className.split(' ')[0]);
-    expect(children).toEqual(['cal-summary', 'calendar-grid', 'card']);
+    expect(children).toEqual(['cal-summary', 'calendar-months', 'card']);
     expect(container.querySelector('.activity-heatmap')).toBeNull();
     const summary = root.querySelector('.cal-summary')!;
     expect([...summary.children].map((el) => el.className)).toEqual(['card cal-overview', 'card cal-streak']);
     expect(container.querySelectorAll('.calendar-grid .cal-day')).toHaveLength(60);
+    const sections = [...container.querySelectorAll('.calendar-section')];
+    expect(sections.map((el) => el.getAttribute('aria-label'))).toEqual(['Days 1–30', 'Days 31–60']);
+    expect(sections.map((el) => el.querySelectorAll('.cal-day').length)).toEqual([30, 30]);
   });
 
   it('shows Refresh, the username, the age and the compact numbers in the streak card', async () => {
@@ -62,8 +65,6 @@ describe('CalendarView compact layout structure (DOM)', () => {
     expect(within(card).getByRole('link', { name: 'Open the LeetCode profile of neo' }).textContent).toBe('@neo ↗');
     expect(within(card).getByText('Updated 5 min ago')).toBeTruthy();
     expect(within(card).getByText('Current')).toBeTruthy();
-    expect(within(card).getByText('Longest')).toBeTruthy();
-    expect(within(card).getByText('Active days')).toBeTruthy();
     expect(card.querySelectorAll('.heat-week')).toHaveLength(16);
     expect(card.querySelector('.heat-grid-compact')).toBeTruthy();
   });
@@ -107,10 +108,10 @@ describe('CalendarView compact layout structure (DOM)', () => {
 
   it('shows today by default and switches the detail with one click on a day', async () => {
     const { container } = await renderCalendar(profile(), defaultState(addDays(today, -2)));
-    expect(container.querySelector('.calendar-grid + section h2')!.textContent).toMatch(/^Day 3 ·/);
+    expect(container.querySelector('.calendar-months + section h2')!.textContent).toMatch(/^Day 3 ·/);
     const first = container.querySelectorAll<HTMLElement>('.cal-day')[0]!;
     fireEvent.click(first);
-    expect(container.querySelector('.calendar-grid + section h2')!.textContent).toMatch(/^Day 1 ·/);
+    expect(container.querySelector('.calendar-months + section h2')!.textContent).toMatch(/^Day 1 ·/);
     expect(first.getAttribute('aria-pressed')).toBe('true');
   });
 
@@ -131,12 +132,10 @@ describe('CalendarView compact layout structure (DOM)', () => {
     expect(popover.hidden).toBe(true);
   });
 
-  it('shows the worked total on the overview with the breakdown', async () => {
+  it('keeps the worked total on Today only, so the overview does not repeat 2/100', async () => {
     const start = addDays(today, -1);
     const state = simulateDay(defaultState(start), start, { bonus: true }).state;
     const { container } = await renderCalendar(profile(), state);
-    const total = container.querySelector<HTMLElement>('.cal-overview .worked-total')!;
-    expect(total.textContent).toContain('6problems worked');
-    expect(total.textContent).toContain('Program 2/104 · Benchmarks 2/10 · Bonus 2');
+    expect(container.querySelector('.cal-overview .worked-total')).toBeNull();
   });
 });

@@ -94,9 +94,24 @@ describe('TodayView bonus offers (DOM)', () => {
     }
     const worked = container.querySelector('.worked-total')!;
     expect(within(worked as HTMLElement).getByText(/Bonus 2/)).toBeTruthy();
-    expect(within(worked as HTMLElement).getByText(/Program 0\/104/)).toBeTruthy();
+    expect(within(worked as HTMLElement).getByText(/Program 0\/100/)).toBeTruthy();
     const state = mock.data[STORAGE_KEY] as AppState;
     const doneSlugs = state.activities.filter((a) => a.status === 'done').map((a) => a.slug);
     expect(new Set(doneSlugs).size).toBe(2);
+  });
+
+  it('lists a due review of a bonus problem in the bonus card, not in the core list', async () => {
+    const slug = 'minimum-window-substring';
+    const state = defaultState(today());
+    state.activities.push({
+      id: `recall:${slug}:${today()}`, slug, type: 'recall', dueDate: today(), status: 'planned',
+      timer: { startedAt: null, accumulatedMs: 0, running: false }, createdAt: today(),
+    });
+    const { store, actions } = createTestApp(state);
+    const { container } = render(<Harness store={store} actions={actions} />);
+    await waitFor(() => expect(offers(container)).toHaveLength(2));
+    const bonusCard = container.querySelector('.bonus-offers') as HTMLElement;
+    expect(within(bonusCard).getByText(/Reviews of finished bonus problems \(1\)/)).toBeTruthy();
+    expect(screen.getByText('Today\'s activities (0/4 done)')).toBeTruthy();
   });
 });

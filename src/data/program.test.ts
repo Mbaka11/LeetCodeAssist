@@ -147,12 +147,12 @@ describe('expectedNewDone', () => {
     expect(expectedNewDone(30, 10)).toBe(10);
   });
 
-  it('covers phase 1 by day 30, then adds 5 per 4 learning days up to the whole queue', () => {
+  it('covers phase 1 by day 30, then adds 24 per 13 learning days: 100 by day 60, within the queue', () => {
     expect(expectedNewDone(30)).toBeGreaterThanOrEqual(PHASE_ONE_QUEUE.length);
     expect(expectedNewDone(31)).toBe(53);
-    expect(expectedNewDone(34)).toBe(52 + 5);
-    expect(expectedNewDone(60, 1000)).toBe(52 + 32);
-    expect(expectedNewDone(60)).toBe(52 + 32); // the queue is longer than the baseline pace needs
+    expect(expectedNewDone(34)).toBe(52 + 7);
+    expect(expectedNewDone(60, 1000)).toBe(100);
+    expect(expectedNewDone(60)).toBe(100); // the queue (104) is a little longer than the pace needs
     expect(expectedNewDone(90)).toBe(expectedNewDone(60));
   });
 });

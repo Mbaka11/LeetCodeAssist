@@ -32,7 +32,7 @@ describe('dashboard views (render smoke tests)', () => {
   it('Today shows the distinct worked total and two optional bonus offers outside the core list', () => {
     const html = renderToStaticMarkup(<TodayView state={defaultState(today)} actions={actions} />);
     expect(html).toContain('class="worked-total"');
-    expect(html).toContain('Program 0/104 · Benchmarks 0/10 · Bonus 0');
+    expect(html).toContain('Program 0/100 · Benchmarks 0/10 · Bonus 0');
     expect(html).toContain('Reviews never add to it');
     expect(html).toContain('Optional bonus problems (2 offered)');
     expect(html.match(/class="bonus-offer"/g)).toHaveLength(2);
@@ -135,7 +135,7 @@ describe('dashboard views (render smoke tests)', () => {
     expect(html).toContain('Save budgets');
     for (const label of ['Easy', 'Medium', 'Hard']) expect(html).toContain(`<th>${label}</th>`);
     expect(html).toContain('aria-label="Recall Medium budget in minutes" value="8"');
-    expect(html).toContain('aria-label="New Hard budget in minutes" value="50"');
+    expect(html).toContain('aria-label="New Hard budget in minutes" value="30"');
     expect(html.match(/budget in minutes/g)).toHaveLength(18);
   });
 
@@ -150,7 +150,7 @@ describe('dashboard views (render smoke tests)', () => {
   it('Logs shows the empty state with the filters and a disabled export', () => {
     const html = renderToStaticMarkup(<LogsView state={defaultState(today)} />);
     expect(html).toContain('Nothing logged yet');
-    expect(html).toContain('Search title');
+    expect(html).toContain('Search');
     expect(html).toContain('Export CSV (0)');
     expect(html).toContain('Solo rate');
   });
@@ -163,7 +163,7 @@ describe('dashboard views (render smoke tests)', () => {
     expect(html).toContain('href="#/problem/two-sum"');
     expect(html).toContain('Two Sum');
     expect(html).toContain('Arrays &amp; Hashing');
-    expect(html).toContain('+5 min'); // Easy new, 30 min logged against a 25 min budget
+    expect(html).toContain('+15 min'); // Easy new, 30 min logged against a 15 min budget
     expect(html).toContain('Done');
     expect(html).toContain('Total time');
     expect(html).not.toContain('Nothing logged yet');

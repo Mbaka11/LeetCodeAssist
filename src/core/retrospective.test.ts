@@ -111,7 +111,7 @@ describe('programRetrospective: phase windows', () => {
   it('counts a phase 2 problem that was learned early, and nothing learned after the phase ended', () => {
     const early = programRetrospective(run(30), PHASE_TWO, day(30));
     expect(early.reached).toBe(false);
-    expect(early.learned.count).toBe(1); // the planner reaches into the queue on day 30
+    expect(early.learned.count).toBeGreaterThan(0); // the planner reaches into the queue on day 30
     const state = run(60);
     const lateOnly = programRetrospective(state, PHASE_ONE, day(60));
     expect(lateOnly.learned.count).toBe(PHASE_ONE_QUEUE.length);

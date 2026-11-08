@@ -1,5 +1,5 @@
 import { isBonusProblem } from '../data/bonus';
-import { BENCHMARKS, PROGRAM_QUEUE } from '../data/program';
+import { BENCHMARKS, PROGRAM_QUEUE, programGoal } from '../data/program';
 import type { AppState } from './types';
 
 /**
@@ -10,7 +10,7 @@ import type { AppState } from './types';
 export interface WorkedTotals {
   /** Program-queue problems worked. */
   program: number;
-  /** Size of the program queue (the "/50"). */
+  /** Problems the 60-day calendar plans (the "/100"); the queue itself is a little longer. */
   programTotal: number;
   /** Benchmark problems worked. */
   benchmark: number;
@@ -49,7 +49,7 @@ export function workedTotals(state: AppState): WorkedTotals {
   }
   return {
     program,
-    programTotal: PROGRAM_QUEUE.length,
+    programTotal: programGoal(),
     benchmark,
     benchmarkTotal: BENCHMARK_SLUGS.size,
     bonus,

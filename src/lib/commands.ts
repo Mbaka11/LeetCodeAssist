@@ -15,14 +15,14 @@ import { materializePlan, planDay } from '../core/planner';
 import { isBonusProblem } from '../data/bonus';
 import { getProblem } from '../data/neetcode150';
 import { postponeInQueue, programQueue } from '../core/queue';
-import { applyOutcome, backfillBenchmarkReviews, scheduleReview } from '../core/reviews';
+import { applyOutcome, backfillBenchmarkReviews, scheduleReview, simplifyBonusReviews } from '../core/reviews';
 import { MAX_HINTS, validateState } from '../core/state';
 import { pauseTimer, resumeTimer, startTimer } from '../core/timer';
 import type { Activity, AppState, Note, Outcome, ReviewType, Settings } from '../core/types';
 
 /** Persists the activities of today's plan (new problems, benchmarks, bonus) so timers can persist. */
 export function materializeToday(state: AppState, now: number): AppState {
-  const backfilled = backfillBenchmarkReviews(state);
+  const backfilled = simplifyBonusReviews(backfillBenchmarkReviews(state));
   return materializePlan(backfilled, planDay(backfilled, trainingDateFromTimestamp(now)));
 }
 

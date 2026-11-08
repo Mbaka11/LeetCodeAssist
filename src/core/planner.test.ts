@@ -50,7 +50,7 @@ describe('planDay: day 1', () => {
       'new:two-sum',
       'new:valid-anagram',
     ]);
-    expect(plan.plannedMinutes).toBe(30 + 30 + 25 + 25);
+    expect(plan.plannedMinutes).toBe(30 + 30 + 15 + 15);
     expect(plan.remainingMinutes).toBe(plan.plannedMinutes);
     expect(plan.carriedOver).toEqual([]);
     expect(plan.items.every((i) => !i.persisted)).toBe(true);
@@ -58,14 +58,14 @@ describe('planDay: day 1', () => {
 
   it('offers two optional bonus problems from the pool outside the core minutes', () => {
     expect(plan.bonuses.map((b) => b.activity.slug)).toEqual(['trapping-rain-water', 'largest-rectangle-in-histogram']);
-    expect(plan.plannedMinutes).toBe(110);
+    expect(plan.plannedMinutes).toBe(90);
     expect(plan.bonuses.every((b) => !b.persisted && !plan.items.includes(b))).toBe(true);
   });
 
   it('reports the targets and the pace relative to the schedule', () => {
     expect(plan.targetMinutes).toBe(150);
     expect(plan.capMinutes).toBe(180);
-    expect(plan.pace).toEqual({ actual: 0, expected: 2, delta: 0, label: 'on pace' });
+    expect(plan.pace).toEqual({ actual: 0, expected: 2, due: 0, delta: 0, label: 'on pace' });
   });
 
   it('returns an empty plan before the start date', () => {
@@ -210,20 +210,22 @@ describe('planDay: reviews', () => {
       retry: [10, 15, 18],
       resolve: [15, 25, 30],
       blind: [15, 20, 25],
-      new: [25, 40, 50],
+      new: [15, 25, 30],
       benchmark: [30, 30, 30],
     };
     for (const [type, minutes] of Object.entries(table) as [ActivityType, number[]][]) {
       expect(slugs.map((slug) => estimatedMinutes(type, slug))).toEqual(minutes);
     }
-    expect(estimatedMinutes('new', 'unknown-problem')).toBe(40); // counts as Medium
+    expect(estimatedMinutes('new', 'unknown-problem')).toBe(25); // counts as Medium
     expect(estimatedMinutes('recall', 'unknown-problem')).toBe(8);
   });
 
   it('plans fewer new problems when reviews fill the budget', () => {
     let state = newState();
-    // 6 overdue Medium resolves = 150 min; one Easy (25) fits under 180, a second one (175 + 25) does not.
+    // 6 overdue Medium resolves (150) and a Medium recall (8) = 158 min; one Easy (15) fits under 180, a second one
+    // (173 + 15) does not.
     for (const slug of mediumSlugs.slice(0, 6)) state = addPlanned(state, 'resolve', slug, day(2));
+    state = addPlanned(state, 'recall', mediumSlugs[8]!, day(2));
     const plan = planDay(state, day(3));
     expect(plan.items.filter((i) => i.activity.type === 'resolve')).toHaveLength(6);
     expect(plan.items.filter((i) => i.activity.type === 'new')).toHaveLength(1);
@@ -231,7 +233,7 @@ describe('planDay: reviews', () => {
     expect(plan.bonuses).toHaveLength(2);
     expect(plan.bonusRoomMinutes).toBe(plan.capMinutes - plan.plannedMinutes);
     // Raise the review load until no new problem fits.
-    for (const slug of mediumSlugs.slice(6, 8)) state = addPlanned(state, 'resolve', slug, day(2));
+    state = addPlanned(state, 'retry', mediumSlugs[6]!, day(2));
     const crowded = planDay(state, day(3));
     expect(crowded.items.filter((i) => i.activity.type === 'new')).toHaveLength(0);
     expect(crowded.bonuses).toHaveLength(2);
@@ -653,10 +655,11 @@ describe('planDay: phase 1 by day 30', () => {
     });
   });
 
-  it('expects phase 1 on day 30 (with a little of phase 2) and is on pace after working the plan', () => {
+  it('expects phase 1 on day 30 (with a little of phase 2) and is not behind after working the plan', () => {
     const pace = planDay(day30State, day(30)).pace;
     expect(pace.expected).toBe(52);
     expect(pace.actual).toBeGreaterThanOrEqual(PHASE_ONE_QUEUE.length);
-    expect(pace.label).toBe('on pace');
+    // With the cheaper default estimates the plan fits a few problems of phase 2 early: on pace or ahead.
+    expect(pace.delta).toBeGreaterThanOrEqual(0);
   });
 });

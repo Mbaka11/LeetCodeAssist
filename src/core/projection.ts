@@ -54,3 +54,33 @@ export function projectDay(state: AppState, date: string, today: string): DayPro
     carriedOverCount: plan.carriedOver.length,
   };
 }
+
+/**
+ * `projectDay` for many future dates at once, from a single forward run (the same rules: everything planned is
+ * done solo on budget). The Calendar uses it so a future cell shows the same numbers as its popover.
+ */
+export function projectDays(state: AppState, dates: readonly string[], today: string): Map<string, DayProjection> {
+  const wanted = new Set(dates.filter((d) => compareDates(d, today) > 0));
+  const out = new Map<string, DayProjection>();
+  if (wanted.size === 0) return out;
+  const last = [...wanted].sort().at(-1)!;
+  let projected = state;
+  for (let d = today; compareDates(d, last) <= 0; d = addDays(d, 1)) {
+    const plan = planDay(projected, d);
+    if (wanted.has(d)) {
+      out.set(d, {
+        date: d,
+        items: plan.items.map((i) => ({ type: i.activity.type, slug: i.activity.slug, minutes: i.minutes })),
+        totalMinutes: plan.plannedMinutes,
+        carriedOverCount: plan.carriedOver.length,
+      });
+    }
+    if (d === last) break;
+    projected = materializePlan(projected, { ...plan, bonuses: [] });
+    for (const item of plan.items) {
+      if (item.activity.status === 'done') continue;
+      projected = applyOutcome(projected, item.activity.id, { outcome: 'solo', completedDate: d, now: 0, totalMs: item.minutes * 60_000 });
+    }
+  }
+  return out;
+}

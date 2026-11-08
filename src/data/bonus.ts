@@ -1,8 +1,8 @@
 /**
  * The bonus pool: extra NeetCode 150 problems that are not part of the program queue (SPEC §2).
  * The planner keeps two optional offers open at any time, chosen in pool order among the problems whose
- * category is ready (see `src/core/bonus.ts`), also after day 60. Completing one starts a normal review cycle
- * but does not count toward pace or the program counter. All slugs refer to src/data/neetcode150.ts and
+ * category is ready (see `src/core/bonus.ts`), also after day 60. Completing one schedules two rebuilds
+ * (`BONUS_REBUILD_OFFSETS`) and does not count toward pace or the program counter. All slugs refer to src/data/neetcode150.ts and
  * never overlap with the program queue or the benchmarks.
  */
 

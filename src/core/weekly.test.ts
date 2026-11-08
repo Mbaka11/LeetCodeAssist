@@ -68,3 +68,20 @@ describe('read-only rolling weekly learning evidence', () => {
     expect(() => weeklySummary(state([]), 'invalid')).toThrow();
   });
 });
+
+describe('weekly chart data', () => {
+  it('lists the seven days with the same weekday of the previous week and counts outcomes', () => {
+    const report = weeklySummary(state([
+      done('two-sum', 'new', '2025-01-14', 'solo'), done('valid-anagram', 'new', '2025-01-14', 'hint'),
+      done('3sum', 'new', '2025-01-20', 'solo'), done('two-sum', 'recall', '2025-01-07', 'stuck'),
+      done('two-sum', 'rebuild', '2025-01-08'),
+    ]), '2025-01-20');
+    expect(report.days.map((d) => d.date)).toEqual(['2025-01-14', '2025-01-15', '2025-01-16', '2025-01-17', '2025-01-18', '2025-01-19', '2025-01-20']);
+    expect(report.days[0]).toMatchObject({ minutes: 20, previousDate: '2025-01-07', previousMinutes: 10 });
+    expect(report.days[1]).toMatchObject({ minutes: 0, previousDate: '2025-01-08', previousMinutes: 10 });
+    expect(report.days[6]).toMatchObject({ minutes: 10, previousMinutes: 0 });
+    expect(report.outcomes.current).toEqual({ solo: 2, hint: 1, solution: 0, stuck: 0, unrated: 0 });
+    expect(report.outcomes.previous).toEqual({ solo: 0, hint: 0, solution: 0, stuck: 1, unrated: 1 });
+  });
+});
+

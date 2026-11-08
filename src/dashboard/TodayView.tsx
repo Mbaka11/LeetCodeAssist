@@ -7,13 +7,15 @@ import { Card } from '../components/Card';
 import { ProgressBar } from '../components/ProgressBar';
 import { Stat } from '../components/Stat';
 import { WorkedTotal } from '../components/WorkedTotal';
+import { isReviewType } from '../core/activities';
 import { diffDays, trainingDateFromTimestamp, trainingDayStart } from '../core/dates';
 import { planDay, type PlanItem } from '../core/planner';
-import { needsBenchmarkBackfill } from '../core/reviews';
+import { needsBenchmarkBackfill, needsBonusSimplify } from '../core/reviews';
 import { computeStreak, dailyTargetMinutes } from '../core/state';
 import { elapsedMs } from '../core/timer';
 import type { AppState } from '../core/types';
 import { workedTotals } from '../core/worked';
+import { isBonusProblem } from '../data/bonus';
 import { getProblem } from '../data/neetcode150';
 import { PROGRAM_LENGTH_DAYS } from '../data/program';
 import type { AppActions } from '../lib/actions';
@@ -48,7 +50,8 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
     plan.items.some((i) => !i.persisted) ||
     plan.bonuses.some((offer) => !offer.persisted) ||
     plan.missedBenchmarks.some((item) => !item.persisted) ||
-    needsBenchmarkBackfill(state);
+    needsBenchmarkBackfill(state) ||
+    needsBonusSimplify(state);
   useEffect(() => {
     if (needsMaterializing) actions.materializeToday().catch(console.error);
   }, [needsMaterializing, actions, state, today]);
@@ -84,10 +87,17 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
 
   // A running optional bonus also counts: its timer must stay visible even though it is not a core item.
   const runningItem = [...plan.items, ...plan.bonuses].find((i) => i.activity.timer.running);
+  // Reviews of bonus-pool problems stay scheduled (and counted in the planned time) but are listed with the
+  // bonus section, so the core checklist only holds program work.
+  const isBonusReview = (i: PlanItem): boolean => isReviewType(i.activity.type) && isBonusProblem(i.activity.slug);
+  const coreItems = plan.items.filter((i) => !isBonusReview(i));
+  const bonusReviews = plan.items.filter(isBonusReview);
   const nextItem =
-    plan.items.find((i) => i.activity.status === 'in_progress') ??
-    plan.items.find((i) => i.activity.status === 'planned');
-  const remaining = plan.items.filter(isOpen).length;
+    coreItems.find((i) => i.activity.status === 'in_progress') ??
+    coreItems.find((i) => i.activity.status === 'planned') ??
+    bonusReviews.find((i) => i.activity.status === 'in_progress') ??
+    bonusReviews.find((i) => i.activity.status === 'planned');
+  const remaining = coreItems.filter(isOpen).length;
   const paceTone = plan.pace.delta > 0 ? 'good' : plan.pace.delta < 0 ? 'warn' : undefined;
   const dayTitle =
     plan.dayIndex <= PROGRAM_LENGTH_DAYS
@@ -100,21 +110,18 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
   };
 
   // A problem stays in the open list while any of its activities is open, so its attempts stay on one card.
-  const openSlugs = new Set(plan.items.filter(isOpen).map((item) => item.activity.slug));
-  const openItems = plan.items.filter((item) => openSlugs.has(item.activity.slug));
-  const finishedItems = plan.items.filter((item) => !openSlugs.has(item.activity.slug));
+  const openSlugs = new Set(coreItems.filter(isOpen).map((item) => item.activity.slug));
+  const openItems = coreItems.filter((item) => openSlugs.has(item.activity.slug));
+  const finishedItems = coreItems.filter((item) => !openSlugs.has(item.activity.slug));
   const budgets = state.settings.budgets;
 
   return (
     <div className="today-layout">
       <header className="day-header today-header">
         <h1>{dayTitle}</h1>
-        <span className="muted">{formatDate(today)}</span>
+        <span className="muted" title="Training day changes at 04:00. Results are dated automatically when you save.">{formatDate(today)}</span>
         {plan.isConsolidationDay ? <Badge tone="resolve">Consolidation day</Badge> : null}
         {plan.isBenchmarkDay ? <Badge tone="benchmark">Benchmark day</Badge> : null}
-        <span className="muted small" role="note" title="Results are dated automatically when you save.">
-          Training day changes at 04:00
-        </span>
       </header>
 
       <aside className="today-aside stack">
@@ -129,18 +136,19 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
             <Stat
               label="Planned"
               value={formatMinutes(plan.plannedMinutes)}
-              hint={`target ${formatMinutes(target)} · cap ${formatMinutes(plan.capMinutes)}`}
+              title={`Target ${formatMinutes(target)} · cap ${formatMinutes(plan.capMinutes)}`}
             />
             <Stat
               label="Pace"
               value={plan.pace.label}
-              hint={`${plan.pace.actual} new done · ${plan.pace.expected} expected`}
+              hint={`${plan.pace.actual}/${plan.pace.due} new problems`}
+              title={`${plan.pace.actual} program problems done; ${plan.pace.due} were due by the end of yesterday and ${plan.pace.expected - plan.pace.due} more are due today. Bonus problems do not count.`}
               {...(paceTone ? { tone: paceTone } : {})}
             />
             <Stat
               label="Streak"
               value={`${streak.current} ${streak.current === 1 ? 'day' : 'days'}`}
-              hint={`longest ${streak.longest} · needs 30 min logged`}
+              title={`Longest ${streak.longest} days. A day counts with 1+ activity done and 30+ min logged.`}
             />
           </div>
           <ProgressBar value={loggedMin} max={target} done={loggedMin >= target} />
@@ -150,7 +158,7 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
 
       <div className="today-main stack">
         <Card
-          title={`Today's activities (${plan.items.length - remaining}/${plan.items.length} done)`}
+          title={`Today's activities (${coreItems.length - remaining}/${coreItems.length} done)`}
           actions={
             runningItem ? (
               <span className="muted">
@@ -165,11 +173,10 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
           }
         >
           {actionError ? <p className="error">{actionError}</p> : null}
-          {plan.items.length === 0 ? (
+          {coreItems.length === 0 ? (
             <p className="muted">Nothing is scheduled today.</p>
           ) : (
             <div className="stack-tight">
-              {nextItem && !runningItem ? <p className="muted">Next: {titleOf(nextItem)}</p> : null}
               {openItems.length > 0 ? (
                 <ProblemActivities items={openItems} history={state.activities} now={now} unfinishedFirst
                   actions={actions} budgets={budgets} />
@@ -195,6 +202,8 @@ export function TodayView({ state, actions }: { state: AppState; actions: AppAct
           now={now}
           actions={actions}
           budgets={budgets}
+          reviews={bonusReviews}
+          history={state.activities}
         />
 
         {plan.missedBenchmarks.length > 0 ? (

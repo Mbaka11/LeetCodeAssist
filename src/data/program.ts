@@ -84,9 +84,9 @@ export const PHASE_ONE_QUEUE: readonly string[] = [
  * follow the core ones (plus `word-search-ii`, the one Hard, as the Tries anchor). That is two a day on the 26
  * learning days plus two. No Easy is left: phase 1 holds them all. Whether a user really gets two a day depends on
  * the time budgets: with the default estimates the reviews fill about half of the daily cap and roughly 1.2 new
- * problems fit, so the expected pace is lower (`PHASE_TWO_NEW_PER_LEARNING_DAY`); with budgets calibrated to the
- * user's own times (Settings -> Calibrate from my logs) two a day fit. The other Mediums and the Hards are in
- * `BONUS_POOL`.
+ * problems fit; with budgets calibrated to the user's own times (Settings -> Calibrate from my logs) and a
+ * somewhat higher cap, nearly two a day fit (`PHASE_TWO_NEW_PER_LEARNING_DAY` expects 100 problems by day 60). The
+ * other Mediums and the Hards are in `BONUS_POOL`.
  */
 export const PHASE_TWO_QUEUE: readonly string[] = [
   // Arrays & Hashing
@@ -198,11 +198,13 @@ export const PROGRAM_LENGTH_DAYS = 60;
 export const NEW_PROBLEMS_PER_DAY = 2;
 
 /**
- * Expected new problems per learning day in phase 2 (days 31-60), as a fraction (5 per 4 days). With the default time
- * estimates the reviews take about half of the budget by then, so the baseline is lower than in phase 1. The queue is
- * longer than this baseline needs, so a user with calibrated budgets who does two a day is never starved.
+ * Expected new problems per learning day in phase 2 (days 31-60), as a fraction (24 per 13 days, about 1.85). With
+ * the 26 learning days of phase 2 that is 48 on top of the 52 of phase 1: **100 problems by day 60**. The queue has 104,
+ * so a user who does two a day is never starved and has 4 problems of slack. Reaching it needs the default budgets and
+ * a daily cap of about 210 minutes (or budgets calibrated to the user's own times); with a lower cap the pace reads
+ * behind, which is the intended warning.
  */
-export const PHASE_TWO_NEW_PER_LEARNING_DAY = { numerator: 5, denominator: 4 } as const;
+export const PHASE_TWO_NEW_PER_LEARNING_DAY = { numerator: 24, denominator: 13 } as const;
 
 /** A third new problem is allowed on a normal day when it is Easy and fits the soft overflow (SPEC §4). */
 export const MAX_NEW_PROBLEMS_PER_DAY = 3;
@@ -285,6 +287,14 @@ export const DAY_SKELETON: readonly DaySkeleton[] = Array.from(
   },
 );
 
+/**
+ * The program goal shown in the counters: the problems the calendar plans for the 60 days (the expected pace at the
+ * end), not the whole queue. The queue (104) is a little longer so that a fast user is never starved.
+ */
+export function programGoal(queueLength: number = PROGRAM_QUEUE.length): number {
+  return expectedNewDone(PROGRAM_LENGTH_DAYS, queueLength);
+}
+
 export function isConsolidationDay(day: number): boolean {
   return CONSOLIDATION_DAYS.includes(day);
 }
@@ -295,7 +305,7 @@ export function benchmarkForDay(day: number): Benchmark | undefined {
 
 /**
  * Number of new problems a user on schedule has completed by the end of program day `day`: 2 per normal day
- * of phase 1 and 5 per 4 normal days of phase 2, capped by the queue length. The planner is a little faster on
+ * of phase 1 and 24 per 13 normal days of phase 2, capped by the queue length. The planner is a little faster on
  * Easy days in phase 1; the queue must stay within what this reaches by day 60 (checked in program.test.ts).
  */
 export function expectedNewDone(day: number, queueLength: number = PROGRAM_QUEUE.length): number {

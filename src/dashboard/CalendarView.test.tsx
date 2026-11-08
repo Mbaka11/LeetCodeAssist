@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { addDays, trainingDateFromTimestamp as localDateFromTimestamp } from '../core/dates';
 import { simulateDay } from '../core/testing';
 import { getProblem } from '../data/neetcode150';
-import { PROGRAM_QUEUE } from '../data/program';
+import { programGoal } from '../data/program';
 import { formatMinutes } from '../lib/format';
 import { defaultState } from '../core/state';
 import type { AppActions } from '../lib/actions';
@@ -28,12 +28,12 @@ describe('CalendarView (render smoke test)', () => {
     expect(html).toContain('0 of 1 days');
     expect(html).toContain('finished 80%+ of the day&#x27;s core plan');
     expect(html).toContain('Time logged');
-    expect(html).toContain('last 7 days · 0 min total');
+    expect(html).toContain('last 7 days');
     expect(html).not.toContain('Daily goal met');
     expect(html).toContain('planned');
     // Overall progress and the per-day minutes bar.
     expect(html).toContain('Problems learned');
-    expect(html).toContain(`0/${PROGRAM_QUEUE.length}`);
+    expect(html).toContain(`0/${programGoal()}`);
     expect(html).toContain('Days elapsed');
     expect(html).toContain('1/60');
     expect(html.match(/<span class="cal-bar[ "]/g)).toHaveLength(60);
@@ -56,7 +56,6 @@ describe('CalendarView (render smoke test)', () => {
     let state = defaultState(start);
     state = simulateDay(state, start, { minutes: 45 }).state;
     const html = renderToStaticMarkup(<CalendarView state={state} actions={actions} />);
-    expect(html).toContain('Streak day');
     expect(html).toContain('Plan done');
     expect(html).not.toContain('Goal met');
     expect(html).toContain('cal-day cal-past plan-done');
@@ -90,16 +89,14 @@ describe('CalendarView compact summary (render smoke test)', () => {
     expect(html).toContain('Save start date');
   });
 
-  it('shows the distinct worked total with its breakdown next to the separate program counter', () => {
+  it('shows the program counter, not the worked total', () => {
     const start = addDays(today, -1);
     const state = simulateDay(defaultState(start), start, { bonus: true }).state;
     const html = renderToStaticMarkup(<CalendarView state={state} actions={actions} />);
-    expect(html).toContain('class="worked-total"');
-    expect(html).toContain('Program 2/104 · Benchmarks 2/10 · Bonus 2');
-    expect(html).toContain('>6</span><span class="worked-total-label">problems worked');
-    expect(html).toContain('Reviews never add to it');
+    // The worked total lives on Today; the Calendar keeps only the program counter.
+    expect(html).not.toContain('class="worked-total"');
     // The program counter is separate and unchanged by the bonus problems.
-    expect(html).toContain(`2/${PROGRAM_QUEUE.length}`);
+    expect(html).toContain(`2/${programGoal()}`);
     expect(html).toContain('Problems learned');
   });
 

@@ -6,6 +6,16 @@ import { parseRoute } from '../lib/route';
 import { WeeklyView } from './WeeklyView';
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+describe('weekly review charts', () => {
+  it('draws the minutes chart and the outcome mix next to the numbers', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(new Date(2025, 0, 20, 12).getTime());
+    const { container } = render(<WeeklyView state={defaultState('2025-01-01')} />);
+    expect(container.querySelector('svg.wk-svg')).toBeTruthy();
+    expect(screen.getByText('How activities ended')).toBeTruthy();
+    expect(screen.getAllByText('no activities')).toHaveLength(2);
+  });
+});
+
 describe('weekly review navigation and empty evidence', () => {
   it('exposes its dashboard route', () => expect(parseRoute('#/weekly')).toEqual({ view: 'weekly' }));
   it('shows the latest rolling week and lets the user navigate without changing program settings', () => {

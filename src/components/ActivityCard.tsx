@@ -32,6 +32,7 @@ export function ActivityCard({
   attemptNumber,
   openProblemSheet,
   budgets,
+  inOptionalSection = false,
   accepted,
   autoOpenAccepted = false,
   hidden = false,
@@ -51,6 +52,8 @@ export function ActivityCard({
   openProblemSheet?: (slug: string) => void;
   /** `settings.budgets`, so the shown estimate follows the user's overrides. */
   budgets?: BudgetOverrides | undefined;
+  /** Inside a section already titled as optional: the Optional badge would repeat it. */
+  inOptionalSection?: boolean;
   /** A detected Accepted verdict for this problem (side panel); never saves a result by itself. */
   accepted?: AcceptedPrompt | undefined;
   /** Only the selected side-panel activity may auto-open for a fresh verdict. Other cards consume it too. */
@@ -138,7 +141,7 @@ export function ActivityCard({
         {grouped && !focused ? <span className="muted attempt-number">#{attemptNumber}</span> : null}
         <Badge tone={activity.type}>{ACTIVITY_LABELS[activity.type]}</Badge>
         {!focused && bonus ? <Badge tone="warn">Bonus</Badge> : null}
-        {!focused && bonus && open ? <Badge>Optional</Badge> : null}
+        {!focused && bonus && open && !inOptionalSection ? <Badge>Optional</Badge> : null}
         {!focused && activity.extra && !bonus ? <Badge>Extra practice</Badge> : null}
         {!focused && variant === 'carried' ? (
           <Badge tone="bad">{`Due ${formatDate(activity.dueDate)}`}</Badge>

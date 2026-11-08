@@ -1,10 +1,15 @@
 /** Pure helpers behind the Logs page: one row per completed or skipped activity, filters, summary, CSV. */
+import { isBonusProblem } from '../data/bonus';
 import { getProblem } from '../data/neetcode150';
-import { estimatedMinutes } from './activities';
+import { estimatedMinutes, isReviewType } from './activities';
 import { dayIndex } from './dates';
 import type { Activity, ActivityType, AppState, Difficulty, Outcome } from './types';
 
-export type LogStatus = 'done' | 'skipped' | 'postponed';
+/**
+ * `replaced` is a scheduled review the app retired itself (its schedule was recalculated after a late, early or
+ * corrected result) while the same review still exists, planned or done. It is not something the user skipped.
+ */
+export type LogStatus = 'done' | 'skipped' | 'postponed' | 'replaced';
 
 export interface LogRow {
   /** Activity id. */
@@ -44,6 +49,10 @@ export interface LogFilters {
   to?: string;
   /** Case-insensitive substring of the problem title. */
   search?: string;
+  /** `YYYY-MM`: only rows dated in that month. */
+  month?: string;
+  /** Replaced reviews are hidden unless this is true. */
+  showReplaced?: boolean;
 }
 
 export interface LogSummary {
@@ -61,12 +70,27 @@ export interface LogSummary {
   soloRate: number | null;
 }
 
-function statusOf(activity: Activity): LogStatus {
+function statusOf(activity: Activity, replaced: ReadonlySet<string>): LogStatus {
   if (activity.status === 'done') return 'done';
-  return activity.postponed ? 'postponed' : 'skipped';
+  if (activity.postponed) return 'postponed';
+  return replaced.has(activity.id) ? 'replaced' : 'skipped';
 }
 
-function rowOf(state: AppState, activity: Activity): LogRow {
+/** Ids of skipped reviews that have a non-skipped twin (same problem and type): retired by the app, not by the user. */
+export function replacedReviewIds(activities: readonly Activity[]): Set<string> {
+  const alive = new Set<string>();
+  for (const a of activities) if (a.status !== 'skipped') alive.add(`${a.type}:${a.slug}`);
+  const replaced = new Set<string>();
+  for (const a of activities) {
+    if (a.status !== 'skipped' || a.postponed || !isReviewType(a.type)) continue;
+    // Also the recall, resolve and blind of a bonus problem: bonuses only come back as two rebuilds.
+    const retiredBonusCycle = !a.extra && isBonusProblem(a.slug) && (a.type === 'recall' || a.type === 'resolve' || a.type === 'blind');
+    if (retiredBonusCycle || alive.has(`${a.type}:${a.slug}`)) replaced.add(a.id);
+  }
+  return replaced;
+}
+
+function rowOf(state: AppState, activity: Activity, replaced: ReadonlySet<string>): LogRow {
   const problem = getProblem(activity.slug);
   const done = activity.status === 'done';
   const date = done ? (activity.completedAt ?? activity.dueDate) : activity.dueDate;
@@ -86,16 +110,17 @@ function rowOf(state: AppState, activity: Activity): LogRow {
     budgetMinutes,
     ...(activity.outcome ? { outcome: activity.outcome } : {}),
     hintsUsed: activity.hintsUsed ?? 0,
-    status: statusOf(activity),
+    status: statusOf(activity, replaced),
   };
 }
 
 /** Every done or skipped activity, newest first (ties: the one recorded later comes first). */
 export function buildLogRows(state: AppState): LogRow[] {
+  const replaced = replacedReviewIds(state.activities);
   return state.activities
     .map((activity, order) => ({ activity, order }))
     .filter(({ activity }) => activity.status === 'done' || activity.status === 'skipped')
-    .map(({ activity, order }) => ({ row: rowOf(state, activity), order }))
+    .map(({ activity, order }) => ({ row: rowOf(state, activity, replaced), order }))
     .sort((a, b) => (a.row.date < b.row.date ? 1 : a.row.date > b.row.date ? -1 : b.order - a.order))
     .map(({ row }) => row);
 }
@@ -104,6 +129,8 @@ export function filterLogRows(rows: readonly LogRow[], filters: LogFilters): Log
   const search = filters.search?.trim().toLowerCase() ?? '';
   return rows.filter(
     (row) =>
+      (filters.showReplaced === true || row.status !== 'replaced') &&
+      (!filters.month || row.date.startsWith(filters.month)) &&
       (!filters.type || row.type === filters.type) &&
       (!filters.difficulty || row.difficulty === filters.difficulty) &&
       (!filters.outcome || row.outcome === filters.outcome) &&
@@ -177,4 +204,9 @@ export function logRowsToCsv(rows: readonly LogRow[]): string {
       .join(','),
   );
   return [CSV_HEADER.join(','), ...lines].join('\r\n') + '\r\n';
+}
+
+/** `YYYY-MM` of every month that has rows, newest first. */
+export function logMonths(rows: readonly LogRow[]): string[] {
+  return [...new Set(rows.map((row) => row.date.slice(0, 7)))].sort().reverse();
 }

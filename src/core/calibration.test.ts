@@ -27,7 +27,7 @@ describe('calibrateBudgets', () => {
     const result = calibrateBudgets(state);
     expect(result.cells).toHaveLength(1);
     // Sorted 10, 11, 12, 12, 14, 30: median 12 -> 12 * 1.25 = 15.
-    expect(result.cells[0]).toMatchObject({ type: 'new', difficulty: 'Easy', samples: 6, medianMinutes: 12, current: 25, suggested: 15 });
+    expect(result.cells[0]).toMatchObject({ type: 'new', difficulty: 'Easy', samples: 6, medianMinutes: 12, current: 15, suggested: 15 });
     expect(result.sampleCount).toBe(6);
     expect(result.table.new.Easy).toBe(15);
     expect(CALIBRATION_MARGIN).toBe(1.25);

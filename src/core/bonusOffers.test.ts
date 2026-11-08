@@ -303,17 +303,16 @@ describe('bonus offers: completion, program counter and projections', () => {
     state = complete(state, offer.activity.id, 'solo', day(1), 30);
     const again = applyOutcome(state, offer.activity.id, { outcome: 'solo', completedDate: day(1), now: 0, totalMs: 1 });
     expect(again).toBe(state); // completing twice changes nothing
-    expect(plannedOf(state, slug, 'recall').map((a) => a.dueDate)).toEqual([day(2)]);
-    expect(plannedOf(state, slug, 'rebuild').map((a) => a.dueDate)).toEqual([day(4)]);
-    expect(plannedOf(state, slug, 'resolve').map((a) => a.dueDate)).toEqual([day(8)]);
-    expect(plannedOf(state, slug, 'blind').map((a) => a.dueDate)).toEqual([day(22)]);
+    // A bonus problem comes back as two rebuilds (day +2 and +6) and nothing else.
+    expect(plannedOf(state, slug, 'rebuild').map((a) => a.dueDate)).toEqual([day(3), day(7)]);
+    for (const type of ['recall', 'resolve', 'blind'] as const) expect(plannedOf(state, slug, type)).toEqual([]);
 
-    const dayTwo = planDay(state, day(2));
-    const recall = dayTwo.items.find((i) => i.activity.type === 'recall' && i.activity.slug === slug)!;
-    expect(recall.overdue).toBe(false);
-    expect(dayTwo.plannedMinutes).toBeGreaterThan(planDay(newState(), day(2)).plannedMinutes - 1);
     const dayThree = planDay(state, day(3));
-    expect(dayThree.items.find((i) => i.activity.type === 'recall' && i.activity.slug === slug)?.overdue).toBe(true);
+    const rebuild = dayThree.items.find((i) => i.activity.type === 'rebuild' && i.activity.slug === slug)!;
+    expect(rebuild.overdue).toBe(false);
+    expect(dayThree.plannedMinutes).toBeGreaterThan(planDay(newState(), day(3)).plannedMinutes - 1);
+    const dayFour = planDay(state, day(4));
+    expect(dayFour.items.find((i) => i.activity.type === 'rebuild' && i.activity.slug === slug)?.overdue).toBe(true);
   });
 
   it('never advances the program counter or pace, and counts as worked', () => {

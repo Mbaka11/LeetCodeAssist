@@ -1,5 +1,6 @@
 import { useId, useState } from 'react';
 import { Button } from '../components/Button';
+import { Explain } from '../components/Explain';
 import { Card } from '../components/Card';
 import { ProgressBar } from '../components/ProgressBar';
 import { Stat } from '../components/Stat';
@@ -318,6 +319,7 @@ export function RoadmapView({ state, actions }: { state: AppState; actions: AppA
           />
         </div>
         <ProgressBar value={stats.overall.worked} max={stats.overall.total} done={stats.overall.worked === stats.overall.total} />
+        <Explain>
         <p className="muted">
           Blind 75 is a subset of the NeetCode 150: its 75 problems are also among the 150. Switching the catalog
           only filters this page. It never adds 150 + 75, resets anything or changes your plan, and both catalogs
@@ -334,6 +336,7 @@ export function RoadmapView({ state, actions }: { state: AppState; actions: AppA
             ? ' Arrows point from a category to the ones that build on it; select a category to see its problems.'
             : ''}
         </p>
+        </Explain>
         {error ? <p className="error">{error}</p> : null}
       </Card>
 

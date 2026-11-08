@@ -44,11 +44,14 @@ Benchmark problems are reserved and never appear in the learning queue.
   in progress) and are *sticky*: they survive reloads and days, a started one keeps its timer and hints, and they
   are never re-ranked. Completing or skipping one frees its slot at once (no per-day limit) and the planner
   refills it; `materializePlan` persists at most the two open offers. Records from 0.5 (one planned pool activity
-  per date) are read as offers and never rewritten or deleted. A completed bonus starts the normal review cycle
-  (D+1/3/7/21) and counts as worked in the roadmap, but it **does not count toward pace** and not toward the
-  *x*/*N* program counter (*N* = the queue length), and it never consumes the program queue. Its four reviews are
-  core work and are fitted before new problems, so many finished bonus problems can crowd out program new
-  problems on later days (accepted trade-off, no limit). Skipping an offer re-dates it (and retired twins) to the
+  per date) are read as offers and never rewritten or deleted. A completed bonus gets a **light review plan**: two
+  `rebuild` reviews at D+2 and D+6 (`BONUS_REBUILD_OFFSETS`) and nothing else (no recall, resolve or blind).
+  When the last rebuild is done solo the problem is *reviewed*; a failed rebuild plans the usual retry. It counts
+  as worked in the roadmap, but it **does not count toward pace** and not toward the *x*/*N* program counter
+  (*N* = the goal of 100), and it never consumes the program queue. The rebuilds are core work and are fitted
+  before new problems, so many finished bonus problems still add some review time (accepted trade-off, no limit).
+  A bonus finished under the old rule is migrated once (`simplifyBonusReviews`): its planned recall, resolve and
+  blind are retired (marked skipped, shown as *Replaced* in Logs) and its rebuilds are topped up to two. Skipping an offer re-dates it (and retired twins) to the
   skip day, so the Calendar and Logs show a skip on the day it happened.
 - **Distinct problems worked** (`workedTotals`, `src/core/worked.ts`): a slug counts once when it has any `done`
   activity. Buckets are disjoint in the order program, benchmark, bonus pool, other:
@@ -61,7 +64,7 @@ Benchmark problems are reserved and never appear in the learning queue.
 
 | Type | When | Instruction | Budget Easy / Medium / Hard (min) |
 |---|---|---|---:|
-| `new` | queue | Search, code, understand, write notes. Help ladder: hint at 15–20 min without an approach, read the solution at 35–45 min then **re-code it from memory**. | 25 / 40 / 50 |
+| `new` | queue | Search, code, understand, write notes. Help ladder: hint at 15–20 min without an approach, read the solution at 35–45 min then **re-code it from memory**. | 15 / 25 / 30 |
 | `recall` | done + 1 day | Retrieval only, no code: write the approach, why it works, edge cases, time/space complexity from memory. | 5 / 8 / 10 |
 | `rebuild` | done + 3 days | Write it again from your own notes (pseudocode, then code), run the edge cases. | 10 / 15 / 18 |
 | `resolve` | done + 7 days | Interview conditions: blank editor and a timer, no notes, no hints. | 15 / 25 / 30 |
@@ -160,6 +163,12 @@ review type, not optional extra practice). Help means Hint/Solution outcome or a
 contains rated attempts (known outcome or recorded hints), not unknown legacy outcomes. Categories from either
 period are included, even when the current period is empty. Unknown metadata goes to Other / uncatalogued.
 
+The page draws the same evidence (`src/dashboard/WeeklyCharts.tsx`, hand-drawn SVG on the theme tokens): KPI tiles
+with the change against the previous window, a *Minutes per day* bar chart (the seven days against the same weekday
+of the previous window), an outcome mix (Solo / Hint / Solution / Stuck / no outcome, this window and the previous
+one) and per-category bars whose amber part is the share of activities that needed help. `weeklySummary` supplies
+`days` and `outcomes` for them; every chart has text or a table alongside the colours.
+
 The fragile list is a snapshot as of end, not only the last week's new failures. It uses the latest rated
 non-extra scheduled review; otherwise a rated initial completion, otherwise available rated extra evidence.
 Hint/Solution, recorded hints or Stuck produce a reason and evidence date/type. Optional immediate Solo repeats
@@ -205,11 +214,13 @@ Problem status: `untouched` → `learning` (new done) → `consolidating` (a rev
   - **Phase 2 (days 31-60, 54 problems):** a second, deeper pass in roadmap category order with the Mediums that
     follow the core ones, plus `word-search-ii`, the one Hard, as the Tries anchor: two a day on the 26 learning
     days plus two. How many really fit depends on the time budgets (§3): with the default estimates the reviews
-    fill about half of the 180-minute cap and a perfect user fits roughly 1.2 new problems a day (measured with
-    `simulateDay`, no bonus offers; 85 of the 104 by day 60), so the **expected pace** is lower than the queue
-    supply; with budgets calibrated to the user's own times (below) two a day fit and the whole queue is
-    done by day 60 (checked on a real export). The queue is longer than the baseline pace needs on purpose, so a
-    fast user is never starved.
+    fill a large part of the 180-minute cap. The goal is **at least 100 of the 104 by day 60**, and the **expected
+    pace** is 100 by day 60. The default `new` budgets (15 / 25 / 30, the same as `resolve`) plus a daily cap of about
+    **210 minutes** reach it: projected on a real export (every planned item solved solo on budget) the default
+    estimates give 88 with the 180 cap, 96 with 195, **100 with 210**, 101 with 225 and 104 with 240. Calibrate from my
+    logs (below) is an alternative (99 at 180, 103 at 210). With a lower cap the pace reads behind, which is the
+    intended warning. The queue is slightly longer than the
+    pace needs, so a fast user is never starved.
   - Consolidation days are 7, 14, 21, 28, 35, 42, 49 and 56. Benchmark pairs are on days 1, 15 and 30
     (Easy + Medium) and 45 and 60 (Medium + Hard); the `easy` and `medium` fields of `Benchmark` hold the lighter
     and the harder problem of the pair.
@@ -224,8 +235,9 @@ Problem status: `untouched` → `learning` (new done) → `consolidating` (a rev
      overflow, §2). A problem postponed today is not offered again today. Then up to two optional bonus
      offers (`DayPlan.bonuses`, §2), outside the budget, with the finished ones in `completedBonuses`.
   4. **Pace indicator**: `actualNewDone - expectedNewDone(dayIndex, queueLength)` ("+2 ahead" /
-     "−1 behind"); `expectedNewDone` is 2 per normal day of phase 1 plus 5 per 4 normal days of phase 2 (days 31-60),
-     capped by the real queue length (52 by day 30, 84 by day 60). Only program-queue problems
+     "−1 behind"); `expectedNewDone` is 2 per normal day of phase 1 plus 24 per 13 normal days of phase 2 (days 31-60),
+     capped by the real queue length (52 by day 30, 100 by day 60). "Behind" is measured against what the
+     previous days required (`Pace.due`, the expectation of the day before); today's own problems are not due yet. Only program-queue problems
      count, bonus-pool problems do not. The expectation does not count the optional third Easy problem, so
      a user who follows the plan on those days reads "+1 ahead" in phase 1 (day 30 is "on pace").
 - Missing days never produce an impossible day: the cap is always respected.
@@ -326,6 +338,7 @@ key, versioned), JSON export/import from Settings.
      days. (In 0.9.1 the **Activity minutes** heatmap moved to **Logs**, below the summary; the two ranges sit side by side.) It shows completed-log minutes per local day for
      program days 1–30 and a separately labelled recent 12 weeks (`src/core/activityHeatmap.ts`; skipped estimates
      and running timers excluded; it never feeds the streak or Plan done).
+   - The 60-day grid is shown in two sections, *Days 1–30* and *Days 31–60* (days after the program join the second).
    - **Roadmap**: a **NeetCode 150 | Blind 75** catalog selector (stored in `settings.roadmapCatalog`, default
      NeetCode 150) and a **Tree | Grid | List** toggle (stored value `all`; optional `settings.roadmapGroup` = `category`|`company` groups List) (`settings.roadmapView`, default Tree), independent of each other.
      The catalog filters the problem lists, the counters and the tree/grid stats (`problemStats(state, catalog)`,
@@ -339,13 +352,18 @@ key, versioned), JSON export/import from Settings.
      selecting a node lists its problems below (checkbox, status pill, program/benchmark/bonus badges,
      LeetCode link). *Grid* is the earlier card layout: per category "worked / solo in review /
      consolidating", Easy/Medium/Hard counters (x/150), check boxes, program items badged.
-   - **Logs**: a table of every completed or skipped activity, newest first: date, program day, type,
-     problem (link to its sheet) with difficulty, category, logged time, approach time, budget, delta
-     versus budget, outcome, hints used and status (done, skipped or postponed). Skipped rows show the due
-     date; the budget is the *current* budget (including overrides), also for older rows. Filters: type,
-     difficulty, outcome, category, date range and free-text search on the title. A summary row covers the
-     filtered set: count, total time, average time against average budget, and the solo rate (share of
-     done rows with outcome `solo`). *Export CSV* downloads the filtered rows. Filtering, summary and CSV
+   - **Logs**: one toolbar card (summary chips and filters) followed directly by the table of every completed
+     or skipped activity, newest first: date with program day ("Nov 7 · D23"), type, problem (link to its
+     sheet) with difficulty and category, logged time against the *current* budget (including overrides, also
+     for older rows) with the delta, approach time, outcome with hints used, and status. Skipped rows show the
+     due date. A skipped **review** that still has a live twin (same problem and type, planned or done) is a
+     *replaced* review: the app retired it when a schedule was recalculated after a late, early or corrected
+     result, so it is hidden unless *Show replaced* is ticked (`replacedReviewIds` in `src/core/logs.ts`); real
+     skips stay *Skipped*. The save timestamp is only a tooltip on the date. Filters: month (with previous and
+     next), type, difficulty, outcome, category, date range and free-text search on the title. The summary
+     covers the filtered set: count, total time, average time against average budget, and the solo rate (share of
+     done rows with outcome `solo`). The **Activity minutes** heatmap and **Pace by month** sit below the table
+     in collapsible sections. *Export CSV* downloads the filtered rows. Filtering, summary and CSV
      are pure helpers in `src/core/logs.ts`. Below the heatmap, **Pace by month** (`src/core/pace.ts`) charts the median
      logged minutes per completion month and difficulty, first attempts and reviews separately, with sample counts,
      hollow few-sample markers, an editorial 15/30/45-minute guideline line (labelled as not data) and, when simulations

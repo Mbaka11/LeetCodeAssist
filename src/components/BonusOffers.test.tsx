@@ -25,9 +25,9 @@ describe('BonusOffers', () => {
     const html = render(plan);
     expect(html).toContain('Optional bonus problems (2 offered)');
     expect(count(html, 'class="bonus-offer"')).toBe(2);
-    expect(count(html, '>Optional</span>')).toBe(2);
+    expect(count(html, '>Optional</span>')).toBe(0); // the card title already says optional
     expect(html).toContain('not included in today&#x27;s core plan time');
-    expect(html).toContain('adds its own later reviews');
+    expect(html).toContain('comes back twice as a rebuild');
     for (const offer of plan.bonuses) {
       expect(html).toContain(getProblem(offer.activity.slug)!.title);
     }
@@ -37,8 +37,9 @@ describe('BonusOffers', () => {
 
   it('shows the added time against the target for each offer', () => {
     const html = render(planDay(newState(), day(1)));
-    expect(count(html, 'bonus-impact bonus-impact-')).toBe(2);
-    expect(html).toContain('Adds ~');
+    // Both offers add the same time, so the note is said once for both.
+    expect(count(html, 'bonus-impact bonus-impact-')).toBe(1);
+    expect(html).toContain('Each: Adds ~');
   });
 
   it('still offers both problems and warns about the cap when the core plan already fills it', () => {
@@ -49,7 +50,7 @@ describe('BonusOffers', () => {
     expect(plan.bonuses).toHaveLength(2);
     const html = render(plan, 30);
     expect(count(html, 'class="bonus-offer"')).toBe(2);
-    expect(count(html, 'bonus-impact-over-cap')).toBe(2);
+    expect(count(html, 'bonus-impact-over-cap')).toBe(1);
     expect(html).toContain('over your 40 min cap');
   });
 
@@ -73,7 +74,7 @@ describe('BonusOffers', () => {
     const roomy = base.plannedMinutes + Math.max(first!.minutes, second!.minutes);
     expect(roomy).toBeLessThan(base.capMinutes);
     // Before anything is started, either offer alone fits the target.
-    expect(count(render(base, roomy), 'bonus-impact-within-target')).toBe(2);
+    expect(count(render(base, roomy), 'bonus-impact-within-target')).toBe(1);
     const started = startExtraPractice(state, first!.activity.slug, NOW).state;
     const html = render(planDay(started, day(1)), roomy);
     // The running offer adds its minutes, so the remaining planned offer now goes over the target.

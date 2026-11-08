@@ -5,7 +5,6 @@ import { Card } from '../components/Card';
 import { MoveForm } from '../components/MoveForm';
 import { ProgressBar } from '../components/ProgressBar';
 import { Stat } from '../components/Stat';
-import { WorkedTotal } from '../components/WorkedTotal';
 import {
   calendarDays,
   programProgress,
@@ -14,10 +13,9 @@ import {
   type EntryState,
 } from '../core/calendar';
 import { addDays, trainingDateFromTimestamp } from '../core/dates';
-import { projectDay } from '../core/projection';
+import { projectDay, projectDays, type DayProjection } from '../core/projection';
 import { computeStreak, loggedTotals } from '../core/state';
 import type { ActivityType, AppState } from '../core/types';
-import { workedTotals } from '../core/worked';
 import { getProblem } from '../data/neetcode150';
 import type { AppActions } from '../lib/actions';
 import { MAX_MOVE_DAYS } from '../lib/commands';
@@ -87,22 +85,46 @@ function StartDateForm({
   );
 }
 
+/** "3/4 done" for past days and today, "~6 · 2h10" for a projected future day; the details are a tooltip. */
+function cellSummary(day: CalendarDay, projection: DayProjection | undefined): { counts: string; minutes: string; title: string } {
+  if (day.kind === 'future') {
+    const count = projection?.items.length ?? day.plannedCount;
+    const minutes = projection?.totalMinutes ?? day.plannedMinutes;
+    return {
+      counts: count === 0 ? 'nothing planned' : `~${count} ${count === 1 ? 'activity' : 'activities'}`,
+      minutes: `~${formatMinutes(minutes)}`,
+      title: 'Forecast if you do every planned item on budget. Hover for the list.',
+    };
+  }
+  const details = [`planned ${day.plannedCount}`, `done ${day.doneCount}`];
+  if (day.carriedCount > 0) details.push(`carried ${day.carriedCount}`);
+  if (day.extraCount > 0) details.push(`${day.extraCount} optional extra`);
+  return {
+    counts: day.coreCount > 0 ? `${day.coreDoneCount}/${day.coreCount} done` : day.doneCount > 0 ? `${day.doneCount} done` : 'nothing done',
+    minutes: `${formatMinutes(day.loggedMinutes)} logged`,
+    title: `${details.join(' · ')} · ~${formatMinutes(day.plannedMinutes)} planned`,
+  };
+}
+
 function DayCell({
   day,
   selected,
   onSelect,
   describedBy,
+  projection,
 }: {
   day: CalendarDay;
   selected: boolean;
   onSelect: () => void;
   describedBy: string;
+  projection?: DayProjection | undefined;
 }) {
+  const summary = cellSummary(day, projection);
   const classes = ['cal-day', `cal-${day.kind}`];
   if (selected) classes.push('selected');
   if (day.planDone) classes.push('plan-done');
   const future = day.kind === 'future';
-  const barMinutes = future ? day.plannedMinutes : day.loggedMinutes;
+  const barMinutes = future ? (projection?.totalMinutes ?? day.plannedMinutes) : day.loggedMinutes;
   const barPercent =
     day.targetMinutes > 0 ? Math.min(100, Math.round((barMinutes / day.targetMinutes) * 100)) : 0;
   return (
@@ -123,23 +145,16 @@ function DayCell({
         {day.isBenchmark ? <Badge tone="benchmark">Benchmark</Badge> : null}
         {day.overflow ? <Badge>After day 60</Badge> : null}
       </span>
-      <span className="cal-counts">
-        planned {day.plannedCount} · done {day.doneCount}
-        {day.carriedCount > 0 ? ` · carried ${day.carriedCount}` : ''}
-        {day.extraCount > 0 ? ` · +${day.extraCount} extra` : ''}
-      </span>
-      <span className="muted">
-        {day.kind === 'future'
-          ? `~${formatMinutes(day.plannedMinutes)} planned`
-          : `${formatMinutes(day.loggedMinutes)} logged of ~${formatMinutes(day.plannedMinutes)}`}
+      <span className="cal-counts" title={summary.title}>
+        <strong>{summary.counts}</strong>
+        <span className="muted">{summary.minutes}</span>
       </span>
       <span className={`cal-bar${future ? ' cal-bar-planned' : ''}`} aria-hidden="true">
         <span className="cal-bar-fill" style={{ width: `${barPercent}%` }} />
       </span>
-      {day.streakQualified || day.planDone ? (
+      {day.planDone ? (
         <span className="cal-badges">
-          {day.streakQualified ? <Badge tone="good">Streak day</Badge> : null}
-          {day.planDone ? <Badge tone="good">Plan done</Badge> : null}
+          <Badge tone="good">Plan done</Badge>
         </span>
       ) : null}
     </button>
@@ -250,6 +265,7 @@ function DayPopover({
   today,
   open,
   alignEnd,
+  projection,
 }: {
   id: string;
   day: CalendarDay;
@@ -257,6 +273,7 @@ function DayPopover({
   today: string;
   open: boolean;
   alignEnd: boolean;
+  projection?: DayProjection | undefined;
 }) {
   return (
     <div
@@ -266,15 +283,15 @@ function DayPopover({
       className={`cal-popover${alignEnd ? ' cal-popover-end' : ''}`}
       hidden={!open}
     >
-      {open ? <DayPopoverBody day={day} state={state} today={today} /> : null}
+      {open ? <DayPopoverBody day={day} state={state} today={today} projected={projection} /> : null}
     </div>
   );
 }
 
-function DayPopoverBody({ day, state, today }: { day: CalendarDay; state: AppState; today: string }) {
+function DayPopoverBody({ day, state, today, projected: given }: { day: CalendarDay; state: AppState; today: string; projected?: DayProjection | undefined }) {
   const projection = useMemo(
-    () => (day.kind === 'future' ? projectDay(state, day.date, today) : null),
-    [day.kind, day.date, state, today],
+    () => (day.kind === 'future' ? (given ?? projectDay(state, day.date, today)) : null),
+    [day.kind, day.date, state, today, given],
   );
   return (
     <>
@@ -313,12 +330,14 @@ function DayCellWithPopover({
   onSelect,
   state,
   today,
+  projection,
 }: {
   day: CalendarDay;
   selected: boolean;
   onSelect: () => void;
   state: AppState;
   today: string;
+  projection?: DayProjection | undefined;
 }) {
   const [open, setOpen] = useState(false);
   const [alignEnd, setAlignEnd] = useState(false);
@@ -347,8 +366,8 @@ function DayCellWithPopover({
         if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false);
       }}
     >
-      <DayCell day={day} selected={selected} onSelect={onSelect} describedBy={popoverId} />
-      <DayPopover id={popoverId} day={day} state={state} today={today} open={open} alignEnd={alignEnd} />
+      <DayCell day={day} selected={selected} onSelect={onSelect} describedBy={popoverId} projection={projection} />
+      <DayPopover id={popoverId} day={day} state={state} today={today} open={open} alignEnd={alignEnd} projection={projection} />
     </div>
   );
 }
@@ -361,7 +380,7 @@ function ProgramProgressCard({ state, today }: { state: AppState; today: string 
         <Stat
           label="Problems learned"
           value={`${progress.learned}/${progress.totalProblems}`}
-          hint="program problems first finished"
+          title="Program problems with a finished first attempt, out of the 100 the 60 days plan"
         />
         <ProgressBar
           value={progress.learned}
@@ -373,7 +392,7 @@ function ProgramProgressCard({ state, today }: { state: AppState; today: string 
         <Stat
           label="Days elapsed"
           value={`${progress.daysElapsed}/${progress.totalDays}`}
-          hint={progress.daysElapsed === 0 ? 'not started yet' : 'including today'}
+          title={progress.daysElapsed === 0 ? 'Not started yet' : 'Including today'}
         />
         <ProgressBar
           value={progress.daysElapsed}
@@ -519,11 +538,21 @@ function DayDetail({
   );
 }
 
+/** The 60-day grid is shown in two halves; days after the program (overflow) join the second one. */
+const CALENDAR_SECTIONS = [
+  { title: 'Days 1–30', from: -Infinity, to: 30 },
+  { title: 'Days 31–60', from: 31, to: Infinity },
+] as const;
+
 export function CalendarView({ state, actions }: { state: AppState; actions: AppActions }) {
   const now = useNow(60_000);
   const today = trainingDateFromTimestamp(now);
   const days = useMemo(() => calendarDays(state, today), [state, today]);
-  const worked = useMemo(() => workedTotals(state), [state]);
+  // One forward run gives every future cell the same forecast as its popover.
+  const projections = useMemo(
+    () => projectDays(state, days.filter((d) => d.kind === 'future').map((d) => d.date), today),
+    [state, days, today],
+  );
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [startDateMessage, setStartDateMessage] = useState<StartDateMessage | null>(null);
   const [startDateOpen, setStartDateOpen] = useState(false);
@@ -555,7 +584,7 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
             <Stat
               label="Streak"
               value={`${streak.current} ${streak.current === 1 ? 'day' : 'days'}`}
-              hint={`longest ${streak.longest}`}
+              title={`Longest ${streak.longest} days. A day counts with 1+ activity done and 30+ min logged.`}
             />
             <Stat
               label="Plan done"
@@ -565,11 +594,11 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
             <Stat
               label="Time logged"
               value={formatMs(logged.last7DaysMs)}
-              hint={`last 7 days · ${formatMs(logged.allTimeMs)} total`}
+              hint="last 7 days"
+              title={`${formatMs(logged.allTimeMs)} logged in total`}
             />
           </div>
           <ProgramProgressCard state={state} today={today} />
-          <WorkedTotal totals={worked} />
           <div className="cal-fine">
             <details className="cal-details">
               <summary>How these are counted</summary>
@@ -599,17 +628,34 @@ export function CalendarView({ state, actions }: { state: AppState; actions: App
         <LeetCodeStreakCard now={now} compact />
       </div>
 
-      <div className="calendar-grid" ref={gridRef}>
-        {days.map((day) => (
-          <DayCellWithPopover
-            key={day.date}
-            day={day}
-            selected={day.date === selected.date}
-            onSelect={() => { pickedRef.current = true; setSelectedDate(day.date); }}
-            state={state}
-            today={today}
-          />
-        ))}
+      <div className="calendar-months" ref={gridRef}>
+        {CALENDAR_SECTIONS.map(({ title, from, to }) => {
+          const section = days.filter((d) => d.dayIndex >= from && d.dayIndex <= to);
+          if (section.length === 0) return null;
+          return (
+            <section key={title} className="calendar-section" aria-label={title}>
+              <header className="calendar-section-head">
+                <h2>{title}</h2>
+                <span className="muted">
+                  {formatDate(section[0]!.date)} – {formatDate(section[section.length - 1]!.date)}
+                </span>
+              </header>
+              <div className="calendar-grid">
+                {section.map((day) => (
+                  <DayCellWithPopover
+                    key={day.date}
+                    day={day}
+                    selected={day.date === selected.date}
+                    onSelect={() => { pickedRef.current = true; setSelectedDate(day.date); }}
+                    state={state}
+                    today={today}
+                    projection={projections.get(day.date)}
+                  />
+                ))}
+              </div>
+            </section>
+          );
+        })}
       </div>
 
       <DayDetail key={selected.date} day={selected} today={today} actions={actions} />
