@@ -70,7 +70,8 @@ describe('ProblemPanel (render smoke test)', () => {
     const plan = planDay(base, today);
     expect(plan.bonuses).toHaveLength(2);
     const idle = render(base, null);
-    expect(idle.split('Optional bonus</span>').length - 1).toBe(2);
+    expect(idle).toContain('aria-label="Optional bonus problems"');
+    expect(idle.split('Optional: ').length - 1).toBe(2);
     expect(idle).toContain('Optional: ');
     for (const offer of plan.bonuses) {
       const html = render(base, offer.activity.slug);
@@ -150,5 +151,34 @@ describe('ProblemPanel (render smoke test)', () => {
     const withHint = render({ ...base, activities: [done, { ...open, hintsUsed: 1 }] }, 'two-sum');
     expect(withHint).toContain('Hint 1 · Nudge');
     expect(withHint).not.toContain('Hint 2 · Insight');
+  });
+
+  it('hides the category in the header while a Blind review of the problem is open', () => {
+    const done = {
+      ...createActivity([], { type: 'new', slug: 'group-anagrams', dueDate: today, createdAt: today }),
+      status: 'done' as const, completedAt: today, outcome: 'solo' as const, totalMs: 60_000,
+    };
+    const blind = createActivity([done], { type: 'blind', slug: 'group-anagrams', dueDate: today, createdAt: today });
+    const html = render({ ...base, activities: [done, blind] }, 'group-anagrams');
+    expect(html).toContain('Category hidden');
+    expect(html).not.toContain('>Arrays &amp; Hashing</span>');
+    expect(html).toContain('Next review: Blind today');
+    const after = render({ ...base, activities: [done, { ...blind, status: 'done' as const, completedAt: today, outcome: 'solo' as const }] }, 'group-anagrams');
+    expect(after).not.toContain('Category hidden');
+    expect(after).toContain('Arrays &amp; Hashing');
+  });
+
+  it('splits the checklist into what is left, the optional bonus offers and the finished items', () => {
+    const plan = planDay(base, today);
+    const first = plan.items[0]!;
+    const done = { ...base, activities: [{ ...first.activity, status: 'done' as const, completedAt: today, outcome: 'solo' as const, totalMs: 60_000 }] };
+    const html = render(done, null);
+    const left = html.slice(html.indexOf('aria-label="Today&#x27;s checklist"'), html.indexOf('aria-label="Optional bonus problems"'));
+    const finished = html.slice(html.indexOf('Done today ('));
+    expect(left).toContain('To do: ');
+    expect(left).not.toContain('Done: ');
+    expect(finished).toContain('Done: ');
+    expect(html).toContain(`1/${plan.items.length}`);
+    expect(html).toContain('role="progressbar"');
   });
 });

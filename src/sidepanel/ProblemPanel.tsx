@@ -8,6 +8,7 @@ import { HintsSection } from '../components/HintsSection';
 import { LeetCodeLink } from '../components/LeetCodeLink';
 import { NotesForm } from '../components/NotesForm';
 import { ProblemMetadataSection } from '../components/ProblemMetadata';
+import { ProgressBar } from '../components/ProgressBar';
 import { trainingDateFromTimestamp, trainingDayStart } from '../core/dates';
 import { planDay, type PlanItem } from '../core/planner';
 import { attemptHistory, isNotesLocked, nextReview } from '../core/problemSheet';
@@ -174,12 +175,18 @@ function ExtraPractice({
 
 const OPTIONAL_BONUS_TAG = 'Optional bonus';
 
+const isOpenItem = (item: PlanItem): boolean =>
+  item.activity.status === 'planned' || item.activity.status === 'in_progress';
+
 function ChecklistRow({
   items,
   openProblem,
+  hideTag,
 }: {
   items: readonly (PlanItem & { tag?: string })[];
   openProblem: (slug: string) => void;
+  /** A tag the surrounding section already states (the Optional bonus heading). */
+  hideTag?: string;
 }) {
   const activity = items[0]!.activity;
   const problem = getProblem(activity.slug);
@@ -191,30 +198,36 @@ function ChecklistRow({
   for (const item of items) types.set(item.activity.type, (types.get(item.activity.type) ?? 0) + 1);
   const tags = [...new Set(items.flatMap((item) => item.tag ? [item.tag] : []))];
   return (
-    <li className={done ? 'check-done' : undefined}>
+    <li className={`${done ? 'check-done' : ''}${started ? ' check-started' : ''}`.trim() || undefined}>
       <span className="check-mark" aria-hidden="true">
         {done ? '✓' : started ? '▶' : '○'}
       </span>
       <span className="visually-hidden">
         {done ? 'Done: ' : started ? 'In progress: ' : tags.includes(OPTIONAL_BONUS_TAG) ? 'Optional: ' : 'To do: '}
       </span>
-      {[...types].map(([type, count]) => <Badge key={type} tone={type}>
-        {ACTIVITY_LABELS[type]}{count > 1 ? ` ×${count}` : ''}
-      </Badge>)}
-      {tags.map((tag) => <Badge key={tag} tone="warn">{tag}</Badge>)}
-      <span className="check-title">{title}</span>
-      {problem ? <Badge tone={difficultyTone(problem.difficulty)}>{problem.difficulty}</Badge> : null}
-      {items.length > 1 ? <span className="muted">{doneCount}/{items.length} done</span> : null}
-      <span className="muted">~{formatMinutes(items.reduce((sum, item) => sum + item.minutes, 0))}</span>
-      <span className="spacer" />
-      <Button aria-label={`Open ${title} on LeetCode`} onClick={() => openProblem(activity.slug)}>
+      <span className="check-main">
+        <span className="check-title">{title}</span>
+        <span className="check-meta">
+          {[...types].map(([type, count]) => <Badge key={type} tone={type}>
+            {ACTIVITY_LABELS[type]}{count > 1 ? ` ×${count}` : ''}
+          </Badge>)}
+          {tags.filter((tag) => tag !== hideTag).map((tag) => <Badge key={tag} tone="warn">{tag}</Badge>)}
+          {problem ? <Badge tone={difficultyTone(problem.difficulty)}>{problem.difficulty}</Badge> : null}
+          {items.length > 1 ? <span className="muted">{doneCount}/{items.length} done</span> : null}
+          <span className="muted">~{formatMinutes(items.reduce((sum, item) => sum + item.minutes, 0))}</span>
+        </span>
+      </span>
+      <Button className="btn-small" aria-label={`Open ${title} on LeetCode`} onClick={() => openProblem(activity.slug)}>
         Open
       </Button>
     </li>
   );
 }
 
-/** Today's checklist with an Open button per item, shown whenever the active tab is not a known problem page. */
+/**
+ * Today's checklist, shown whenever the active tab is not a known problem page: what is left first, then the
+ * optional bonus offers, then the finished items folded away. Each row has an Open button.
+ */
 function TodayChecklist({
   state,
   now,
@@ -226,24 +239,51 @@ function TodayChecklist({
   if (plan.dayIndex < 1) {
     return <p className="muted">Your program starts on {formatDate(state.settings.startDate)}.</p>;
   }
-  const open = plan.items.filter((i) => i.activity.status === 'planned' || i.activity.status === 'in_progress');
+  const open = plan.items.filter(isOpenItem);
+  const doneCount = plan.items.length - open.length;
+  const groups = groupActivities([
+    ...plan.items,
+    ...plan.bonuses.map((item) => ({ ...item, tag: OPTIONAL_BONUS_TAG })),
+    ...plan.carriedOver.map((item) => ({ ...item, tag: 'Carried over' })),
+    ...plan.missedBenchmarks.map((item) => ({ ...item, tag: 'Missed benchmark' })),
+  ], state.activities);
+  const finished = groups.filter((g) => !g.items.some(isOpenItem));
+  const pending = groups.filter((g) => g.items.some(isOpenItem));
+  const optional = pending.filter((g) => g.items.every((i) => i.tag === OPTIONAL_BONUS_TAG));
+  const todo = pending.filter((g) => !optional.includes(g));
   return (
     <div className="stack-tight">
-      <p>
-        <strong>Day {plan.dayIndex}</strong> · {plan.items.length - open.length}/{plan.items.length} done ·{' '}
-        {open.length} left (~{formatMinutes(open.reduce((sum, i) => sum + i.minutes, 0))})
-      </p>
+      <div className="checklist-summary">
+        <p>
+          <strong>Day {plan.dayIndex}</strong> · {doneCount}/{plan.items.length} done
+          {open.length > 0 ? <span className="muted"> · {open.length} left (~{formatMinutes(open.reduce((sum, i) => sum + i.minutes, 0))})</span> : null}
+        </p>
+        {plan.items.length > 0 ? <ProgressBar value={doneCount} max={plan.items.length} done={open.length === 0} /> : null}
+      </div>
       {plan.items.length === 0 ? <p className="muted">Nothing is scheduled today.</p> : null}
-      <ul className="checklist" aria-label="Today's checklist">
-        {groupActivities([
-          ...plan.items,
-          ...plan.bonuses.map((item) => ({ ...item, tag: OPTIONAL_BONUS_TAG })),
-          ...plan.carriedOver.map((item) => ({ ...item, tag: 'Carried over' })),
-          ...plan.missedBenchmarks.map((item) => ({ ...item, tag: 'Missed benchmark' })),
-        ], state.activities).map((group) => (
-          <ChecklistRow key={group.slug} items={group.items} openProblem={openProblem} />
-        ))}
-      </ul>
+      {todo.length > 0 ? (
+        <ul className="checklist" aria-label="Today's checklist">
+          {todo.map((group) => <ChecklistRow key={group.slug} items={group.items} openProblem={openProblem} />)}
+        </ul>
+      ) : plan.items.length > 0 ? <p className="tone-good">Core plan done for today.</p> : null}
+      {optional.length > 0 ? (
+        <section className="checklist-section">
+          <h3 className="checklist-heading">Optional bonus <span className="muted">· never debt</span></h3>
+          <ul className="checklist" aria-label="Optional bonus problems">
+            {optional.map((group) => (
+              <ChecklistRow key={group.slug} items={group.items} openProblem={openProblem} hideTag={OPTIONAL_BONUS_TAG} />
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {finished.length > 0 ? (
+        <details className="checklist-section checklist-finished">
+          <summary>Done today ({finished.length})</summary>
+          <ul className="checklist" aria-label="Done today">
+            {finished.map((group) => <ChecklistRow key={group.slug} items={group.items} openProblem={openProblem} />)}
+          </ul>
+        </details>
+      ) : null}
       <DashboardLink hash="#/today" openDashboard={openDashboard}>
         Open the dashboard
       </DashboardLink>
@@ -273,15 +313,29 @@ export function ProblemPanel({
   const matches = slug && problem ? panelMatches(plan, slug) : [];
   const openActivity = selectedPanelActivity(matches);
   const focused = state.settings.sidePanelFocus === true && openActivity !== undefined;
-  const focusToggle = <div className="stack-tight">
-    <Button aria-pressed={state.settings.sidePanelFocus === true} onClick={() => {
-      setFocusError(null);
-      actions.updateSettings({ sidePanelFocus: !state.settings.sidePanelFocus })
-        .catch((e: unknown) => setFocusError(e instanceof Error ? e.message : String(e)));
-    }}>Focus mode</Button>
-    {state.settings.sidePanelFocus && !openActivity ? <p role="status" className="muted">Nothing to focus on: open a problem with a current activity. Showing the normal panel.</p> : null}
+  const coreOpen = plan.items.filter(isOpenItem).length;
+  const focusToggle = <div className="stack-tight panel-top">
+    <div className="panel-toolbar">
+      {/* On a problem page only: the checklist already states the day and progress. */}
+      {problem && plan.dayIndex >= 1 ? (
+        <span className="panel-day" title={`${coreOpen} core ${coreOpen === 1 ? 'item' : 'items'} left today`}>
+          <strong>Day {plan.dayIndex}</strong> · {plan.items.length - coreOpen}/{plan.items.length}
+        </span>
+      ) : null}
+      <span className="spacer" />
+      <Button className="btn-small" aria-pressed={state.settings.sidePanelFocus === true}
+        title="Hide everything except the current activity, its hints and the LeetCode link" onClick={() => {
+          setFocusError(null);
+          actions.updateSettings({ sidePanelFocus: !state.settings.sidePanelFocus })
+            .catch((e: unknown) => setFocusError(e instanceof Error ? e.message : String(e)));
+        }}>Focus mode</Button>
+      <Button variant="ghost" className="btn-small" title="Open the dashboard" onClick={() => openDashboard('#/today')}>
+        Dashboard ↗
+      </Button>
+      <ShortcutsHelp open={helpOpen} onToggle={setHelpOpen} />
+    </div>
+    {state.settings.sidePanelFocus && !openActivity ? <p role="status" className="muted small">Nothing to focus on: open a problem with a current activity. Showing the normal panel.</p> : null}
     {focusError ? <p className="error" role="alert">{focusError}</p> : null}
-    <ShortcutsHelp open={helpOpen} onToggle={setHelpOpen} />
   </div>;
   const needsMaterializing =
     plan.items.some((item) => !item.persisted) || plan.bonuses.some((item) => !item.persisted) ||
@@ -296,12 +350,10 @@ export function ProblemPanel({
     return (
       <div className="stack">
         {focusToggle}
-        <Card title="Open a LeetCode problem">
-          <p className="muted">
-            This panel follows your active tab. Open a problem on leetcode.com, or pick one from today&apos;s
-            checklist, to see its activity, timer, hints and notes here.
-          </p>
-        </Card>
+        <p className="panel-hint muted">
+          <strong>Open a LeetCode problem</strong> to see its timer, hints and notes here. The panel follows your
+          active tab.
+        </p>
         <Card title="Today's checklist">
           <TodayChecklist state={state} now={now} openDashboard={openDashboard} openProblem={openProblem} />
         </Card>
@@ -325,7 +377,9 @@ export function ProblemPanel({
     );
   }
 
-  const hasOpen = matches.some((m) => m.activity.status === 'planned' || m.activity.status === 'in_progress');
+  const hasOpen = matches.some(isOpenItem);
+  // A Blind review is solved with the category hidden: do not print it in the header.
+  const blindOpen = matches.some((m) => m.activity.type === 'blind' && isOpenItem(m));
 
   const status = getProblemStatus(state, slug);
   const review = nextReview(state, slug, today);
@@ -344,33 +398,33 @@ export function ProblemPanel({
   return (
     <div className="stack" key={slug}>
       {focusToggle}
-      <Card>
-        <h1 className="panel-title">{problem.title}</h1>
-        <div hidden={focused}>
-          <div className="row">
+      <Card className="panel-head">
+        <div className="panel-head-top">
+          <h1 className="panel-title">{problem.title}</h1>
+          <LeetCodeLink href={problemUrl(slug)} />
+        </div>
+        <div hidden={focused} className="stack-tight">
+          <div className="row panel-badges">
             <Badge tone={difficultyTone(problem.difficulty)}>{problem.difficulty}</Badge>
             <Badge tone={STATUS_TONES[status]}>{STATUS_LABELS[status]}</Badge>
-            <span className="muted">{problem.category}</span>
+            {blindOpen
+              ? <span className="muted" title="A Blind review is open: the category is hidden so it does not give the pattern away.">Category hidden</span>
+              : <span className="muted">{problem.category}</span>}
           </div>
-          <p className="muted">
-            {position !== null
-              ? `Program problem ${position} of ${programQueue(state).length}`
-              : isBonusProblem(slug)
-                ? 'Bonus problem (not in the 60-day program)'
-                : 'Not in the 60-day program'}
+          <p className="muted small panel-meta">
+            {[
+              position !== null
+                ? `Program problem ${position} of ${programQueue(state).length}`
+                : isBonusProblem(slug) ? 'Bonus problem (not in the 60-day program)' : 'Not in the 60-day program',
+              review
+                ? `Next review: ${ACTIVITY_LABELS[review.type]} ${review.dueDate === today ? 'today' : `on ${formatDate(review.dueDate)}`}${review.dueDate < today ? ' (overdue)' : ''}`
+                : 'No review scheduled',
+              ...(attempts > 0 ? [`${attempts} ${attempts === 1 ? 'attempt' : 'attempts'}`] : []),
+            ].join(' · ')}
           </p>
-          <p className="muted">
-            {review
-              ? `Next review: ${ACTIVITY_LABELS[review.type]} on ${formatDate(review.dueDate)}${review.dueDate < today ? ' (overdue)' : ''}`
-              : 'No review scheduled'}
-            {attempts > 0 ? ` · ${attempts} ${attempts === 1 ? 'attempt' : 'attempts'}` : ''}
-          </p>
-        </div>
-        <div className="row">
-          <span hidden={focused}><DashboardLink hash={problemHref(slug)} openDashboard={openDashboard}>
+          <DashboardLink hash={problemHref(slug)} openDashboard={openDashboard}>
             Open the problem sheet
-          </DashboardLink></span>
-          <LeetCodeLink href={problemUrl(slug)} />
+          </DashboardLink>
         </div>
       </Card>
 
@@ -393,9 +447,10 @@ export function ProblemPanel({
         <NotesSection state={state} actions={actions} slug={slug} locked={locked} />
       </div>
       <div hidden={focused}>
-        <Card title="Attempt history">
+        <details className="card panel-fold">
+          <summary><h2>Attempt history</h2><span className="muted">{attempts}</span></summary>
           <AttemptHistory history={history} compact />
-        </Card>
+        </details>
       </div>
     </div>
   );

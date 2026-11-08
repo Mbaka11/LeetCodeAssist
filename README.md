@@ -225,10 +225,11 @@ change. Small samples, difficulty differences and missing history limit comparis
   budget, a summary row, correction previews and CSV export), *Weekly review* (read-only learning evidence)
   and *Settings*.
 - **Side panel**: one global panel per window that stays open across tabs. On a leetcode.com problem
-  page it shows the problem (difficulty, category, program position), today's activity with its
-  instruction and timer, hints, the outcome form, notes, attempt history and the next review date. On
-  any other page it shows **Open a LeetCode problem** and today's checklist with an **Open** button per
-  item. Open it from the dashboard's **Open side panel** button, by clicking a LeetCode link in the
+  page it shows the problem (difficulty, category, program position; the category is hidden during a
+  Blind review), today's activity with its instruction and timer, hints, the outcome form, notes, the
+  folded attempt history and the next review date. On any other page it shows today's checklist with a
+  progress bar: what is left, the optional bonus offers, and the finished items folded, with an **Open**
+  button per item. Focus mode, the dashboard link and the shortcuts sit in one toolbar on top. Open it from the dashboard's **Open side panel** button, by clicking a LeetCode link in the
   dashboard, or with the shortcut **Alt+Shift+L** (change it at `chrome://extensions/shortcuts`).
 - **Notifications and badge**: a morning summary (for example
   `Today: 2 new, 2 recalls, 1 rebuild · ~2h20`) and an evening summary such as

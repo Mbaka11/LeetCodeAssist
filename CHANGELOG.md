@@ -3,6 +3,14 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.17.0
+
+### Changed (UI/UX)
+- **Side panel rework.** The full-width *Focus mode* button is gone: Focus mode, a *Dashboard ↗* link and *Shortcuts* sit in one compact toolbar, with the training day and core progress on problem pages.
+- **Problem header** is shorter: the LeetCode link sits next to the title, and program position, next review ("Blind today") and attempts share one line. *Attempt history* is folded with its count.
+- **No Blind spoiler:** while a Blind review of the problem is open, the header shows *Category hidden* instead of the category.
+- **Checklist** (any non-problem page): a progress bar, then what is left, then the optional bonus offers under their own heading, then the finished items folded under *Done today (n)*. Each row puts the title first with type, difficulty and minutes below it. The intro card became a one-line hint.
+
 ## 0.16.0
 
 ### Changed

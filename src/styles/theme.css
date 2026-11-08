@@ -1160,12 +1160,41 @@ textarea.mono {
 }
 
 .checklist li {
+  display: grid;
+  grid-template-columns: 1.2em minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.checklist li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.checklist .check-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.checklist .check-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.checklist .check-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
+  gap: 4px 6px;
+  font-size: 0.82rem;
+}
+
+.checklist .check-started .check-mark {
+  color: var(--accent);
 }
 
 .checklist .check-mark {
@@ -2392,4 +2421,131 @@ label > select,
 
 .cal-counts strong {
   font-weight: 600;
+}
+
+/* Side panel rework (0.17.0) */
+.btn-small {
+  padding: 3px 10px;
+  font-size: 0.85rem;
+}
+
+.panel-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.panel-toolbar .btn[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.panel-day {
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.panel-toolbar .shortcuts-help summary {
+  font-size: 0.85rem;
+  padding: 3px 4px;
+}
+
+.panel-toolbar .shortcuts-help[open] {
+  flex-basis: 100%;
+  order: 10;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.panel-hint {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.panel-head-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel-head-top .panel-title {
+  margin: 0;
+}
+
+.panel-head .panel-badges {
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.panel-meta {
+  margin: 0;
+}
+
+.panel-fold > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.panel-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.panel-fold > summary::before {
+  content: '▸';
+  color: var(--muted);
+}
+
+.panel-fold[open] > summary::before {
+  content: '▾';
+}
+
+.panel-fold > summary h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.panel-fold[open] > summary {
+  margin-bottom: 8px;
+}
+
+.checklist-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.checklist-summary p {
+  margin: 0;
+}
+
+.checklist-section {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.checklist-heading {
+  font-size: 0.9rem;
+  margin: 0 0 8px;
+}
+
+.checklist-finished > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.checklist-finished[open] > summary {
+  margin-bottom: 8px;
+}
+
+.small {
+  font-size: 0.85rem;
 }

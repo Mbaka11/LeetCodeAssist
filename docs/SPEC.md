@@ -397,10 +397,17 @@ key, versioned), JSON export/import from Settings.
    - **Shortcuts** (only while the panel document has focus and the target is not a text field): Alt+T start/pause/resume
      the selected activity, Alt+R open Finish, Alt+1..4 choose the outcome, Alt+Enter save a valid form, Alt+? toggles the
      visible list. They call the same handlers as the buttons; Alt+Shift+L stays the browser command.
-   - On any other page: an **Open a LeetCode problem** state with today's checklist (core items, the up-to-two
-     optional bonus offers marked *Optional bonus*, carried-over reviews); each item has an
-     **Open** button that navigates the active tab (when it is a LeetCode or empty tab) or opens a new
-     tab.
+   - A one-line toolbar on top: the training day and core progress (problem pages only), **Focus mode**,
+     **Dashboard ↗** and the **Shortcuts** disclosure (it opens full width under the toolbar).
+   - Problem page header: title with the LeetCode link, difficulty, status and category, then one meta line
+     (program position, next review, attempts) and the problem sheet link. While a **Blind** review of the
+     problem is open the category reads *Category hidden*, so the panel does not give the pattern away.
+     Attempt history is a folded section with its count.
+   - On any other page: a one-line **Open a LeetCode problem** hint and today's checklist: day, done/total, time
+     left and a progress bar, then the open items, then the up-to-two optional bonus offers under their own
+     *Optional bonus* heading, then the finished items folded under *Done today (n)*. Each row shows the title
+     with its type, tags, difficulty and minutes below, and an **Open** button that navigates the active tab
+     (when it is a LeetCode or empty tab) or opens a new tab.
    - Opening: the dashboard's *Open side panel* button, the shortcut **Alt+Shift+L**, and clicking a
      LeetCode problem link in the dashboard (which also calls `chrome.sidePanel.open({ windowId })`
      in the same click handler, best effort).
