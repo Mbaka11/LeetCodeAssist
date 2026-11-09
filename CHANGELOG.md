@@ -3,6 +3,11 @@
 All notable changes to LeetCode Assist. The stored data format (`version: 1`) is unchanged: all new
 fields are optional, so data saved by earlier versions keeps working.
 
+## 0.18.0
+
+### Added
+- **Roadmap: planned by day 60.** Next to what you have worked, the Roadmap now shows what your plan will have covered by the last program day if every day is done as planned: *NeetCode 150 42/150 → 95 by day 60 · Blind 75 26/75 → 53 by day 60*. The same count is on the Easy/Medium/Hard tiles, every tree node and category card, and the progress bars show it as a lighter band behind the worked part. An unworked problem the plan reaches shows *Planned · Day n* in its row. It uses the same forecast as the Calendar, so it follows your daily cap and budgets (on the author's export: 95 by day 60 at a 180-minute cap, about 108 at 210).
+
 ## 0.17.0
 
 ### Changed (UI/UX)

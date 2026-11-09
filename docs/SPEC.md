@@ -344,7 +344,12 @@ key, versioned), JSON export/import from Settings.
      The catalog filters the problem lists, the counters and the tree/grid stats (`problemStats(state, catalog)`,
      `categoryDifficultyCounts(state, catalog)`); both catalogs read the same `problemStatus`, `checked` and
      activities, so nothing is duplicated or reset. Both counters (*NeetCode 150 x/150 · Blind 75 y/75*) are
-     always visible, with a note that Blind 75 is a subset (not 150 + 75). Every category keeps its tree node;
+     always visible, with a note that Blind 75 is a subset (not 150 + 75). Each also shows **→ N by day 60**
+     (`roadmapPlan` in `src/core/roadmapPlan.ts`): worked problems plus the problems `upcomingFirstDates` finds in a
+     forward run of the planner from today through day 60 (every item done solo on budget, no bonus, the same rules as
+     the Calendar forecast). The difficulty tiles, tree nodes and category cards show their own *by day 60* count and
+     the progress bars draw it as a lighter band; an unworked problem row shows *Planned · Day n*. One run is shared by
+     both catalogs (`RoadmapPlanContext`); nothing is shown after the program's last day. Every category keeps its tree node;
      a category without problems in the catalog would be labelled and show no problem panel (all 18 currently have
      at least one Blind 75 problem). Premium problems carry a *Premium* badge and are never scheduled. *Tree*
      draws the NeetCode prerequisite graph left to right (one column per tier, SVG arrows, scrollable);

@@ -281,6 +281,7 @@ h2 {
 }
 
 .progress {
+  position: relative;
   height: 8px;
   border-radius: 999px;
   background: var(--surface-2);
@@ -288,9 +289,19 @@ h2 {
 }
 
 .progress-fill {
+  position: relative;
   height: 100%;
   background: var(--accent);
   transition: width 0.3s;
+}
+
+/* Planned by day 60 (Roadmap): a lighter band behind the done fill. */
+.progress-planned {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  border-right: 2px solid color-mix(in srgb, var(--accent) 70%, transparent);
+  border-radius: 0 999px 999px 0;
 }
 
 .progress-done .progress-fill {
@@ -2548,4 +2559,33 @@ label > select,
 
 .small {
   font-size: 0.85rem;
+}
+
+/* Roadmap: planned by day 60 */
+.plan-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.85rem;
+  margin: 6px 0 0;
+}
+
+.plan-legend .swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  background: var(--accent);
+}
+
+.plan-legend .swatch-planned {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+.planned-day {
+  font-size: 0.8rem;
+  white-space: nowrap;
 }

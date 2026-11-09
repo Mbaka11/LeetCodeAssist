@@ -207,3 +207,26 @@ describe('RoadmapView catalog selector (render smoke test)', () => {
     }
   });
 });
+
+describe('RoadmapView planned by day 60', () => {
+  it('shows the day-60 forecast for both catalogs, difficulties, categories and problem rows during the program', async () => {
+    const { trainingDateFromTimestamp } = await import('../core/dates');
+    const { roadmapPlan } = await import('../core/roadmapPlan');
+    const today = trainingDateFromTimestamp(Date.now());
+    const state = withView(defaultState(today), 'grid');
+    const html = renderToStaticMarkup(<RoadmapView state={state} actions={actions} />);
+    const nc = roadmapPlan(state, 'neetcode150', today);
+    const blind = roadmapPlan(state, 'blind75', today);
+    expect(html).toContain(`→ ${nc.overall.planned} by day 60`);
+    expect(html).toContain(`→ ${blind.overall.planned} by day 60`);
+    expect(html).toContain(`${nc.byDifficulty.Hard.planned} by day 60`);
+    expect(html).toContain('Planned by day 60');
+    expect(html).toContain('progress-planned');
+    expect(html).toContain('Planned · Day 1');
+  });
+
+  it('shows no forecast once the program is over', () => {
+    const html = renderToStaticMarkup(<RoadmapView state={withView(defaultState('2020-01-06'), 'grid')} actions={actions} />);
+    expect(html).not.toContain('by day 60');
+  });
+});

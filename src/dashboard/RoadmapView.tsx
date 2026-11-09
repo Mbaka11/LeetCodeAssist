@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { Button } from '../components/Button';
 import { Explain } from '../components/Explain';
 import { Card } from '../components/Card';
@@ -13,6 +13,10 @@ import {
   roadmapTiers,
 } from '../core/roadmap';
 import { problemStats, type CategoryStats } from '../core/state';
+import { programEndDate, roadmapPlan, upcomingFirstDates, type PlanCounts } from '../core/roadmapPlan';
+import { trainingDateFromTimestamp } from '../core/dates';
+import { useNow } from '../lib/useNow';
+import { RoadmapPlanContext, useRoadmapPlan } from './roadmapPlanContext';
 import type { AppState, Difficulty, Problem, RoadmapViewMode, Settings } from '../core/types';
 import { CATEGORIES, type CategoryName } from '../data/neetcode150';
 import { isPremiumProblem } from '../data/premium';
@@ -32,6 +36,14 @@ const NO_DIFFICULTY_COUNTS: Record<Difficulty, { worked: number; total: number }
   Medium: { worked: 0, total: 0 },
   Hard: { worked: 0, total: 0 },
 };
+
+const NO_PLAN: PlanCounts = { total: 0, worked: 0, planned: 0 };
+
+/** Planned-by-day-60 count of a category in the selected catalog (from the Roadmap context). */
+function usePlanned(catalog: CatalogId, name: string): number | undefined {
+  const info = useRoadmapPlan();
+  return info ? (info.plans[catalog].byCategory.get(name) ?? NO_PLAN).planned : undefined;
+}
 
 /** Stats of a category, zero when the catalog has no problem in it (the tree keeps the node as a connector). */
 function statsOf(byCategory: ReadonlyMap<string, CategoryStats>, name: CategoryName): CategoryStats {
@@ -63,6 +75,7 @@ function CategoryCard({
   actions: AppActions;
 }) {
   const prerequisites = prerequisitesOf(name);
+  const planned = usePlanned(catalog, name);
   return (
     <section className="card category">
       <header className="card-header">
@@ -71,9 +84,10 @@ function CategoryCard({
           {stats.worked}/{stats.total}
         </span>
       </header>
-      <ProgressBar value={stats.worked} max={stats.total} done={stats.total > 0 && stats.worked === stats.total} />
+      <ProgressBar value={stats.worked} max={stats.total} done={stats.total > 0 && stats.worked === stats.total}
+        {...(planned !== undefined ? { planned } : {})} />
       <p className="muted category-stats">
-        worked {stats.worked} · solo in review {stats.soloInReview} · consolidating {stats.consolidating}
+        worked {stats.worked}{planned !== undefined ? ` · ${planned} by day 60` : ''} · solo in review {stats.soloInReview} · consolidating {stats.consolidating}
       </p>
       {prerequisites.length > 0 ? <p className="muted category-after">After: {prerequisites.join(', ')}</p> : null}
       {problems.length === 0 ? (
@@ -137,6 +151,10 @@ function TreeView({
   const selectedStats = statsOf(byCategory, selected);
   const selectedProblems = categoryProblems(selected, catalog);
   const selectedPrerequisites = prerequisitesOf(selected);
+  const planInfo = useRoadmapPlan();
+  const plannedOf = (name: string): number | undefined =>
+    planInfo ? (planInfo.plans[catalog].byCategory.get(name) ?? NO_PLAN).planned : undefined;
+  const selectedPlanned = plannedOf(selected);
 
   return (
     <>
@@ -167,6 +185,7 @@ function TreeView({
             const stats = statsOf(byCategory, node.name);
             const byDifficulty = counts.get(node.name) ?? NO_DIFFICULTY_COUNTS;
             const prerequisites = prerequisitesOf(node.name);
+            const planned = plannedOf(node.name);
             const classes = ['tree-node'];
             if (node.name === selected) classes.push('selected');
             if (stats.total > 0 && stats.worked === stats.total) classes.push('complete');
@@ -186,13 +205,14 @@ function TreeView({
                     {stats.worked}/{stats.total}
                   </span>
                 </span>
-                <ProgressBar value={stats.worked} max={stats.total} done={stats.total > 0 && stats.worked === stats.total} />
+                <ProgressBar value={stats.worked} max={stats.total} done={stats.total > 0 && stats.worked === stats.total}
+                  {...(planned !== undefined ? { planned } : {})} />
                 {stats.total === 0 ? (
                   <span className="muted tree-node-stats">None in {CATALOG_LABELS[catalog]}</span>
                 ) : (
                   <>
                     <span className="muted tree-node-stats">
-                      solo {stats.soloInReview} · consolidating {stats.consolidating}
+                      {planned !== undefined ? `${planned} by day 60 · ` : ''}solo {stats.soloInReview}{planned === undefined ? ` · consolidating ${stats.consolidating}` : ''}
                     </span>
                     <span className="muted tree-node-stats">
                       {DIFFICULTIES.map((d) => `${d} ${byDifficulty[d].worked}/${byDifficulty[d].total}`).join(' · ')}
@@ -218,7 +238,7 @@ function TreeView({
           </span>
         </header>
         <p className="muted category-stats">
-          worked {selectedStats.worked} · solo in review {selectedStats.soloInReview} · consolidating{' '}
+          worked {selectedStats.worked}{selectedPlanned !== undefined ? ` · ${selectedPlanned} by day 60` : ''} · solo in review {selectedStats.soloInReview} · consolidating{' '}
           {selectedStats.consolidating}
           {selectedPrerequisites.length > 0 ? ` · after ${selectedPrerequisites.join(', ')}` : ''}
         </p>
@@ -236,6 +256,7 @@ const VIEW_LABELS: Record<RoadmapViewMode, string> = { tree: 'Tree', grid: 'Grid
 
 /** Both catalog counters side by side, so the overlap is visible whichever catalog is selected. */
 function CatalogCounters({ state, selected }: { state: AppState; selected: CatalogId }) {
+  const planInfo = useRoadmapPlan();
   return (
     <p className="catalog-counters" role="group" aria-label="Progress in both catalogs">
       {CATALOG_IDS.map((id, index) => {
@@ -245,6 +266,7 @@ function CatalogCounters({ state, selected }: { state: AppState; selected: Catal
             {index > 0 ? <span aria-hidden="true"> · </span> : null}
             <span className={id === selected ? 'catalog-counter catalog-counter-active' : 'catalog-counter'}>
               {CATALOG_LABELS[id]} <strong>{overall.worked}/{overall.total}</strong>
+              {planInfo ? <span className="muted"> → {planInfo.plans[id].overall.planned} by day 60</span> : null}
             </span>
           </span>
         );
@@ -260,6 +282,21 @@ export function RoadmapView({ state, actions }: { state: AppState; actions: AppA
   const view: RoadmapViewMode = state.settings.roadmapView ?? 'tree';
   const [error, setError] = useState<string | null>(null);
   const premiumCount = catalogProblems(catalog).filter((p) => isPremiumProblem(p.slug)).length;
+  const today = trainingDateFromTimestamp(useNow(60_000));
+  // One forward run of the planner to day 60, shared by both catalogs; null once the program is over.
+  const planInfo = useMemo(() => {
+    const end = programEndDate(state);
+    if (today > end) return null;
+    const upcoming = upcomingFirstDates(state, today, end);
+    return {
+      startDate: state.settings.startDate,
+      plans: {
+        neetcode150: roadmapPlan(state, 'neetcode150', today, upcoming),
+        blind75: roadmapPlan(state, 'blind75', today, upcoming),
+      },
+    };
+  }, [state, today]);
+  const plan = planInfo?.plans[catalog];
 
   const change = (patch: Partial<Settings>): void => {
     setError(null);
@@ -267,6 +304,7 @@ export function RoadmapView({ state, actions }: { state: AppState; actions: AppA
   };
 
   return (
+    <RoadmapPlanContext.Provider value={planInfo}>
     <div className="stack">
       <Card
         title={`${CATALOG_LABELS[catalog]} roadmap`}
@@ -308,22 +346,36 @@ export function RoadmapView({ state, actions }: { state: AppState; actions: AppA
                 key={difficulty}
                 label={difficulty}
                 value={`${counts.worked}/${counts.total}`}
-                hint={`${counts.soloInReview} solo in review · ${counts.consolidating} consolidating`}
+                hint={plan ? `${plan.byDifficulty[difficulty].planned} by day 60` : `${counts.soloInReview} solo in review`}
+                title={`${counts.soloInReview} solo in review · ${counts.consolidating} consolidating`}
               />
             );
           })}
           <Stat
             label="All"
             value={`${stats.overall.worked}/${stats.overall.total}`}
-            hint={`${stats.overall.soloInReview} solo in review · ${stats.overall.consolidating} consolidating`}
+            hint={plan ? `${plan.overall.planned} by day 60` : `${stats.overall.soloInReview} solo in review`}
+            title={`${stats.overall.soloInReview} solo in review · ${stats.overall.consolidating} consolidating`}
           />
         </div>
-        <ProgressBar value={stats.overall.worked} max={stats.overall.total} done={stats.overall.worked === stats.overall.total} />
+        <ProgressBar value={stats.overall.worked} max={stats.overall.total} done={stats.overall.worked === stats.overall.total}
+          {...(plan ? { planned: plan.overall.planned } : {})} />
+        {plan ? (
+          <p className="plan-legend muted">
+            <span><span className="swatch" aria-hidden="true" />Worked</span>
+            <span><span className="swatch swatch-planned" aria-hidden="true" />Planned by day 60 ({plan.endDate}) if every day is done as planned</span>
+          </p>
+        ) : null}
         <Explain>
         <p className="muted">
           Blind 75 is a subset of the NeetCode 150: its 75 problems are also among the 150. Switching the catalog
           only filters this page. It never adds 150 + 75, resets anything or changes your plan, and both catalogs
           share the same checkboxes and statuses.
+        </p>
+        <p className="muted">
+          “By day 60” adds the problems your plan would start from today to the last program day, if every day is
+          done as planned (the same forecast as the Calendar, so it follows your daily cap and budgets). Benchmarks
+          and problems you already worked count; optional bonus problems you have not started do not.
         </p>
         <p className="muted">
           “Worked” counts problems you have started in the program or ticked as solved (ticks count here, not in
@@ -348,5 +400,6 @@ export function RoadmapView({ state, actions }: { state: AppState; actions: AppA
         <GridView state={state} actions={actions} byCategory={byCategory} catalog={catalog} />
       )}
     </div>
+    </RoadmapPlanContext.Provider>
   );
 }

@@ -359,7 +359,11 @@ page looks; a stylesheet test only guards the layout rules (see the CHANGELOG fo
 The Roadmap can be filtered by **NeetCode 150** or **Blind 75**. The Blind 75 is a subset: its 75 problems
 are also among the 150, so switching only changes what the page shows. It adds nothing (not 150 + 75),
 resets nothing and does not change your plan, and both catalogs share the same statuses and checkboxes.
-Both counters are always shown, for example *NeetCode 150 12/150 · Blind 75 7/75*. The list is the
+Both counters are always shown, for example *NeetCode 150 42/150 → 95 by day 60 · Blind 75 26/75 → 53 by day 60*.
+**By day 60** is the forecast of your plan: the problems you already worked plus those the planner would start
+from today to the last program day if every day is done as planned (the Calendar's forecast, so it follows your
+daily cap and budgets). It is shown for the catalog, each difficulty and each category, as a lighter band on the
+progress bars, and an unworked problem row says on which program day it is planned (*Planned · Day 39*). The list is the
 `blind75` flag of NeetCode's public problem metadata (source URL and revision in `src/data/blind75.ts`),
 which is NeetCode's version of the list. Problems that need LeetCode Premium (6 in the Blind 75, 7 in the
 NeetCode 150) are labelled **Premium** and are never scheduled; solving them needs a Premium account.

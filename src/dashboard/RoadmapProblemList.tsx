@@ -10,6 +10,8 @@ import { BENCHMARKS, PROGRAM_QUEUE } from '../data/program';
 import type { AppActions } from '../lib/actions';
 import { STATUS_LABELS, STATUS_TONES, difficultyTone } from '../lib/instructions';
 import { problemHref } from '../lib/route';
+import { dayIndex } from '../core/dates';
+import { useRoadmapPlan } from './roadmapPlanContext';
 
 const BENCHMARK_SLUGS: ReadonlySet<string> = new Set(BENCHMARKS.flatMap((b) => [b.easy, b.medium]));
 const PROGRAM_SLUGS: ReadonlySet<string> = new Set(PROGRAM_QUEUE);
@@ -28,11 +30,15 @@ export function RoadmapProblemList({
   detailed?: boolean;
   hideTechniques?: boolean;
 }) {
+  const planInfo = useRoadmapPlan();
+  // The same forward run for both catalogs, so either plan's map works.
+  const upcoming = planInfo?.plans.neetcode150.upcoming;
   return (
     <ul className="problem-list">
       {problems.map((problem) => {
         const status = getProblemStatus(state, problem.slug);
         const worked = status !== 'untouched'; // done in the program or a benchmark: shown as checked
+        const plannedOn = worked ? undefined : upcoming?.get(problem.slug);
         return (
           <li key={problem.slug} className="problem-row">
             <label className="choice">
@@ -57,6 +63,11 @@ export function RoadmapProblemList({
                 </span>
               ) : null}
               <Badge tone={STATUS_TONES[status]}>{STATUS_LABELS[status]}</Badge>
+              {plannedOn && planInfo ? (
+                <span className="muted planned-day" title={`The plan starts it on ${plannedOn} if every day is done as planned`}>
+                  Planned · Day {dayIndex(planInfo.startDate, plannedOn)}
+                </span>
+              ) : null}
               <LeetCodeLink href={problem.url} openPanel />
               <FavoriteButton slug={problem.slug} title={problem.title} state={state} actions={actions} compact />
             </span>
